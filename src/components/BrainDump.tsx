@@ -302,7 +302,7 @@ const BrainDump: React.FC = () => {
     <div className="w-full max-w-4xl mx-auto bg-paper rounded-lg shadow-sm border border-accent-tertiary/20 p-6 mt-6">
       <h2 className="font-display text-2xl text-ink-dark mb-4">Brain Dump</h2>
       <p className="font-serif text-ink-light mb-6">
-        Upload your thoughts, notes, or content in any format. Textera will analyze and organize it into structured e-book ideas.
+        Upload your thoughts, notes, or content in any format. Autopen will analyze and organize it into structured e-book ideas.
       </p>
 
       {error && (

@@ -51,7 +51,7 @@ const SignupForm: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <h2 className="font-display text-3xl text-ink-dark mb-2">Create Account</h2>
-        <p className="font-serif text-ink-light">Join Textera to start creating beautiful e-books</p>
+        <p className="font-serif text-ink-light">Join Autopen to start creating beautiful e-books</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

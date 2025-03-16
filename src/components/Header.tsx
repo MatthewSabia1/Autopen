@@ -66,7 +66,7 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <BookOpen className="w-8 h-8 text-accent-primary" />
-          <h1 className="font-display text-2xl font-semibold text-ink-dark">Textera</h1>
+          <h1 className="font-display text-2xl font-semibold text-ink-dark">Autopen</h1>
         </div>
         
         <nav className="hidden md:flex space-x-8">

@@ -8,7 +8,7 @@ export type NewCreatorContent = Database['public']['Tables']['creator_contents']
 export type CreatorContentUpdate = Database['public']['Tables']['creator_contents']['Update'];
 
 // Cache helpers
-const CREATOR_CONTENTS_CACHE_KEY = 'textera_creator_contents_cache';
+const CREATOR_CONTENTS_CACHE_KEY = 'autopen_creator_contents_cache';
 
 const getContentFromCache = (): CreatorContent[] => {
   try {

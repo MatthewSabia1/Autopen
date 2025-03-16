@@ -65,12 +65,12 @@ function App() {
           <div className="w-full max-w-4xl mx-auto bg-paper rounded-lg shadow-sm border border-accent-tertiary/20 p-8 my-8">
             <h2 className="font-display text-3xl text-ink-dark mb-6">Support</h2>
             <p className="font-serif text-ink-light mb-4">
-              Need help with Textera? Our support team is here to assist you.
+              Need help with Autopen? Our support team is here to assist you.
             </p>
             <div className="bg-cream p-6 rounded-md border border-accent-tertiary/20 mb-6">
               <h3 className="font-display text-xl text-ink-dark mb-3">Contact Support</h3>
               <p className="font-serif text-ink-light mb-4">
-                Send us an email at support@textera.com and we'll get back to you as soon as possible.
+                Send us an email at support@autopen.com and we'll get back to you as soon as possible.
               </p>
               <button className="px-5 py-2 font-serif bg-accent-primary text-white rounded hover:bg-accent-primary/90 transition-colors">
                 Email Support
@@ -88,7 +88,7 @@ function App() {
                 <li>
                   <h4 className="font-serif font-semibold text-ink-dark">Can I export my e-books to different formats?</h4>
                   <p className="font-serif text-ink-light">
-                    Yes, Textera supports exporting to EPUB, PDF, and MOBI formats for compatibility with different e-readers.
+                    Yes, Autopen supports exporting to EPUB, PDF, and MOBI formats for compatibility with different e-readers.
                   </p>
                 </li>
                 <li>
@@ -127,7 +127,7 @@ function App() {
               
               <div className="bg-paper p-6 rounded-lg border border-accent-tertiary/20 shadow-sm mb-8">
                 <div className="text-center mb-6">
-                  <h3 className="font-display text-xl text-ink-dark mb-2">Get Started with Textera</h3>
+                  <h3 className="font-display text-xl text-ink-dark mb-2">Get Started with Autopen</h3>
                   <p className="font-serif text-ink-light">
                     Create a free account to save your projects and access all features
                   </p>
@@ -162,7 +162,7 @@ function App() {
             <div className="mb-6 md:mb-0">
               <div className="flex items-center space-x-2 mb-2">
                 <BookOpenIcon className="w-5 h-5 text-accent-primary" />
-                <span className="font-display text-xl text-ink-dark">Textera</span>
+                <span className="font-display text-xl text-ink-dark">Autopen</span>
               </div>
               <p className="text-ink-light text-sm">AI-powered e-book creation and publishing</p>
             </div>
@@ -198,7 +198,7 @@ function App() {
           </div>
           
           <div className="border-t border-accent-tertiary/10 mt-8 pt-8 text-center text-ink-faded text-sm">
-            <p>© {new Date().getFullYear()} Textera. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Autopen. All rights reserved.</p>
           </div>
         </div>
       </footer>

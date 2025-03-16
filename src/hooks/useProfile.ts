@@ -7,7 +7,7 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 // Create a profile cache helper
-const PROFILE_CACHE_KEY = 'textera_profile_cache';
+const PROFILE_CACHE_KEY = 'autopen_profile_cache';
 
 const getProfileFromCache = (): Profile | null => {
   try {

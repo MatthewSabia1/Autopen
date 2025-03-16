@@ -373,7 +373,7 @@ const UserDashboard: React.FC = () => {
           <div className="bg-gradient-to-r from-accent-primary to-accent-secondary rounded-lg shadow-md p-6 text-white">
             <div className="flex items-center mb-3">
               <Crown className="w-5 h-5 mr-2" />
-              <h3 className="font-display text-xl">Textera Pro</h3>
+              <h3 className="font-display text-xl">Autopen Pro</h3>
             </div>
             
             <p className="font-serif text-sm mb-4 opacity-90">

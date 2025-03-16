@@ -154,9 +154,9 @@ BEGIN
       user_id, 
       progress
     ) VALUES (
-      'Getting Started with Textera', 
-      'Learn how to use the Textera platform effectively', 
-      '{"type": "course", "sections": [{"title": "Platform Overview", "content": "Textera is an AI-powered writing platform"}, {"title": "Using Brain Dump", "content": "The Brain Dump tool helps organize your ideas"}, {"title": "Creating Products", "content": "How to create and manage your products"}]}', 
+      'Getting Started with Autopen', 
+      'Learn how to use the Autopen platform effectively', 
+      '{"type": "course", "sections": [{"title": "Platform Overview", "content": "Autopen is an AI-powered writing platform"}, {"title": "Using Brain Dump", "content": "The Brain Dump tool helps organize your ideas"}, {"title": "Creating Products", "content": "How to create and manage your products"}]}', 
       'in_progress', 
       test_user_id, 
       65

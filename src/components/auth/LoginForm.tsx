@@ -41,7 +41,7 @@ const LoginForm: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <h2 className="font-display text-3xl text-ink-dark mb-2">Welcome Back</h2>
-        <p className="font-serif text-ink-light">Sign in to access your Textera account</p>
+        <p className="font-serif text-ink-light">Sign in to access your Autopen account</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

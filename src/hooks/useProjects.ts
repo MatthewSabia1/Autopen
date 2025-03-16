@@ -8,7 +8,7 @@ export type NewProject = Database['public']['Tables']['projects']['Insert'];
 export type ProjectUpdate = Database['public']['Tables']['projects']['Update'];
 
 // Cache helpers
-const PROJECTS_CACHE_KEY = 'textera_projects_cache';
+const PROJECTS_CACHE_KEY = 'autopen_projects_cache';
 
 const getProjectsFromCache = (): Project[] => {
   try {

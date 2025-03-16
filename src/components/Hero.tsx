@@ -22,7 +22,7 @@ const Hero: React.FC = () => {
             Transform your <span className="text-accent-primary">ideas</span> into beautiful e-books
           </h1>
           <p className="font-serif text-lg text-ink-light leading-relaxed mb-8">
-            Textera uses AI to help you format, create, style, and publish professional e-books from your unorganized content.
+            Autopen uses AI to help you format, create, style, and publish professional e-books from your unorganized content.
           </p>
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
             {user ? (

@@ -177,7 +177,7 @@ Return your analysis in JSON format with the following structure:
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'Textera AI E-book Creation Assistant'
+        'X-Title': 'Autopen AI E-book Creation Assistant'
       },
       body: JSON.stringify(payload)
     });
