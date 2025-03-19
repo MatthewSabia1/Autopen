@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added quick action buttons to Projects table including View, Edit, and Delete buttons
+- Implemented confirmation modal for project deletion with options to delete associated content
+- Added ability to delete just the project or project with all associated content (Brain Dumps, Products, etc.)
 - Added Projects page as a new folder and organization system for Brain Dump outputs and Products
 - Created database schema for project folders including project_folders and folder_projects tables
 - Implemented folder-based organization for user content
@@ -28,8 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added debug logging for tracking project fetch operations
 - Added AddToProjectModal component for adding different content types to projects
 - Enhanced useFolders hook with methods to add/remove different content types
+- Added comprehensive real-time subscriptions for folder and folder-project relationships
 
 ### Changed
+- Enhanced project deletion to allow selective content preservation
+- Updated useFolders and useProjects hooks to support content deletion options
+- Improved user experience for destructive actions with clear confirmation flows
 - Replaced custom NavigationContext with React Router's navigation system
 - Updated Header component to use React Router's Link component
 - Restructured App.tsx to use Routes and proper route definitions
@@ -55,6 +62,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved form styling and input validation feedback in all modals
 
 ### Fixed
+- Fixed projects not appearing in the Projects table until page reload by implementing comprehensive real-time subscriptions
+- Added subscriptions to both project_folders and folder_projects tables to ensure consistent state updates
+- Improved project creation workflow to properly reflect changes in the UI immediately
+- Enhanced the useFolders hook with detailed logging and better state management
+- Added multiple fallback strategies to ensure UI consistency with database state
+- Fixed new projects not appearing in table until page refresh by enhancing real-time subscription handling
+- Improved project creation flow with better state management and multiple refresh strategies
+- Enhanced debug logging for real-time events to help diagnose subscription issues
+- Added fallback refresh mechanisms when real-time updates fail
+- Fixed project deletion error by correcting database table references from non-existent "folder_contents" to actual "folder_projects" table
+- Corrected all database schema references to ensure consistency between code and actual database structure
 - Fixed race condition in project creation flow
 - Corrected folder navigation after creation
 - Improved offline detection logic

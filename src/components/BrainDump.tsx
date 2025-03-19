@@ -299,36 +299,36 @@ const BrainDump: React.FC = () => {
   };
   
   return (
-    <div className="w-full max-w-4xl mx-auto bg-paper rounded-lg shadow-sm border border-accent-tertiary/20 p-6 mt-6">
-      <h2 className="font-display text-2xl text-ink-dark mb-4">Brain Dump</h2>
-      <p className="font-serif text-ink-light mb-6">
+    <div className="w-full max-w-4xl mx-auto bg-paper dark:bg-gray-800 rounded-lg shadow-sm border border-accent-tertiary/20 dark:border-gray-700 p-6 mt-6">
+      <h2 className="font-display text-2xl text-ink-dark dark:text-gray-200 mb-4">Brain Dump</h2>
+      <p className="font-serif text-ink-light dark:text-gray-400 mb-6">
         Upload your thoughts, notes, or content in any format. Autopen will analyze and organize it into structured e-book ideas.
       </p>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-start text-red-700">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-md flex items-start text-red-700 dark:text-red-400">
           <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
           <p className="font-serif text-sm">{error}</p>
         </div>
       )}
 
-      <div className="flex border-b border-accent-tertiary/20 mb-6">
+      <div className="flex border-b border-accent-tertiary/20 dark:border-gray-700 mb-6">
         <button 
-          className={`flex items-center px-4 py-3 font-serif ${activeTab === 'paste' ? 'text-ink-dark border-b-2 border-accent-primary' : 'text-ink-faded'}`}
+          className={`flex items-center px-4 py-3 font-serif ${activeTab === 'paste' ? 'text-ink-dark dark:text-gray-200 border-b-2 border-accent-primary' : 'text-ink-faded dark:text-gray-500'}`}
           onClick={() => setActiveTab('paste')}
         >
           <FileText className="w-4 h-4 mr-2" />
           Paste Text
         </button>
         <button 
-          className={`flex items-center px-4 py-3 font-serif ${activeTab === 'upload' ? 'text-ink-dark border-b-2 border-accent-primary' : 'text-ink-faded'}`}
+          className={`flex items-center px-4 py-3 font-serif ${activeTab === 'upload' ? 'text-ink-dark dark:text-gray-200 border-b-2 border-accent-primary' : 'text-ink-faded dark:text-gray-500'}`}
           onClick={() => setActiveTab('upload')}
         >
           <Upload className="w-4 h-4 mr-2" />
           Upload Files
         </button>
         <button 
-          className={`flex items-center px-4 py-3 font-serif ${activeTab === 'link' ? 'text-ink-dark border-b-2 border-accent-primary' : 'text-ink-faded'}`}
+          className={`flex items-center px-4 py-3 font-serif ${activeTab === 'link' ? 'text-ink-dark dark:text-gray-200 border-b-2 border-accent-primary' : 'text-ink-faded dark:text-gray-500'}`}
           onClick={() => setActiveTab('link')}
         >
           <LinkIcon className="w-4 h-4 mr-2" />
@@ -339,10 +339,10 @@ const BrainDump: React.FC = () => {
       <div className="mb-6">
         {activeTab === 'paste' && (
           <div>
-            <label htmlFor="content" className="block font-serif text-ink-light mb-2">Paste your content below</label>
+            <label htmlFor="content" className="block font-serif text-ink-light dark:text-gray-400 mb-2">Paste your content below</label>
             <textarea 
               id="content"
-              className="w-full h-64 p-4 font-serif bg-cream border border-accent-tertiary/30 rounded-md focus:outline-none focus:ring-1 focus:ring-accent-primary"
+              className="w-full h-64 p-4 font-serif bg-cream dark:bg-gray-900 border border-accent-tertiary/30 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-accent-primary dark:text-gray-200"
               placeholder="Paste your unorganized notes, ideas, or content here..."
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
@@ -355,13 +355,13 @@ const BrainDump: React.FC = () => {
         {activeTab === 'upload' && (
           <div>
             <div 
-              className="flex flex-col items-center justify-center h-40 bg-cream border-2 border-dashed border-accent-tertiary/40 rounded-md"
+              className="flex flex-col items-center justify-center h-40 bg-cream dark:bg-gray-900 border-2 border-dashed border-accent-tertiary/40 dark:border-gray-700 rounded-md"
               onDrop={handleTextDrop}
               onDragOver={(e) => e.preventDefault()}
             >
               <Upload className="w-10 h-10 text-accent-primary/70 mb-3" />
-              <p className="font-serif text-ink-light mb-1">Drag & drop your files here</p>
-              <p className="font-serif text-ink-faded text-sm mb-3">or select files to upload</p>
+              <p className="font-serif text-ink-light dark:text-gray-400 mb-1">Drag & drop your files here</p>
+              <p className="font-serif text-ink-faded dark:text-gray-500 text-sm mb-3">or select files to upload</p>
               <div className="flex space-x-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -395,7 +395,7 @@ const BrainDump: React.FC = () => {
                 onChange={handleFileChange}
               />
             </div>
-            <p className="font-serif text-ink-faded text-xs mt-2">
+            <p className="font-serif text-ink-faded dark:text-gray-500 text-xs mt-2">
               Supported formats: PDF, DOCX, TXT, RTF, PPT, PPTX, EPUB, CSV, and common image formats
             </p>
           </div>
@@ -403,11 +403,11 @@ const BrainDump: React.FC = () => {
 
         {activeTab === 'link' && (
           <div>
-            <label htmlFor="link" className="block font-serif text-ink-light mb-2">Enter a webpage URL or YouTube video link</label>
+            <label htmlFor="link" className="block font-serif text-ink-light dark:text-gray-400 mb-2">Enter a webpage URL or YouTube video link</label>
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0">
               <div className="flex flex-1">
                 <div 
-                  className={`flex-shrink-0 bg-cream border border-accent-tertiary/30 rounded-l-md p-3 flex items-center cursor-pointer ${isYouTube ? 'text-red-500' : 'text-accent-primary'}`}
+                  className={`flex-shrink-0 bg-cream dark:bg-gray-900 border border-accent-tertiary/30 dark:border-gray-700 rounded-l-md p-3 flex items-center cursor-pointer ${isYouTube ? 'text-red-500' : 'text-accent-primary'}`}
                   onClick={() => setIsYouTube(!isYouTube)}
                 >
                   {isYouTube ? (
@@ -419,7 +419,7 @@ const BrainDump: React.FC = () => {
                 <input 
                   type="url" 
                   id="link"
-                  className="w-full p-3 font-serif bg-cream border border-accent-tertiary/30 border-l-0 rounded-r-md focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                  className="w-full p-3 font-serif bg-cream dark:bg-gray-900 border border-accent-tertiary/30 dark:border-gray-700 border-l-0 rounded-r-md focus:outline-none focus:ring-1 focus:ring-accent-primary dark:text-gray-200"
                   placeholder={isYouTube ? "https://www.youtube.com/watch?v=..." : "https://example.com"}
                   value={linkUrl}
                   onChange={(e) => {
@@ -458,19 +458,19 @@ const BrainDump: React.FC = () => {
             <div className="flex mt-2 text-sm">
               <button
                 onClick={() => setIsYouTube(false)}
-                className={`mr-4 py-1 font-serif ${!isYouTube ? 'text-accent-primary border-b border-accent-primary' : 'text-ink-light'}`}
+                className={`mr-4 py-1 font-serif ${!isYouTube ? 'text-accent-primary border-b border-accent-primary' : 'text-ink-light dark:text-gray-400'}`}
               >
                 Webpage
               </button>
               <button
                 onClick={() => setIsYouTube(true)}
-                className={`py-1 font-serif ${isYouTube ? 'text-red-500 border-b border-red-500' : 'text-ink-light'}`}
+                className={`py-1 font-serif ${isYouTube ? 'text-red-500 border-b border-red-500' : 'text-ink-light dark:text-gray-400'}`}
               >
                 YouTube Video
               </button>
             </div>
             {isYouTube && (
-              <p className="mt-2 text-xs text-ink-faded font-serif">
+              <p className="mt-2 text-xs text-ink-faded dark:text-gray-500 font-serif">
                 YouTube videos will be processed to extract the transcript for analysis if available. Note that not all videos have transcripts.
               </p>
             )}
@@ -481,38 +481,38 @@ const BrainDump: React.FC = () => {
       {/* Display uploaded files and links */}
       {(files.length > 0 || links.length > 0) && (
         <div className="mb-6">
-          <h3 className="font-serif font-semibold text-ink-dark mb-3">Added Content ({files.length + links.length})</h3>
+          <h3 className="font-serif font-semibold text-ink-dark dark:text-gray-200 mb-3">Added Content ({files.length + links.length})</h3>
           
           {/* Files */}
           {files.length > 0 && (
             <div className="mb-4">
-              <h4 className="font-serif text-sm text-ink-light mb-2">Files & Images ({files.length})</h4>
+              <h4 className="font-serif text-sm text-ink-light dark:text-gray-400 mb-2">Files & Images ({files.length})</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {files.map(file => (
                   <div 
                     key={file.id} 
-                    className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-center"
+                    className="p-3 bg-cream dark:bg-gray-900 rounded-md border border-accent-tertiary/20 dark:border-gray-700 flex items-center"
                   >
                     {file.type === 'image' && file.preview ? (
-                      <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
+                      <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper dark:bg-gray-800">
                         <img src={file.preview} alt={file.name} className="w-full h-full object-cover" />
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
+                      <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper dark:bg-gray-800 flex items-center justify-center">
                         <FileText className="w-6 h-6 text-accent-primary" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-serif text-ink-dark text-sm truncate" title={file.name}>
+                      <p className="font-serif text-ink-dark dark:text-gray-200 text-sm truncate" title={file.name}>
                         {file.name}
                       </p>
-                      <p className="font-serif text-ink-faded text-xs">
+                      <p className="font-serif text-ink-faded dark:text-gray-500 text-xs">
                         {formatFileSize(file.size)}
                       </p>
                     </div>
                     <button 
                       onClick={() => removeFile(file.id)}
-                      className="p-1.5 text-ink-faded hover:text-red-500 transition-colors"
+                      className="p-1.5 text-ink-faded dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -525,19 +525,19 @@ const BrainDump: React.FC = () => {
           {/* Links */}
           {links.length > 0 && (
             <div>
-              <h4 className="font-serif text-sm text-ink-light mb-2">Links ({links.length})</h4>
+              <h4 className="font-serif text-sm text-ink-light dark:text-gray-400 mb-2">Links ({links.length})</h4>
               <div className="grid grid-cols-1 gap-2">
                 {links.map(link => (
                   <div 
                     key={link.id} 
-                    className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-start"
+                    className="p-3 bg-cream dark:bg-gray-900 rounded-md border border-accent-tertiary/20 dark:border-gray-700 flex items-start"
                   >
                     {link.type === 'youtube' && link.thumbnail ? (
-                      <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
+                      <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper dark:bg-gray-800">
                         <img src={link.thumbnail} alt={link.title} className="w-full h-full object-cover" />
                       </div>
                     ) : (
-                      <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
+                      <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper dark:bg-gray-800 flex items-center justify-center">
                         {link.type === 'youtube' ? (
                           <Youtube className="w-5 h-5 text-red-500" />
                         ) : (
@@ -547,17 +547,17 @@ const BrainDump: React.FC = () => {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
-                        <p className="font-serif text-ink-dark text-sm truncate" title={link.title}>
+                        <p className="font-serif text-ink-dark dark:text-gray-200 text-sm truncate" title={link.title}>
                           {link.title}
                         </p>
                         <button 
                           onClick={() => removeLink(link.id)}
-                          className="p-1.5 text-ink-faded hover:text-red-500 transition-colors ml-2 flex-shrink-0"
+                          className="p-1.5 text-ink-faded dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-2 flex-shrink-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="font-serif text-ink-faded text-xs truncate mb-1" title={link.url}>
+                      <p className="font-serif text-ink-faded dark:text-gray-500 text-xs truncate mb-1" title={link.url}>
                         {link.url}
                       </p>
                       
@@ -565,12 +565,12 @@ const BrainDump: React.FC = () => {
                       {link.type === 'youtube' && (
                         <div className="mt-1">
                           {link.isLoadingTranscript ? (
-                            <div className="flex items-center text-xs text-ink-light">
+                            <div className="flex items-center text-xs text-ink-light dark:text-gray-400">
                               <Loader className="w-3 h-3 mr-1.5 animate-spin" />
                               Fetching transcript...
                             </div>
                           ) : link.transcriptError && !link.transcript ? (
-                            <div className="flex items-center text-xs text-amber-600">
+                            <div className="flex items-center text-xs text-amber-600 dark:text-amber-500">
                               <AlertCircle className="w-3 h-3 mr-1.5" />
                               {link.transcriptError.includes("No transcript available") 
                                 ? "No transcript available for this video" 
@@ -583,7 +583,7 @@ const BrainDump: React.FC = () => {
                               </button>
                             </div>
                           ) : link.transcript ? (
-                            <div className="flex items-center text-xs text-green-600">
+                            <div className="flex items-center text-xs text-green-600 dark:text-green-500">
                               <Check className="w-3 h-3 mr-1.5" />
                               {link.transcriptError 
                                 ? "Using mock transcript for analysis" 
@@ -608,7 +608,6 @@ const BrainDump: React.FC = () => {
           )}
         </div>
       )}
-
       <div className="flex justify-end">
         <button 
           onClick={handleSubmit}

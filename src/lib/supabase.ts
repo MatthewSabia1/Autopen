@@ -223,19 +223,16 @@ const checkConnectivitySimple = async (): Promise<boolean> => {
     });
     
     // Use a very simple check
-    const checkPromise = new Promise<boolean>(async (resolve) => {
-      try {
-        const response = await fetch(`${supabaseUrl}/rest/v1/?apikey=${supabaseAnonKey}`, {
-          method: 'HEAD',
-          headers: {
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${supabaseAnonKey}`
-          }
-        });
-        resolve(response.ok);
-      } catch (e) {
-        resolve(false);
-      }
+    const checkPromise = new Promise<boolean>((resolve) => {
+      fetch(`${supabaseUrl}/rest/v1/?apikey=${supabaseAnonKey}`, {
+        method: 'HEAD',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        }
+      })
+        .then(response => resolve(response.ok))
+        .catch(() => resolve(false));
     });
     
     // Race between the timeout and the connectivity check

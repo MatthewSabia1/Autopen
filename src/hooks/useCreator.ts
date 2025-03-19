@@ -37,53 +37,6 @@ export const useCreator = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
 
-  // Set up listeners for online/offline events
-  useEffect(() => {
-    const handleOffline = () => {
-      setIsOffline(true);
-      setError('You are currently offline. Some features may be limited.');
-    };
-
-    const handleOnline = async () => {
-      const isConnected = await checkSupabaseConnectivity();
-      if (isConnected) {
-        setIsOffline(false);
-        setError(null);
-        // Refresh content if possible
-        if (user) {
-          fetchCreatorContents();
-        }
-      }
-    };
-
-    // Check initial connectivity
-    checkSupabaseConnectivity().then(isConnected => {
-      setIsOffline(!isConnected);
-      if (!isConnected && user) {
-        // Load from cache
-        const cachedContents = getContentFromCache();
-        if (cachedContents.length > 0) {
-          setContents(cachedContents);
-          setError('Using locally stored data. Some features may be limited.');
-        } else {
-          setError('Network connection issue: Unable to connect to the database.');
-        }
-      }
-    });
-
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('supabase:offline', handleOffline);
-    window.addEventListener('supabase:online', handleOnline);
-
-    return () => {
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('supabase:offline', handleOffline);
-      window.removeEventListener('supabase:online', handleOnline);
-    };
-  }, [user]);
-
   // Fetch all creator contents for the current user
   const fetchCreatorContents = useCallback(async () => {
     if (!user) {
@@ -128,44 +81,69 @@ export const useCreator = () => {
           return;
         }
       } catch (fetchError: any) {
-        console.error('Fetch creator contents error:', fetchError);
-        
-        // If we have cached contents, continue using them
-        if (cachedContents.length > 0) {
-          console.log('Using cached creator contents data');
-          setError('Using locally stored data. Some features may be limited.');
-          setIsOffline(true);
-          return;
+        // If fetch fails, check if we have cached data
+        const cachedData = getContentFromCache();
+        if (cachedData.length > 0) {
+          setContents(cachedData);
+          setError('Could not connect to the network. Showing cached data.');
+        } else {
+          setError(`Could not load creator contents: ${fetchError.message}`);
         }
-        
-        // No cached contents, show the error
-        throw fetchError;
       }
-    } catch (err: any) {
-      console.error('Error fetching creator contents:', err);
-      
-      // If it's a network/connectivity error
-      if (err.message && (
-        err.message.includes('Failed to fetch') || 
-        err.message.includes('Network request failed') ||
-        err.message.includes('timeout') ||
-        err.message.includes('abort')
-      )) {
-        setError('Network connection issue: Unable to connect to the database');
-        setIsOffline(true);
-        
-        // Use cached contents if available
-        const cachedContents = getContentFromCache();
-        if (cachedContents.length > 0) {
-          setContents(cachedContents);
-        }
-      } else {
-        setError(err.message || 'Failed to fetch creator contents');
-      }
+    } catch (e) {
+      console.error('Error fetching creator contents:', e);
+      setError('An unexpected error occurred while loading creator contents.');
     } finally {
       setLoading(false);
     }
   }, [user]);
+
+  // Set up listeners for online/offline events
+  useEffect(() => {
+    const handleOffline = () => {
+      setIsOffline(true);
+      setError('You are currently offline. Some features may be limited.');
+    };
+
+    const handleOnline = async () => {
+      const isConnected = await checkSupabaseConnectivity();
+      if (isConnected) {
+        setIsOffline(false);
+        setError(null);
+        // Refresh creator contents if possible
+        if (user) {
+          fetchCreatorContents();
+        }
+      }
+    };
+
+    // Check initial connectivity
+    checkSupabaseConnectivity().then(isConnected => {
+      setIsOffline(!isConnected);
+      if (!isConnected && user) {
+        // Load from cache
+        const cachedContents = getContentFromCache();
+        if (cachedContents.length > 0) {
+          setContents(cachedContents);
+          setError('Using locally stored data. Some features may be limited.');
+        } else {
+          setError('Network connection issue: Unable to connect to the database.');
+        }
+      }
+    });
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('supabase:offline', handleOffline);
+    window.addEventListener('supabase:online', handleOnline);
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('supabase:offline', handleOffline);
+      window.removeEventListener('supabase:online', handleOnline);
+    };
+  }, [user, fetchCreatorContents]);
 
   // Fetch contents on initialization and when user changes
   useEffect(() => {

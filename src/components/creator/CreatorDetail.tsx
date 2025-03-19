@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Save, Edit, Wand2, BookText, AlertCircle, Loader } from 'lucide-react';
-import { useNavigation } from '../../contexts/NavigationContext';
+import { ChevronLeft, Save, Edit, Wand2, BookText, AlertCircle, Loader, BookOpen, ArrowLeft } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const CreatorDetail: React.FC = () => {
-  const { navigateTo } = useNavigation();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   
   // Mock content data for the initial version
   const [content] = useState({
-    id: "demo-content-id",
-    title: "The Ultimate Guide to Productivity",
-    description: "A comprehensive guide to achieving more with less effort using proven techniques and tools.",
-    type: "ebook",
-    status: "draft",
+    id: id || '1',
+    title: 'The Art of Productivity',
+    description: 'A comprehensive guide to boosting your productivity and managing your time effectively.',
+    type: 'e-book',
+    status: 'draft',
     sections: [
       { id: "sec1", title: "Introduction", content: "In today's fast-paced world, productivity has become a crucial skill..." },
       { id: "sec2", title: "Chapter 1: Understanding Productivity", content: "Productivity is not about doing more, but about doing what matters..." },
@@ -73,159 +74,62 @@ const CreatorDetail: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-cream">
-      <header className="bg-paper border-b border-accent-tertiary/30 p-4 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <button 
-              onClick={() => navigateTo('creator')}
-              className="mr-4 p-1.5 text-ink-light hover:text-ink-dark rounded-full hover:bg-cream transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            
-            <div>
-              <h1 className="font-display text-xl md:text-2xl text-ink-dark">{content.title}</h1>
-              {content.description && (
-                <p className="font-serif text-sm text-ink-light">{content.description}</p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <button 
-              onClick={handleSaveContent}
-              disabled={isSaving}
-              className="px-4 py-1.5 font-serif bg-accent-primary text-white rounded hover:bg-accent-primary/90 transition-colors flex items-center text-sm"
-            >
-              {isSaving ? (
-                <>
-                  <Loader className="w-4 h-4 mr-1.5 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-1.5" />
-                  Save
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="w-full max-w-6xl mx-auto px-6 py-8">
+      <button 
+        onClick={() => navigate('/creator')}
+        className="flex items-center text-accent-primary mb-6 font-serif hover:underline"
+      >
+        <ArrowLeft className="w-4 h-4 mr-1" />
+        Back to Creator
+      </button>
       
-      <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <aside className="md:col-span-1">
-          <div className="bg-paper rounded-lg shadow-sm border border-accent-tertiary/20 overflow-hidden">
-            <div className="p-4 border-b border-accent-tertiary/20 flex justify-between items-center">
-              <h2 className="font-serif font-semibold text-ink-dark">Sections</h2>
-              <div className="flex space-x-1">
-                <button 
-                  onClick={handleGenerateContent}
-                  disabled={isGenerating}
-                  className={`p-1.5 rounded-full ${isGenerating ? 'text-accent-secondary/50' : 'text-accent-secondary hover:bg-accent-secondary/10'} transition-colors`}
-                  title="Generate content with AI"
-                >
-                  {isGenerating ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-4 h-4" />
-                  )}
-                </button>
-                <button 
-                  className="p-1.5 text-ink-light hover:text-ink-dark hover:bg-cream transition-colors rounded-full"
-                  title="Edit sections"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-              </div>
+      {/* Content details */}
+      <div className="bg-paper rounded-lg border border-accent-tertiary/20 shadow-sm p-6 mb-8">
+        <div className="flex flex-col md:flex-row justify-between mb-6">
+          <div>
+            <h2 className="font-display text-3xl text-ink-dark mb-2">{content.title}</h2>
+            <div className="flex items-center space-x-3 mb-3">
+              <span className="text-xs font-serif bg-accent-tertiary/10 text-accent-tertiary px-2 py-0.5 rounded">
+                {content.type}
+              </span>
+              <span className="text-xs font-serif text-ink-faded">
+                Created on {new Date(content.created_at).toLocaleDateString()}
+              </span>
+              <span className="text-xs font-serif bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                {content.status}
+              </span>
             </div>
-            
-            <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-              <ul className="divide-y divide-accent-tertiary/10">
-                {content.sections.map((section) => (
-                  <li key={section.id}>
-                    <button 
-                      className={`p-3 flex items-start w-full text-left hover:bg-cream/50 transition-colors ${
-                        activeSection === section.id ? 'bg-cream' : ''
-                      }`}
-                      onClick={() => handleSectionSelect(section.id)}
-                    >
-                      <span className="font-serif text-sm text-ink-dark">{sectionTitles[section.id] || section.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="p-4 border-t border-accent-tertiary/20 bg-cream/30">
-              <button 
-                onClick={handleGenerateContent}
-                disabled={isGenerating}
-                className="w-full px-4 py-2 font-serif bg-accent-secondary text-white rounded hover:bg-accent-secondary/90 disabled:bg-accent-secondary/50 transition-colors flex items-center justify-center"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Generate with AI
-                  </>
-                )}
-              </button>
-            </div>
+            <p className="text-ink-light font-serif max-w-2xl">
+              {content.description}
+            </p>
           </div>
-        </aside>
-        
-        {/* Main editor */}
-        <div className="md:col-span-3">
-          <div className="bg-paper rounded-lg shadow-sm border border-accent-tertiary/20 p-6">
-            {activeSection ? (
-              <>
-                <div className="mb-4">
-                  <input
-                    type="text"
-                    value={sectionTitles[activeSection] || content.sections.find(s => s.id === activeSection)?.title || ""}
-                    onChange={(e) => handleSectionTitleChange(activeSection, e.target.value)}
-                    className="font-display text-2xl text-ink-dark bg-transparent border-b border-accent-tertiary/30 focus:border-accent-primary px-2 py-1 w-full focus:outline-none"
-                  />
-                </div>
-                
-                <textarea
-                  value={sectionContent}
-                  onChange={(e) => setSectionContent(e.target.value)}
-                  className="w-full min-h-[60vh] p-2 font-serif text-ink-dark bg-transparent border-0 focus:outline-none focus:ring-0 resize-none"
-                  placeholder="Start writing or use AI to generate content..."
-                ></textarea>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <BookText className="w-16 h-16 text-accent-tertiary/40 mx-auto mb-4" />
-                <h3 className="font-serif text-xl text-ink-dark mb-2">No section selected</h3>
-                <p className="font-serif text-ink-light mb-6">
-                  Select a section from the sidebar to start editing.
-                </p>
-              </div>
-            )}
+          <div className="flex space-x-2 mt-4 md:mt-0">
+            <button className="p-2 text-accent-primary hover:bg-accent-primary/5 rounded">
+              <Edit className="w-5 h-5" />
+            </button>
+            <button className="p-2 text-accent-primary hover:bg-accent-primary/5 rounded">
+              <BookOpen className="w-5 h-5" />
+            </button>
           </div>
-          
-          {isGenerating && (
-            <div className="mt-4 p-4 bg-white rounded-lg border border-accent-tertiary/20 shadow-sm">
-              <div className="flex items-center">
-                <Loader className="w-5 h-5 text-accent-secondary animate-spin mr-3" />
-                <div>
-                  <h3 className="font-serif font-semibold text-ink-dark text-sm">AI is working on your content</h3>
-                  <p className="font-serif text-xs text-ink-light">Generating high-quality content. This may take a moment...</p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      </main>
+        
+        {/* Content preview */}
+        <div className="bg-cream rounded-lg p-6 border border-accent-tertiary/20">
+          <div className="flex items-center justify-center h-96">
+            <BookOpen className="w-16 h-16 text-accent-primary/30" />
+          </div>
+        </div>
+      </div>
+      
+      {/* Action buttons */}
+      <div className="flex justify-end space-x-4">
+        <button className="px-5 py-2 font-serif text-accent-primary border border-accent-primary/30 rounded hover:bg-accent-primary/5 transition-colors">
+          Save Draft
+        </button>
+        <button className="px-5 py-2 font-serif bg-accent-primary text-white rounded hover:bg-accent-primary/90 transition-colors">
+          Publish
+        </button>
+      </div>
     </div>
   );
 };
