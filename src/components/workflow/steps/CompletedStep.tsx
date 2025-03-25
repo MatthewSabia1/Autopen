@@ -107,7 +107,7 @@ const CompletedStep = () => {
                 Ready for your next project? Start creating a new eBook or try other content types like courses or blog posts.
               </p>
               <Button
-                onClick={resetWorkflow}
+                onClick={() => resetWorkflow()}
                 className="gap-2 mt-auto bg-accent-primary hover:bg-accent-primary/90"
               >
                 <ArrowRight className="h-4 w-4" />

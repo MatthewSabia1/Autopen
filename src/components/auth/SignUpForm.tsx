@@ -10,11 +10,11 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useNavigate, Link } from "react-router-dom";
-import { UserPlus, Zap } from "lucide-react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { UserPlus, PenTool } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
-export default function SignUpForm() {
+export default function SignUpForm({ onToggle }: { onToggle?: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -23,6 +23,8 @@ export default function SignUpForm() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const location = useLocation();
+  const isStandalone = location.pathname === "/signup";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,13 +46,70 @@ export default function SignUpForm() {
     }
   };
 
+  const SignUpFormContent = (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Full Name</Label>
+        <Input
+          id="fullName"
+          placeholder="John Doe"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+          className="border-slate-300 focus-visible:ring-accent-primary"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="name@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="border-slate-300 focus-visible:ring-accent-primary"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="Create a password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="border-slate-300 focus-visible:ring-accent-primary"
+        />
+        <p className="text-xs text-slate-500">
+          Password must be at least 8 characters long
+        </p>
+      </div>
+      {error && <p className="text-sm text-red-500">{error}</p>}
+      <Button
+        type="submit"
+        className="w-full bg-accent-primary hover:bg-accent-primary/90 text-white"
+        disabled={isLoading}
+      >
+        {isLoading ? "Creating account..." : "Create account"}
+      </Button>
+    </form>
+  );
+
+  // If called from the modal, just return the form content
+  if (!isStandalone) {
+    return SignUpFormContent;
+  }
+
+  // Otherwise, return the full standalone form with layout
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Zap className="h-8 w-8 text-brand-600" />
-            <h1 className="text-3xl font-bold text-slate-800">AutoPen</h1>
+            <PenTool className="h-8 w-8 text-accent-primary" />
+            <h1 className="text-3xl font-bold text-slate-800">Autopen</h1>
           </div>
           <p className="text-slate-600">Create an account to get started</p>
         </div>
@@ -62,61 +121,14 @@ export default function SignUpForm() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="border-slate-300 focus-visible:ring-brand-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="border-slate-300 focus-visible:ring-brand-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Create a password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="border-slate-300 focus-visible:ring-brand-500"
-                />
-                <p className="text-xs text-slate-500">
-                  Password must be at least 8 characters long
-                </p>
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button
-                type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white"
-                disabled={isLoading}
-              >
-                {isLoading ? "Creating account..." : "Create account"}
-              </Button>
-            </form>
+            {SignUpFormContent}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 border-t border-slate-200 pt-4">
             <div className="text-sm text-center text-slate-600">
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="text-brand-600 hover:text-brand-800 font-medium"
+                className="text-accent-primary hover:text-accent-primary/80 font-medium"
               >
                 Sign in
               </Link>
@@ -126,11 +138,11 @@ export default function SignUpForm() {
 
         <div className="mt-6 text-center text-sm text-slate-500">
           By creating an account, you agree to our{" "}
-          <a href="#" className="text-brand-600 hover:text-brand-800">
+          <a href="#" className="text-accent-primary hover:text-accent-primary/80">
             Terms of Service
           </a>{" "}
           and{" "}
-          <a href="#" className="text-brand-600 hover:text-brand-800">
+          <a href="#" className="text-accent-primary hover:text-accent-primary/80">
             Privacy Policy
           </a>
         </div>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Wand2, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface CreateContentModalProps {
   isOpen: boolean;
@@ -35,19 +35,19 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[620px] bg-paper border-accent-tertiary/20 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[620px] bg-paper border-accent-tertiary/20 p-0 overflow-hidden shadow-blue-md rounded-lg">
         <div className="relative">
           <DialogHeader className="p-6 pb-0">
-            <div className="flex items-center gap-3 mb-1">
-              <Wand2 className="h-5 w-5 text-accent-primary" />
-              <h2 className="font-display text-xl text-ink-dark">Create AI Content</h2>
-            </div>
-            <p className="text-ink-light font-serif text-sm">
+            <DialogTitle className="flex items-center gap-3 mb-1 font-display text-xl text-ink-dark">
+              <Wand2 className="h-5 w-5 text-accent-yellow" />
+              Create AI Content
+            </DialogTitle>
+            <DialogDescription className="text-ink-light font-serif text-sm">
               Start a new AI-assisted content creation project.
-            </p>
+            </DialogDescription>
           </DialogHeader>
           <button
-            className="absolute top-6 right-6 text-ink-faded hover:text-ink-dark"
+            className="absolute top-6 right-6 text-ink-faded hover:text-accent-yellow"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -56,13 +56,13 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
         
         <form onSubmit={handleSubmit} className="space-y-5 px-6">
           <div className="space-y-2">
-            <label htmlFor="content-title" className="block font-serif text-sm text-ink-dark">
+            <label htmlFor="content-title" className="block font-serif text-sm text-accent-yellow font-medium">
               Content Title <span className="text-red-500">*</span>
             </label>
             <Input
               id="content-title"
               placeholder="Enter a title for your content"
-              className="bg-cream border-accent-tertiary/20 font-serif"
+              className="bg-cream border-accent-yellow/30 font-serif focus:border-accent-yellow focus:ring-accent-yellow/20 shadow-inner transition-all duration-200"
               value={contentData.title}
               onChange={(e) => setContentData({ ...contentData, title: e.target.value })}
               required
@@ -70,30 +70,30 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="description" className="block font-serif text-sm text-ink-dark">
+            <label htmlFor="description" className="block font-serif text-sm text-accent-yellow font-medium">
               Description
             </label>
             <Textarea
               id="description"
               placeholder="Briefly describe your content (optional)"
-              className="bg-cream border-accent-tertiary/20 font-serif min-h-[100px]"
+              className="bg-cream border-accent-yellow/30 font-serif min-h-[100px] focus:border-accent-yellow focus:ring-accent-yellow/20 shadow-inner transition-all duration-200"
               value={contentData.description}
               onChange={(e) => setContentData({ ...contentData, description: e.target.value })}
             />
           </div>
           
           <div className="space-y-3">
-            <label className="block font-serif text-sm text-ink-dark">
+            <label className="block font-serif text-sm text-accent-yellow font-medium">
               Content Type <span className="text-red-500">*</span>
             </label>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* E-Book Option */}
               <label 
-                className={`relative border rounded-md p-4 cursor-pointer transition-colors
+                className={`relative border rounded-md p-4 cursor-pointer transition-all duration-200
                   ${contentData.contentType === 'e-book' 
-                    ? 'border-accent-primary/50 bg-accent-primary/5' 
-                    : 'border-accent-tertiary/20 hover:border-accent-tertiary/40 bg-cream'
+                    ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-yellow-sm' 
+                    : 'border-accent-tertiary/20 hover:border-accent-yellow/40 hover:shadow-sm bg-cream'
                   }`}
               >
                 <input
@@ -107,12 +107,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 <div className="flex items-start gap-3">
                   <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
                     ${contentData.contentType === 'e-book'
-                      ? 'border-accent-primary bg-accent-primary/10'
+                      ? 'border-accent-yellow bg-accent-yellow/10'
                       : 'border-accent-tertiary/50'
                     }`}
                   >
                     {contentData.contentType === 'e-book' && (
-                      <div className="w-2 h-2 bg-accent-primary rounded-full m-auto" />
+                      <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
                     )}
                   </div>
                   <div>
@@ -126,10 +126,10 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               
               {/* Online Course Option */}
               <label 
-                className={`relative border rounded-md p-4 cursor-pointer transition-colors
+                className={`relative border rounded-md p-4 cursor-pointer transition-all duration-200
                   ${contentData.contentType === 'online-course' 
-                    ? 'border-accent-primary/50 bg-accent-primary/5' 
-                    : 'border-accent-tertiary/20 hover:border-accent-tertiary/40 bg-cream'
+                    ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-yellow-sm' 
+                    : 'border-accent-tertiary/20 hover:border-accent-yellow/40 hover:shadow-sm bg-cream'
                   }`}
               >
                 <input
@@ -143,12 +143,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 <div className="flex items-start gap-3">
                   <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
                     ${contentData.contentType === 'online-course'
-                      ? 'border-accent-primary bg-accent-primary/10'
+                      ? 'border-accent-yellow bg-accent-yellow/10'
                       : 'border-accent-tertiary/50'
                     }`}
                   >
                     {contentData.contentType === 'online-course' && (
-                      <div className="w-2 h-2 bg-accent-primary rounded-full m-auto" />
+                      <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
                     )}
                   </div>
                   <div>
@@ -162,10 +162,10 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               
               {/* Blog Post Option */}
               <label 
-                className={`relative border rounded-md p-4 cursor-pointer transition-colors
+                className={`relative border rounded-md p-4 cursor-pointer transition-all duration-200
                   ${contentData.contentType === 'blog-post' 
-                    ? 'border-accent-primary/50 bg-accent-primary/5' 
-                    : 'border-accent-tertiary/20 hover:border-accent-tertiary/40 bg-cream'
+                    ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-yellow-sm' 
+                    : 'border-accent-tertiary/20 hover:border-accent-yellow/40 hover:shadow-sm bg-cream'
                   }`}
               >
                 <input
@@ -179,12 +179,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 <div className="flex items-start gap-3">
                   <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
                     ${contentData.contentType === 'blog-post'
-                      ? 'border-accent-primary bg-accent-primary/10'
+                      ? 'border-accent-yellow bg-accent-yellow/10'
                       : 'border-accent-tertiary/50'
                     }`}
                   >
                     {contentData.contentType === 'blog-post' && (
-                      <div className="w-2 h-2 bg-accent-primary rounded-full m-auto" />
+                      <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
                     )}
                   </div>
                   <div>
@@ -198,10 +198,10 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               
               {/* Video Script Option */}
               <label 
-                className={`relative border rounded-md p-4 cursor-pointer transition-colors
+                className={`relative border rounded-md p-4 cursor-pointer transition-all duration-200
                   ${contentData.contentType === 'video-script' 
-                    ? 'border-accent-primary/50 bg-accent-primary/5' 
-                    : 'border-accent-tertiary/20 hover:border-accent-tertiary/40 bg-cream'
+                    ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-yellow-sm' 
+                    : 'border-accent-tertiary/20 hover:border-accent-yellow/40 hover:shadow-sm bg-cream'
                   }`}
               >
                 <input
@@ -215,12 +215,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 <div className="flex items-start gap-3">
                   <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
                     ${contentData.contentType === 'video-script'
-                      ? 'border-accent-primary bg-accent-primary/10'
+                      ? 'border-accent-yellow bg-accent-yellow/10'
                       : 'border-accent-tertiary/50'
                     }`}
                   >
                     {contentData.contentType === 'video-script' && (
-                      <div className="w-2 h-2 bg-accent-primary rounded-full m-auto" />
+                      <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
                     )}
                   </div>
                   <div>
@@ -234,10 +234,10 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               
               {/* Newsletter Option */}
               <label 
-                className={`relative border rounded-md p-4 cursor-pointer transition-colors
+                className={`relative border rounded-md p-4 cursor-pointer transition-all duration-200
                   ${contentData.contentType === 'newsletter' 
-                    ? 'border-accent-primary/50 bg-accent-primary/5' 
-                    : 'border-accent-tertiary/20 hover:border-accent-tertiary/40 bg-cream'
+                    ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-yellow-sm' 
+                    : 'border-accent-tertiary/20 hover:border-accent-yellow/40 hover:shadow-sm bg-cream'
                   }`}
               >
                 <input
@@ -251,12 +251,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 <div className="flex items-start gap-3">
                   <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
                     ${contentData.contentType === 'newsletter'
-                      ? 'border-accent-primary bg-accent-primary/10'
+                      ? 'border-accent-yellow bg-accent-yellow/10'
                       : 'border-accent-tertiary/50'
                     }`}
                   >
                     {contentData.contentType === 'newsletter' && (
-                      <div className="w-2 h-2 bg-accent-primary rounded-full m-auto" />
+                      <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
                     )}
                   </div>
                   <div>
@@ -270,10 +270,10 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               
               {/* Social Media Option */}
               <label 
-                className={`relative border rounded-md p-4 cursor-pointer transition-colors
+                className={`relative border rounded-md p-4 cursor-pointer transition-all duration-200
                   ${contentData.contentType === 'social-media' 
-                    ? 'border-accent-primary/50 bg-accent-primary/5' 
-                    : 'border-accent-tertiary/20 hover:border-accent-tertiary/40 bg-cream'
+                    ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-yellow-sm' 
+                    : 'border-accent-tertiary/20 hover:border-accent-yellow/40 hover:shadow-sm bg-cream'
                   }`}
               >
                 <input
@@ -287,12 +287,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 <div className="flex items-start gap-3">
                   <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
                     ${contentData.contentType === 'social-media'
-                      ? 'border-accent-primary bg-accent-primary/10'
+                      ? 'border-accent-yellow bg-accent-yellow/10'
                       : 'border-accent-tertiary/50'
                     }`}
                   >
                     {contentData.contentType === 'social-media' && (
-                      <div className="w-2 h-2 bg-accent-primary rounded-full m-auto" />
+                      <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
                     )}
                   </div>
                   <div>
@@ -306,9 +306,9 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
             </div>
           </div>
           
-          <div className="bg-accent-primary/5 border border-accent-primary/20 p-4 rounded-md">
+          <div className="bg-accent-yellow/10 border border-accent-yellow/20 p-4 rounded-md">
             <div className="flex items-start gap-3">
-              <FileText className="h-5 w-5 text-accent-primary flex-shrink-0 mt-0.5" />
+              <FileText className="h-5 w-5 text-accent-yellow flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-sm font-serif font-medium text-ink-dark">Next: Brain Dump Tool</h3>
                 <p className="text-xs font-serif text-ink-light mt-1">
@@ -321,17 +321,17 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
           </div>
         </form>
         
-        <DialogFooter className="bg-cream/70 border-t border-accent-tertiary/20 p-4 gap-3">
+        <DialogFooter className="bg-cream/80 border-t border-accent-tertiary/30 p-4 gap-3 shadow-inner">
           <Button
             variant="outline"
             onClick={onClose}
-            className="font-serif border-accent-tertiary/30 text-ink-light"
+            className="font-serif border-accent-tertiary/40 text-ink-light hover:bg-accent-tertiary/10 transition-all duration-200"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            className="gap-2 font-serif bg-accent-primary hover:bg-accent-primary/90"
+            className="gap-2 font-serif bg-accent-yellow hover:bg-accent-yellow/90 text-white border border-accent-yellow/50 shadow-yellow-sm"
           >
             <Wand2 className="h-4 w-4" />
             Create Content

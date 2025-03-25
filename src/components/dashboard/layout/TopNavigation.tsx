@@ -1,6 +1,9 @@
 import React from "react";
-import { PenTool, Settings, User } from "lucide-react";
+import { Bell, MessageSquare, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "../../../../supabase/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,93 +12,70 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "../../../../supabase/auth";
-import { Link } from "react-router-dom";
 
-interface TopNavigationProps {
-  onSearch?: (query: string) => void;
-  activeTab?: string;
-}
-
-const TopNavigation = ({
-  onSearch = () => {},
-  activeTab = "Dashboard",
-}: TopNavigationProps) => {
+export default function TopNavigation() {
   const { user, signOut } = useAuth();
 
   if (!user) return null;
 
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Brain Dump", href: "/brain-dump" },
-    { label: "Creator", href: "/creator" },
-    { label: "AI Workflows", href: "/workflow" },
-    { label: "Products", href: "/products" },
-  ];
-
   return (
-    <header className="w-full h-16 border-b border-accent-tertiary/20 bg-paper flex items-center justify-between px-6 fixed top-0 z-50 transition-colors duration-200">
-      <div className="flex items-center gap-8">
-        <Link to="/" className="navbar-logo">
-          <PenTool className="h-5 w-5 text-accent-primary" />
-          <span>Autopen</span>
-        </Link>
-
-        <nav className="navbar-links">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              to={item.href}
-              className={`${
-                activeTab === item.label
-                  ? "navbar-link-active"
-                  : "navbar-link"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="gap-2 text-ink-dark rounded-full p-1 hover:bg-accent-tertiary/10"
-            >
-              <Avatar className="h-8 w-8 bg-accent-primary/10">
-                <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                  alt={user.email || ""}
-                />
-                <AvatarFallback className="font-serif text-accent-primary">M</AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-serif">matt</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-paper border-accent-tertiary/20 shadow-medium">
-            <DropdownMenuLabel className="font-display text-ink-dark">My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-accent-tertiary/10" />
-            <DropdownMenuItem className="py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-accent-tertiary/10" />
-            <DropdownMenuItem onSelect={() => signOut()} className="py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+    <header className="border-b bg-white sticky top-0 z-10">
+      <div className="flex h-16 items-center justify-between px-6">
+        <div className="md:flex md:flex-1 md:max-w-sm">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-10 border-gray-200 bg-gray-50 focus:bg-white"
+            />
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-1 md:gap-2">
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+            <MessageSquare className="h-5 w-5" />
+            <span className="sr-only">Messages</span>
+          </Button>
+          
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+            <div className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 border-2 border-white"></span>
+            </div>
+            <span className="sr-only">Notifications</span>
+          </Button>
+          
+          <div className="h-8 w-px bg-gray-200 mx-1"></div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full p-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                  <span className="text-xs font-medium">{user.email ? user.email[0].toUpperCase() : "U"}</span>
+                </div>
+                <span className="sr-only">User</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut()}>
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
-};
-
-export default TopNavigation;
+}

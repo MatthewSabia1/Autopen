@@ -25,12 +25,12 @@ interface ProductTemplateProps {
 
 const StatCard = ({ icon, title, value }: StatCardProps) => {
   return (
-    <Card className="bg-white border-slate-100 shadow-textera">
+    <Card className="bg-paper border-accent-tertiary/20 shadow-blue-sm transition-all duration-200 hover:shadow-blue-md">
       <CardContent className="p-6 flex items-start gap-4">
         <div className="mt-1">{icon}</div>
         <div>
-          <h3 className="text-slate-600 text-sm mb-1">{title}</h3>
-          <p className="text-2xl font-medium text-slate-800">{value}</p>
+          <h3 className="text-accent-primary text-sm mb-1 font-serif">{title}</h3>
+          <p className="text-2xl font-medium text-ink-dark font-serif">{value}</p>
         </div>
       </CardContent>
     </Card>
@@ -40,11 +40,11 @@ const StatCard = ({ icon, title, value }: StatCardProps) => {
 const QuickAction = ({ icon, title, description, href }: QuickActionProps) => {
   return (
     <Link to={href} className="block">
-      <div className="flex items-start gap-4 p-4 hover:bg-slate-50 rounded-lg transition-colors">
-        <div className="mt-1">{icon}</div>
+      <div className="flex items-start gap-4 p-4 hover:bg-accent-primary/5 rounded-lg transition-all duration-200 border border-transparent hover:border-accent-primary/20">
+        <div className="mt-1 text-accent-primary">{icon}</div>
         <div>
-          <h3 className="font-medium text-slate-800 mb-1">{title}</h3>
-          <p className="text-sm text-slate-600">{description}</p>
+          <h3 className="font-medium text-ink-dark mb-1 font-serif">{title}</h3>
+          <p className="text-sm text-ink-light font-serif">{description}</p>
         </div>
       </div>
     </Link>
@@ -58,11 +58,11 @@ const ProductTemplate = ({
 }: ProductTemplateProps) => {
   return (
     <Link to={href}>
-      <Card className="bg-white border-slate-100 shadow-textera hover:shadow-textera-md transition-shadow">
+      <Card className="bg-paper border-accent-yellow/20 shadow-yellow-sm hover:shadow-yellow-md transition-all duration-200">
         <CardContent className="p-6">
-          <h3 className="font-medium text-slate-800 mb-2 flex items-center gap-2">
-            {title}
-            <Button variant="ghost" size="sm" className="ml-auto">
+          <h3 className="font-medium text-ink-dark mb-2 flex items-center gap-2 font-serif">
+            <span className="text-accent-yellow">{title}</span>
+            <Button variant="ghost" size="sm" className="ml-auto hover:text-accent-yellow">
               <svg
                 width="16"
                 height="16"
@@ -72,13 +72,13 @@ const ProductTemplate = ({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-slate-400"
+                className="text-ink-light"
               >
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </Button>
           </h3>
-          <p className="text-sm text-slate-600">{description}</p>
+          <p className="text-sm text-ink-light font-serif">{description}</p>
         </CardContent>
       </Card>
     </Link>
@@ -88,17 +88,17 @@ const ProductTemplate = ({
 const DashboardGrid = () => {
   const statCards = [
     {
-      icon: <Award className="h-5 w-5 text-amber-500" />,
+      icon: <Award className="h-5 w-5 text-accent-yellow" />,
       title: "Completed Products",
       value: 5,
     },
     {
-      icon: <FileText className="h-5 w-5 text-blue-500" />,
+      icon: <FileText className="h-5 w-5 text-accent-primary" />,
       title: "Draft Products",
       value: 7,
     },
     {
-      icon: <BookText className="h-5 w-5 text-green-500" />,
+      icon: <BookText className="h-5 w-5 text-accent-primary" />,
       title: "Words Written",
       value: "24,350",
     },
@@ -224,7 +224,7 @@ const DashboardGrid = () => {
       {/* Quick Actions and Product Templates */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
-          <h2 className="text-lg font-medium text-slate-800 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-medium text-ink-dark mb-4 flex items-center gap-2 font-serif">
             <svg
               width="20"
               height="20"
@@ -234,18 +234,19 @@ const DashboardGrid = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="text-accent-primary"
             >
               <path d="m15 15-6-6"></path>
               <path d="m9 15 6-6"></path>
             </svg>
             Quick Actions
           </h2>
-          <div className="bg-white rounded-lg border border-slate-100 shadow-textera overflow-hidden">
+          <div className="bg-paper rounded-lg border border-accent-tertiary/20 shadow-blue-sm overflow-hidden">
             {quickActions.map((action, index) => (
               <React.Fragment key={index}>
                 <QuickAction {...action} />
                 {index < quickActions.length - 1 && (
-                  <div className="border-b border-slate-100 mx-4"></div>
+                  <div className="border-b border-accent-tertiary/10 mx-4"></div>
                 )}
               </React.Fragment>
             ))}
@@ -253,7 +254,7 @@ const DashboardGrid = () => {
         </div>
 
         <div>
-          <h2 className="text-lg font-medium text-slate-800 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-medium text-ink-dark mb-4 flex items-center gap-2 font-serif">
             <svg
               width="20"
               height="20"
@@ -263,6 +264,7 @@ const DashboardGrid = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="text-accent-yellow"
             >
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
             </svg>

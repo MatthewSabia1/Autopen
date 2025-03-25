@@ -99,117 +99,103 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout activeTab="Dashboard">
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-4 animate-fade-in">
         {/* Welcome section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
           <div>
-            <h2 className="font-display text-3xl text-ink-dark dark:text-gray-100 mb-2">
+            <h2 className="font-display text-2xl text-ink-dark/90 dark:text-gray-100/90 mb-1 font-medium">
               Welcome{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ' Back'}!
             </h2>
-            <p className="font-serif text-ink-light dark:text-gray-400">Continue working on your e-book products</p>
+            <p className="font-serif text-ink-light/80 dark:text-gray-400/90 text-sm">Continue working on your e-book products</p>
           </div>
-          <div className="flex items-center space-x-4 mt-4 md:mt-0">
+          <div className="flex items-center space-x-3 mt-2 md:mt-0">
             <Button 
               onClick={() => handleNavigate('/settings')}
               variant="outline" 
-              className="px-5 py-2 font-serif text-accent-primary border border-accent-primary/30 hover:bg-accent-primary/5 flex items-center"
+              className="px-3 py-1.5 text-sm font-serif text-accent-primary/90 border border-accent-primary/20 hover:bg-accent-primary/5 flex items-center"
             >
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="w-3.5 h-3.5 mr-1.5 opacity-80" />
               Settings
             </Button>
             <Button 
               onClick={() => handleNavigate('/brain-dump')}
-              className="px-5 py-2 font-serif bg-accent-primary text-white rounded flex items-center hover:bg-accent-primary/90 transition-colors"
+              className="px-3 py-1.5 text-sm font-serif bg-accent-primary/90 text-white/95 rounded flex items-center hover:bg-accent-primary/80 transition-colors shadow-sm"
             >
-              <PenTool className="w-4 h-4 mr-2" />
+              <PenTool className="w-3.5 h-3.5 mr-1.5 opacity-90" />
               New Brain Dump
             </Button>
           </div>
         </div>
 
         {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/20 dark:border-gray-700 shadow-textera">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
             <CardContent className="p-0">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-accent-secondary/10 dark:bg-accent-secondary/20 rounded-full flex items-center justify-center mr-3">
-                  <Award className="w-5 h-5 text-accent-secondary" />
+                <div className="w-8 h-8 bg-accent-secondary/5 dark:bg-accent-secondary/10 rounded-full flex items-center justify-center mr-3">
+                  <Award className="w-3.5 h-3.5 text-accent-secondary/80" />
                 </div>
                 <div>
-                  <p className="text-ink-light dark:text-gray-400 text-sm font-serif">Completed Products</p>
-                  <p className="text-ink-dark dark:text-gray-100 text-xl font-display">{dashboardStats.completedProducts}</p>
+                  <p className="text-ink-light/80 dark:text-gray-400/90 text-xs font-serif">Completed Products</p>
+                  <p className="text-ink-dark/90 dark:text-gray-100/90 text-xl font-display font-medium">{dashboardStats.completedProducts}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/20 dark:border-gray-700 shadow-textera">
+          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
             <CardContent className="p-0">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mr-3">
-                  <BookText className="w-5 h-5 text-accent-primary" />
+                <div className="w-8 h-8 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-3">
+                  <BookText className="w-3.5 h-3.5 text-accent-primary/80" />
                 </div>
                 <div>
-                  <p className="text-ink-light dark:text-gray-400 text-sm font-serif">Draft Products</p>
-                  <p className="text-ink-dark dark:text-gray-100 text-xl font-display">{dashboardStats.draftProducts}</p>
+                  <p className="text-ink-light/80 dark:text-gray-400/90 text-xs font-serif">Draft Products</p>
+                  <p className="text-ink-dark/90 dark:text-gray-100/90 text-xl font-display font-medium">{dashboardStats.draftProducts}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/20 dark:border-gray-700 shadow-textera">
+          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
             <CardContent className="p-0">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-accent-tertiary/20 dark:bg-accent-tertiary/30 rounded-full flex items-center justify-center mr-3">
-                  <FileText className="w-5 h-5 text-accent-tertiary" />
+                <div className="w-8 h-8 bg-accent-tertiary/5 dark:bg-accent-tertiary/10 rounded-full flex items-center justify-center mr-3">
+                  <FileText className="w-3.5 h-3.5 text-accent-tertiary/80" />
                 </div>
                 <div>
-                  <p className="text-ink-light dark:text-gray-400 text-sm font-serif">Words Written</p>
-                  <p className="text-ink-dark dark:text-gray-100 text-xl font-display">{dashboardStats.wordsWritten.toLocaleString()}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/20 dark:border-gray-700 shadow-textera">
-            <CardContent className="p-0">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mr-3">
-                  <Sparkles className="w-5 h-5 text-accent-primary" />
-                </div>
-                <div>
-                  <p className="text-ink-light dark:text-gray-400 text-sm font-serif">AI Credits</p>
-                  <p className="text-ink-dark dark:text-gray-100 text-xl font-display">{dashboardStats.aiCredits}</p>
+                  <p className="text-ink-light/80 dark:text-gray-400/90 text-xs font-serif">Words Written</p>
+                  <p className="text-ink-dark/90 dark:text-gray-100/90 text-xl font-display font-medium">{dashboardStats.wordsWritten.toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
       
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Left column - Now starting with Quick Actions followed by Recent Products */}
           <div className="lg:col-span-2">
             {/* Quick Actions - Now first */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/20 dark:border-gray-700 shadow-textera mb-6">
-              <CardHeader className="pb-2">
+            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm mb-6">
+              <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center">
-                  <Zap className="w-5 h-5 text-accent-secondary mr-2" />
-                  <CardTitle className="font-display text-xl text-ink-dark dark:text-gray-100">Quick Actions</CardTitle>
+                  <Zap className="w-4 h-4 text-accent-secondary/80 mr-2" />
+                  <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Quick Actions</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
                     onClick={() => handleNavigate('/brain-dump')}
                     variant="outline"
-                    className="p-4 border border-accent-tertiary/20 dark:border-gray-700 rounded-md bg-white dark:bg-gray-700 hover:shadow-textera transition-shadow flex items-start justify-start h-auto"
+                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-8 h-8 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-primary/20 dark:group-hover:bg-accent-primary/30 transition-colors">
-                      <PenTool className="w-4 h-4 text-accent-primary" />
+                    <div className="w-7 h-7 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-primary/10 dark:group-hover:bg-accent-primary/20 transition-colors">
+                      <PenTool className="w-3 h-3 text-accent-primary/80" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100 group-hover:text-accent-primary transition-colors">Brain Dump</h4>
-                      <p className="font-serif text-xs text-ink-light dark:text-gray-400 mt-1">
+                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-primary/90 transition-colors text-sm">Brain Dump</h4>
+                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
                         Transform your ideas into organized content
                       </p>
                     </div>
@@ -218,14 +204,14 @@ const Dashboard = () => {
                   <Button 
                     onClick={() => handleNavigate('/creator')}
                     variant="outline"
-                    className="p-4 border border-accent-tertiary/20 dark:border-gray-700 rounded-md bg-white dark:bg-gray-700 hover:shadow-textera transition-shadow flex items-start justify-start h-auto"
+                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-8 h-8 bg-accent-secondary/10 dark:bg-accent-secondary/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-secondary/20 dark:group-hover:bg-accent-secondary/30 transition-colors">
-                      <Wand2 className="w-4 h-4 text-accent-secondary" />
+                    <div className="w-7 h-7 bg-accent-secondary/5 dark:bg-accent-secondary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-secondary/10 dark:group-hover:bg-accent-secondary/20 transition-colors">
+                      <Wand2 className="w-3 h-3 text-accent-secondary/80" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100 group-hover:text-accent-secondary transition-colors">AI Creator</h4>
-                      <p className="font-serif text-xs text-ink-light dark:text-gray-400 mt-1">
+                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-secondary/90 transition-colors text-sm">AI Creator</h4>
+                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
                         Generate complete content with AI
                       </p>
                     </div>
@@ -234,14 +220,14 @@ const Dashboard = () => {
                   <Button 
                     onClick={() => handleNavigate('/products')}
                     variant="outline"
-                    className="p-4 border border-accent-tertiary/20 dark:border-gray-700 rounded-md bg-white dark:bg-gray-700 hover:shadow-textera transition-shadow flex items-start justify-start h-auto"
+                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-8 h-8 bg-accent-tertiary/20 dark:bg-accent-tertiary/30 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-tertiary/30 dark:group-hover:bg-accent-tertiary/40 transition-colors">
-                      <BookText className="w-4 h-4 text-accent-tertiary" />
+                    <div className="w-7 h-7 bg-accent-tertiary/5 dark:bg-accent-tertiary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-tertiary/10 dark:group-hover:bg-accent-tertiary/20 transition-colors">
+                      <BookText className="w-3 h-3 text-accent-tertiary/80" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100 group-hover:text-accent-tertiary transition-colors">All Products</h4>
-                      <p className="font-serif text-xs text-ink-light dark:text-gray-400 mt-1">
+                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-tertiary/90 transition-colors text-sm">All Products</h4>
+                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
                         View and manage all your e-books
                       </p>
                     </div>
@@ -250,14 +236,14 @@ const Dashboard = () => {
                   <Button 
                     onClick={() => handleNavigate('/settings')}
                     variant="outline"
-                    className="p-4 border border-accent-tertiary/20 dark:border-gray-700 rounded-md bg-white dark:bg-gray-700 hover:shadow-textera transition-shadow flex items-start justify-start h-auto"
+                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-8 h-8 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-primary/20 dark:group-hover:bg-accent-primary/30 transition-colors">
-                      <Settings className="w-4 h-4 text-accent-primary" />
+                    <div className="w-7 h-7 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-primary/10 dark:group-hover:bg-accent-primary/20 transition-colors">
+                      <Settings className="w-3 h-3 text-accent-primary/80" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100 group-hover:text-accent-primary transition-colors">Settings</h4>
-                      <p className="font-serif text-xs text-ink-light dark:text-gray-400 mt-1">
+                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-primary/90 transition-colors text-sm">Settings</h4>
+                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
                         Customize your account preferences
                       </p>
                     </div>
@@ -267,12 +253,12 @@ const Dashboard = () => {
             </Card>
             
             {/* Recent Products */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/20 dark:border-gray-700 shadow-textera mb-6">
-              <CardHeader className="pb-2">
+            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm mb-6">
+              <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Clock className="w-5 h-5 text-accent-primary mr-2" />
-                    <CardTitle className="font-display text-xl text-ink-dark dark:text-gray-100">Recent Products</CardTitle>
+                    <Clock className="w-4 h-4 text-accent-primary/80 mr-2" />
+                    <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Recent Products</CardTitle>
                   </div>
                   <Button 
                     onClick={() => handleNavigate('/products')}
@@ -284,46 +270,46 @@ const Dashboard = () => {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 {recentProducts.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {recentProducts.map(product => (
                       <div 
                         key={product.id} 
-                        className="p-4 border border-accent-tertiary/20 dark:border-gray-700 rounded-md hover:shadow-textera-md transition-shadow cursor-pointer"
+                        className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md hover:shadow-sm transition-all cursor-pointer bg-white/50 dark:bg-gray-800/50"
                         onClick={() => handleNavigate(`/products/${product.id}`)}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100">{product.title}</h4>
+                            <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 text-sm">{product.title}</h4>
                             <div className="flex items-center mt-1">
-                              <Badge variant="outline" className="text-xs font-serif bg-accent-secondary/10 dark:bg-accent-secondary/20 text-accent-secondary dark:text-gray-400 mr-2">
+                              <Badge variant="outline" className="text-xs font-serif bg-accent-secondary/5 dark:bg-accent-secondary/10 text-accent-secondary/80 dark:text-gray-400/90 mr-2 px-1.5 py-0">
                                 {product.category}
                               </Badge>
-                              <span className="text-xs font-serif text-ink-faded dark:text-gray-500">
+                              <span className="text-xs font-serif text-ink-faded/70 dark:text-gray-500/80">
                                 Updated {product.date}
                               </span>
                             </div>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-accent-tertiary dark:text-gray-400" />
+                          <ChevronRight className="w-3.5 h-3.5 text-accent-tertiary/70 dark:text-gray-400/70" />
                         </div>
-                        <div className="w-full bg-cream dark:bg-gray-700 rounded-full h-2 mt-3 mb-2">
-                          <Progress value={product.progress} className="h-2 bg-accent-primary dark:bg-gray-200" />
+                        <div className="w-full bg-cream/50 dark:bg-gray-700/50 rounded-full h-1.5 mt-2 mb-1">
+                          <Progress value={product.progress} className="h-1.5 bg-accent-primary/80 dark:bg-gray-200/90" />
                         </div>
                         <div className="flex justify-between text-xs font-serif">
-                          <span className="text-ink-light dark:text-gray-400">Progress</span>
-                          <span className="text-accent-primary dark:text-gray-200">{product.progress}%</span>
+                          <span className="text-ink-light/70 dark:text-gray-400/80 text-[10px]">Progress</span>
+                          <span className="text-accent-primary/80 dark:text-gray-200/80 text-[10px]">{product.progress}%</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <BookText className="w-12 h-12 text-accent-tertiary/40 dark:text-gray-400 mx-auto mb-3" />
-                    <p className="font-serif text-ink-light dark:text-gray-400 mb-4">You haven't created any products yet</p>
+                  <div className="text-center py-6">
+                    <BookText className="w-10 h-10 text-accent-tertiary/40 dark:text-gray-400 mx-auto mb-2" />
+                    <p className="font-serif text-ink-light dark:text-gray-400 mb-3">You haven't created any products yet</p>
                     <Button 
                       onClick={() => handleNavigate('/products')}
-                      className="px-4 py-2 font-serif text-sm bg-accent-primary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-primary/90 dark:hover:bg-gray-300"
+                      className="px-3 py-1.5 font-serif text-sm bg-accent-primary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-primary/90 dark:hover:bg-gray-300"
                     >
                       Create Your First Product
                     </Button>
@@ -331,8 +317,8 @@ const Dashboard = () => {
                 )}
                 
                 {recentProducts.length > 0 && (
-                  <div className="mt-5 pt-5 border-t border-accent-tertiary/20 dark:border-gray-700">
-                    <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="mt-4 pt-4 border-t border-accent-tertiary/20 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button 
                         onClick={() => handleNavigate('/creator')}
                         className="flex-1 px-3 py-1.5 text-xs font-serif bg-accent-secondary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-secondary/90 dark:hover:bg-gray-300 transition-colors flex items-center justify-center"
@@ -355,12 +341,12 @@ const Dashboard = () => {
             </Card>
             
             {/* Recent Brain Dumps */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/20 dark:border-gray-700 shadow-textera mb-6">
-              <CardHeader className="pb-2">
+            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm mb-6">
+              <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Brain className="w-5 h-5 text-accent-secondary mr-2" />
-                    <CardTitle className="font-display text-xl text-ink-dark dark:text-gray-100">Recent Brain Dumps</CardTitle>
+                    <Brain className="w-4 h-4 text-accent-secondary/80 mr-2" />
+                    <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Recent Brain Dumps</CardTitle>
                   </div>
                   <Button 
                     onClick={() => handleNavigate('/brain-dumps')}
@@ -372,9 +358,9 @@ const Dashboard = () => {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 {brainDumps.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {brainDumps.map(dump => {
                       // Try to parse the content to get the summary
                       let summary = '';
@@ -397,22 +383,22 @@ const Dashboard = () => {
                       return (
                         <div 
                           key={dump.id} 
-                          className="p-4 border border-accent-tertiary/20 dark:border-gray-700 rounded-md hover:shadow-textera-md transition-shadow cursor-pointer"
+                          className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md hover:shadow-sm transition-all cursor-pointer bg-white/50 dark:bg-gray-800/50"
                           onClick={() => handleNavigate(`/brain-dump/${dump.id}`)}
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100">{dump.title}</h4>
+                              <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 text-sm">{dump.title}</h4>
                               <div className="flex items-center mt-1">
-                                <span className="text-xs font-serif text-ink-faded dark:text-gray-500">
+                                <span className="text-xs font-serif text-ink-faded/70 dark:text-gray-500/80">
                                   Created {formattedDate}
                                 </span>
                               </div>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-accent-tertiary dark:text-gray-400" />
+                            <ChevronRight className="w-3.5 h-3.5 text-accent-tertiary/70 dark:text-gray-400/70" />
                           </div>
                           {summary && (
-                            <p className="mt-3 font-serif text-sm text-ink-light dark:text-gray-400 line-clamp-2">
+                            <p className="mt-1.5 font-serif text-xs text-ink-light/80 dark:text-gray-400/90 line-clamp-2">
                               {summary}
                             </p>
                           )}
@@ -421,12 +407,12 @@ const Dashboard = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <Brain className="w-12 h-12 text-accent-tertiary/40 dark:text-gray-400 mx-auto mb-3" />
-                    <p className="font-serif text-ink-light dark:text-gray-400 mb-4">You haven't created any brain dumps yet</p>
+                  <div className="text-center py-6">
+                    <Brain className="w-10 h-10 text-accent-tertiary/40 dark:text-gray-400 mx-auto mb-2" />
+                    <p className="font-serif text-ink-light dark:text-gray-400 mb-3">You haven't created any brain dumps yet</p>
                     <Button 
                       onClick={() => handleNavigate('/brain-dump')}
-                      className="px-4 py-2 font-serif text-sm bg-accent-primary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-primary/90 dark:hover:bg-gray-300 transition-colors"
+                      className="px-3 py-1.5 font-serif text-sm bg-accent-primary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-primary/90 dark:hover:bg-gray-300 transition-colors"
                     >
                       Create Your First Brain Dump
                     </Button>
@@ -434,13 +420,13 @@ const Dashboard = () => {
                 )}
                 
                 {brainDumps.length > 0 && (
-                  <div className="mt-5 pt-5 border-t border-accent-tertiary/20 dark:border-gray-700">
+                  <div className="mt-4 pt-4 border-t border-accent-tertiary/20 dark:border-gray-700">
                     <Button 
                       onClick={() => handleNavigate('/brain-dump')}
                       variant="outline"
-                      className="w-full px-3 py-2 text-sm font-serif bg-accent-secondary/10 dark:bg-accent-secondary/20 text-accent-secondary dark:text-accent-secondary/90 border border-accent-secondary/20 dark:border-accent-secondary/30 rounded hover:bg-accent-secondary/20 dark:hover:bg-accent-secondary/30 transition-colors flex items-center justify-center"
+                      className="w-full px-3 py-1.5 text-xs font-serif bg-accent-secondary/10 dark:bg-accent-secondary/20 text-accent-secondary dark:text-accent-secondary/90 border border-accent-secondary/20 dark:border-accent-secondary/30 rounded hover:bg-accent-secondary/20 dark:hover:bg-accent-secondary/30 transition-colors flex items-center justify-center"
                     >
-                      <Brain className="w-4 h-4 mr-1.5" />
+                      <Brain className="w-3 h-3 mr-1.5" />
                       New Brain Dump
                     </Button>
                   </div>
@@ -452,37 +438,37 @@ const Dashboard = () => {
           {/* Right sidebar column */}
           <div className="lg:col-span-1 space-y-6">
             {/* Product Templates */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/20 dark:border-gray-700 shadow-textera">
-              <CardHeader className="pb-2">
+            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
+              <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center">
-                  <Layers className="w-5 h-5 text-accent-secondary mr-2" />
-                  <CardTitle className="font-display text-xl text-ink-dark dark:text-gray-100">Product Templates</CardTitle>
+                  <Layers className="w-4 h-4 text-accent-secondary/80 mr-2" />
+                  <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Product Templates</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="px-4 pb-4">
+                <div className="space-y-2">
                   {templates.map(template => (
                     <div 
                       key={template.id}
-                      className={`p-4 border ${activeTemplate === template.id ? 'border-accent-primary bg-accent-primary/5' : 'border-accent-tertiary/20 dark:border-gray-700'} rounded-md cursor-pointer transition-all`}
+                      className={`p-3 border ${activeTemplate === template.id ? 'border-accent-primary/50 bg-accent-primary/5' : 'border-accent-tertiary/10 dark:border-gray-700/80'} rounded-md cursor-pointer transition-all bg-white/50 dark:bg-gray-800/50`}
                       onClick={() => setActiveTemplate(activeTemplate === template.id ? null : template.id)}
                     >
                       <div className="flex justify-between items-center">
-                        <h4 className="font-serif font-semibold text-ink-dark dark:text-gray-100">{template.name}</h4>
-                        <ChevronRight className={`w-4 h-4 text-accent-primary dark:text-gray-200 transition-transform ${activeTemplate === template.id ? 'rotate-90' : ''}`} />
+                        <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 text-sm">{template.name}</h4>
+                        <ChevronRight className={`w-3.5 h-3.5 text-accent-primary/70 dark:text-gray-200/70 transition-transform ${activeTemplate === template.id ? 'rotate-90' : ''}`} />
                       </div>
                       
-                      <p className="font-serif text-xs text-ink-light dark:text-gray-400 mt-1 mb-2">
+                      <p className="font-serif text-xs text-ink-light/80 dark:text-gray-400/90 mt-0.5 mb-1">
                         {template.description}
                       </p>
                       
                       {activeTemplate === template.id && (
-                        <div className="mt-3 pt-3 border-t border-accent-tertiary/20 dark:border-gray-700">
-                          <ul className="space-y-1 mb-3">
+                        <div className="mt-2 pt-2 border-t border-accent-tertiary/20 dark:border-gray-700">
+                          <ul className="space-y-1 mb-2">
                             {template.features.map((feature, idx) => (
-                              <li key={idx} className="flex items-start text-xs font-serif text-ink-light dark:text-gray-400">
-                                <div className="w-3 h-3 rounded-full border border-white dark:border-gray-700 flex items-center justify-center mt-0.5 mr-2 flex-shrink-0">
-                                  <div className="w-1.5 h-1.5 bg-white dark:bg-gray-700 rounded-full"></div>
+                              <li key={idx} className="flex items-start text-xs font-serif text-ink-light/70 dark:text-gray-400/80">
+                                <div className="w-2 h-2 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mt-0.5 mr-1.5 flex-shrink-0">
+                                  <div className="w-0.5 h-0.5 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
                                 </div>
                                 {feature}
                               </li>
@@ -515,71 +501,71 @@ const Dashboard = () => {
             </Card>
           
             {/* Writing Tips */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/20 dark:border-gray-700 shadow-textera">
-              <CardHeader className="pb-2">
+            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
+              <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center">
-                  <Lightning className="w-5 h-5 text-accent-primary mr-2" />
-                  <CardTitle className="font-display text-xl text-ink-dark dark:text-gray-100">Writing Tips</CardTitle>
+                  <Lightning className="w-4 h-4 text-accent-primary/80 mr-2" />
+                  <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Writing Tips</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="px-4 pb-4">
+                <div className="space-y-2">
                   {writingTips.map((tip, index) => (
                     <div key={index} className="flex items-start">
-                      <div className="w-6 h-6 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0 text-accent-primary dark:text-gray-200 font-serif text-xs font-semibold">
+                      <div className="w-4.5 h-4.5 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-2 flex-shrink-0 text-accent-primary/80 dark:text-gray-200/90 font-serif text-[10px] font-medium">
                         {index + 1}
                       </div>
-                      <p className="font-serif text-sm text-ink-light dark:text-gray-400">{tip}</p>
+                      <p className="font-serif text-xs text-ink-light/80 dark:text-gray-400/90">{tip}</p>
                     </div>
                   ))}
                 </div>
                 
-                <div className="mt-4 pt-4 border-t border-accent-tertiary/20 dark:border-gray-700">
+                <div className="mt-3 pt-3 border-t border-accent-tertiary/10 dark:border-gray-700/80">
                   <Button 
                     variant="link"
-                    className="w-full text-accent-primary dark:text-gray-200 text-sm font-serif flex items-center justify-center hover:underline"
+                    className="w-full text-accent-primary/80 dark:text-gray-200/90 text-sm font-serif flex items-center justify-center hover:underline"
                   >
                     View All Tips
-                    <ArrowRight className="w-3 h-3 ml-1" />
+                    <ArrowRight className="w-2.5 h-2.5 ml-1 opacity-80" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
           
             {/* Pro Features Teaser */}
-            <div className="bg-gradient-to-r from-accent-primary to-accent-secondary dark:bg-gray-800 rounded-lg shadow-textera-md p-6 text-white dark:text-gray-200">
-              <div className="flex items-center mb-3">
-                <Crown className="w-5 h-5 mr-2" />
-                <h3 className="font-display text-xl">Textera Pro</h3>
+            <div className="bg-gradient-to-r from-accent-primary/90 to-accent-secondary/90 dark:bg-gray-800 rounded-lg shadow-sm p-4 text-white/95 dark:text-gray-200/95">
+              <div className="flex items-center mb-2">
+                <Crown className="w-4 h-4 mr-2 opacity-90" />
+                <h3 className="font-display text-lg font-medium">Autopen Pro</h3>
               </div>
               
-              <p className="font-serif text-sm mb-4 opacity-90 dark:opacity-80">
+              <p className="font-serif text-xs mb-3 opacity-90 dark:opacity-80">
                 Unlock advanced features to take your e-book creation to the next level.
               </p>
               
-              <ul className="space-y-2 mb-4">
-                <li className="flex items-center text-sm font-serif">
-                  <div className="w-4 h-4 rounded-full border border-white dark:border-gray-700 flex items-center justify-center mr-2">
-                    <div className="w-2 h-2 bg-white dark:bg-gray-700 rounded-full"></div>
+              <ul className="space-y-1.5 mb-3">
+                <li className="flex items-center text-xs font-serif">
+                  <div className="w-3 h-3 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mr-1.5">
+                    <div className="w-1 h-1 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
                   </div>
                   Premium templates and layouts
                 </li>
-                <li className="flex items-center text-sm font-serif">
-                  <div className="w-4 h-4 rounded-full border border-white dark:border-gray-700 flex items-center justify-center mr-2">
-                    <div className="w-2 h-2 bg-white dark:bg-gray-700 rounded-full"></div>
+                <li className="flex items-center text-xs font-serif">
+                  <div className="w-3 h-3 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mr-1.5">
+                    <div className="w-1 h-1 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
                   </div>
                   Advanced AI writing assistance
                 </li>
-                <li className="flex items-center text-sm font-serif">
-                  <div className="w-4 h-4 rounded-full border border-white dark:border-gray-700 flex items-center justify-center mr-2">
-                    <div className="w-2 h-2 bg-white dark:bg-gray-700 rounded-full"></div>
+                <li className="flex items-center text-xs font-serif">
+                  <div className="w-3 h-3 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mr-1.5">
+                    <div className="w-1 h-1 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
                   </div>
                   Export to multiple formats
                 </li>
               </ul>
               
               <Button 
-                className="w-full py-2 bg-white dark:bg-gray-200 text-accent-primary dark:text-gray-900 font-serif rounded hover:bg-opacity-90 dark:hover:bg-opacity-80 transition-colors text-sm"
+                className="w-full py-1.5 bg-white/95 dark:bg-gray-200/95 text-accent-primary/90 dark:text-gray-900/90 font-serif rounded hover:bg-opacity-90 dark:hover:bg-opacity-80 transition-colors text-xs shadow-sm"
               >
                 Upgrade Now
               </Button>

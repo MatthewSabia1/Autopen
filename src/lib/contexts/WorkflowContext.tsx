@@ -151,7 +151,7 @@ interface WorkflowContextFunctions {
   addBrainDumpLink: (url: string, title: string, linkType: 'youtube' | 'webpage') => Promise<string>;
   removeBrainDumpLink: (linkId: string) => Promise<void>;
   analyzeBrainDump: () => Promise<void>;
-  resetWorkflow: () => void;
+  resetWorkflow: (newWorkflowType?: WorkflowType) => void;
   
   // eBook specific functions
   selectEbookIdea: (ideaId: string) => Promise<void>;
@@ -1238,13 +1238,26 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
    * Optionally can specify a specific workflow type to reset to
    */
   const resetWorkflow = (newWorkflowType?: WorkflowType) => {
+    console.log('resetWorkflow called with:', newWorkflowType);
+    
     if (newWorkflowType) {
+      // Validate the workflow type to ensure it's a valid enum value
+      const validWorkflowTypes: WorkflowType[] = ['ebook', 'course', 'video', 'blog', 'social'];
+      
+      if (!validWorkflowTypes.includes(newWorkflowType)) {
+        console.error(`Invalid workflow type: "${newWorkflowType}". Using default "ebook" instead.`);
+        newWorkflowType = 'ebook'; // Fallback to ebook for invalid types
+      }
+      
+      console.log(`Setting workflow state to ${newWorkflowType} and navigating to /workflow/${newWorkflowType}`);
+      
       setState({
         ...initialState,
         workflowType: newWorkflowType
       });
       navigate(`/workflow/${newWorkflowType}`);
     } else {
+      console.log('Resetting workflow state to default and navigating to /workflow');
       setState(initialState);
       navigate('/workflow');
     }

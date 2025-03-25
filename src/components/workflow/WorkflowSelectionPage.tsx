@@ -21,7 +21,7 @@ const WorkflowSelectionPage = () => {
       id: 'ebook',
       title: 'E-Book Creation',
       description: 'Create a professional eBook with AI-powered chapter generation and export to PDF, EPUB, and Markdown.',
-      icon: <BookOpen className="h-12 w-12 text-accent-primary" />,
+      icon: <BookOpen className="h-12 w-12 text-accent-yellow" />,
       active: true,
       comingSoon: false
     },
@@ -63,7 +63,7 @@ const WorkflowSelectionPage = () => {
     <DashboardLayout activeTab="AI Workflows">
       <div className="space-y-8 animate-fade-in">
         {/* Hero section */}
-        <div className="bg-gradient-to-br from-accent-primary/10 to-accent-tertiary/5 rounded-xl p-6 md:p-8 shadow-textera mb-8">
+        <div className="bg-gradient-to-br from-accent-primary/10 to-accent-tertiary/5 rounded-xl p-6 md:p-8 shadow-blue-sm mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="max-w-lg">
               <h1 className="text-3xl font-display text-ink-dark mb-3">Content Creation Workflows</h1>
@@ -88,21 +88,23 @@ const WorkflowSelectionPage = () => {
           {workflowTypes.map((workflow) => (
             <div
               key={workflow.id}
-              className={`p-6 rounded-xl border shadow-textera transition-all duration-200 ${
+              className={`p-6 rounded-xl border shadow-blue-sm transition-all duration-200 ${
                 workflow.active
-                  ? 'bg-paper border-accent-primary/20 hover:shadow-textera-md cursor-pointer'
+                  ? 'bg-paper border-accent-yellow/20 hover:shadow-yellow-sm cursor-pointer'
                   : 'bg-paper/70 border-accent-tertiary/10'
               }`}
               onClick={() => {
                 if (workflow.active) {
                   // Set workflow type and navigate
-                  resetWorkflow(workflow.id as WorkflowType);
+                  console.log(`Selecting workflow type: ${workflow.id}`);
+                  const workflowType: WorkflowType = workflow.id as WorkflowType;
+                  resetWorkflow(workflowType);
                 }
               }}
             >
               <div className="flex flex-col h-full">
                 <div className={`p-4 rounded-lg mb-4 inline-flex ${
-                  workflow.active ? 'bg-accent-primary/10' : 'bg-accent-tertiary/10'
+                  workflow.active ? 'bg-accent-yellow/10' : 'bg-accent-tertiary/10'
                 }`}>
                   {workflow.icon}
                 </div>
@@ -122,10 +124,12 @@ const WorkflowSelectionPage = () => {
                 
                 {workflow.active ? (
                   <Button
-                    className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif w-full"
+                    className="gap-2 bg-accent-yellow hover:bg-accent-yellow/90 text-white font-serif w-full shadow-yellow-sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      resetWorkflow(workflow.id as WorkflowType);
+                      console.log(`Starting workflow from button: ${workflow.id}`);
+                      const workflowType: WorkflowType = workflow.id as WorkflowType;
+                      resetWorkflow(workflowType);
                     }}
                   >
                     Start Workflow
@@ -144,12 +148,12 @@ const WorkflowSelectionPage = () => {
         </div>
 
         {/* Workflow Process Overview */}
-        <div className="bg-accent-primary/5 p-6 rounded-lg border border-accent-primary/20">
+        <div className="bg-accent-primary/5 p-6 rounded-lg border border-accent-primary/20 shadow-blue-sm">
           <h3 className="text-xl font-display text-ink-dark mb-4">How Workflows Work</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-accent-primary/20 flex items-center justify-center mb-4">
-                <span className="font-display text-xl text-accent-primary">1</span>
+              <div className="w-12 h-12 rounded-full bg-accent-yellow/10 flex items-center justify-center mb-4">
+                <span className="font-display text-xl text-accent-yellow">1</span>
               </div>
               <h4 className="font-serif font-medium text-ink-dark mb-2">Input & Brainstorm</h4>
               <p className="font-serif text-sm text-ink-light">

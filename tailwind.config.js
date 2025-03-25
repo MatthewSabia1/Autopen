@@ -13,9 +13,16 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1.5rem",
+        md: "2rem",
+      },
       screens: {
-        "2xl": "1400px",
+        sm: "640px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1280px",
+        "2xl": "1440px",
       },
     },
     extend: {
@@ -53,19 +60,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        textera: {
-          50: "#f9f9f7",
-          100: "#f1f1ee",
-          200: "#e8e8e3",
-          300: "#d8d8cf",
-          400: "#b8b8ac",
-          500: "#94948a",
-          600: "#75756d",
-          700: "#5f5f59",
-          800: "#4f4f4a",
-          900: "#43433f",
-          950: "#232321",
+        // Autopen colors based on mockups
+        cream: "#FAF9F5",  // Light cream background
+        paper: "#FFFFFF",  // White background for cards
+        ink: {
+          dark: "#333333", // Main text color
+          light: "#666666", // Secondary text color
+          faded: "#888888", // Lighter text for placeholders
         },
+        accent: {
+          primary: "#738996",    // Primary grayish blue accent
+          secondary: "#5e7282",  // Slightly darker blue
+          tertiary: "#F1F0EC",   // Light beige/gray for subtle backgrounds and borders
+          yellow: "#ccb595",     // Dull yellowish color (secondary accent used sparingly)
+        },
+        danger: "#DC2626", // For error messages
         slate: {
           50: "#f8fafc",
           100: "#f1f5f9",
@@ -79,47 +88,30 @@ export default {
           900: "#0f172a",
           950: "#020617",
         },
-        // Textera colors from screenshots and code analysis
-        cream: "#FAF7F0",
-        paper: "#FFFCF7",
-        ink: {
-          dark: "#2D2A32",
-          light: "#7F7D88",
-          faded: "#6D6C74",
-        },
-        accent: {
-          primary: "#6D8A96",    // Blue-gray color from screenshots/code
-          secondary: "#D1B490",  // Tan/beige color from screenshots/code
-          tertiary: "#E8C8A9",   // Light tan from screenshots/code
-        },
-        danger: "#DC2626",       // For error messages
-        dark: {
-          bg: {
-            primary: "#0F172A",    // darker than slate-900
-            secondary: "#1E293B",  // darker than slate-800
-            tertiary: "#334155",   // darker than slate-700
-          },
-          text: {
-            primary: "#F8FAFC",    // lighter than gray-100
-            secondary: "#E2E8F0",  // lighter than gray-200
-            tertiary: "#CBD5E1",   // lighter than gray-300
-            muted: "#94A3B8",      // gray-400
-          },
-          border: {
-            primary: "#475569",    // slate-600
-            secondary: "#334155",  // slate-700
-          }
+        gray: {
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          200: "#E5E7EB",
+          300: "#D1D5DB",
+          400: "#9CA3AF",
+          500: "#6B7280",
+          600: "#4B5563",
+          700: "#374151",
+          800: "#1F2937",
+          900: "#111827",
         }
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        serif: ["Merriweather", "Georgia", "Cambria", "Times New Roman", "serif"],
-        display: ["Playfair Display", "serif"],
+        serif: ["Georgia", "Cambria", "Times New Roman", "serif"],
+        display: ["Georgia", "serif"],
+        mono: ["Consolas", "Monaco", "monospace"],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "8px",
+        md: "6px",
+        sm: "4px",
+        DEFAULT: "4px",
       },
       keyframes: {
         "accordion-down": {
@@ -156,11 +148,17 @@ export default {
         "pulse-slow": "pulse-slow 3s ease-in-out infinite",
       },
       boxShadow: {
-        textera: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-        "textera-md": "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
-        soft: "0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1)",
-        medium: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
-        hard: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        textera: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
+        "textera-md": "0 2px 5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
+        "textera-lg": "0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02)",
+        soft: "0 1px 2px rgba(0, 0, 0, 0.03)",
+        medium: "0 2px 4px rgba(0, 0, 0, 0.05)",
+        hard: "0 4px 8px rgba(0, 0, 0, 0.08)",
+        blue: "0 4px 12px rgba(115, 137, 150, 0.15)",
+        "blue-sm": "0 2px 5px rgba(115, 137, 150, 0.1)",
+        yellow: "0 4px 12px rgba(204, 181, 149, 0.15)",
+        "yellow-sm": "0 2px 5px rgba(204, 181, 149, 0.1)",
+        none: "none"
       },
     },
   },

@@ -77,7 +77,9 @@ function AppRoutes() {
           path="/creator"
           element={
             <PrivateRoute>
-              <Creator />
+              <WorkflowProvider>
+                <Creator />
+              </WorkflowProvider>
             </PrivateRoute>
           }
         />

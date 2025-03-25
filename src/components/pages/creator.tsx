@@ -140,23 +140,61 @@ const Creator = () => {
       : templates.filter((template) => template.category === activeFilter);
 
   const handleCreateContent = (data: ContentData) => {
-    // For e-book content type, navigate to the integrated workflow
-    if (data.contentType === 'e-book') {
-      // Store the content data in session storage for the workflow to use
-      sessionStorage.setItem('newProjectData', JSON.stringify({
-        title: data.title,
-        description: data.description
-      }));
+    // Map from ContentData.contentType to WorkflowType
+    const contentTypeToWorkflowType = (contentType: string): WorkflowType => {
+      // Log the contentType we're trying to map
+      console.log('Mapping content type:', contentType);
       
-      // Reset workflow and navigate to ebook workflow
-      resetWorkflow('ebook');
-    } else {
-      // For other content types, show placeholder for now
-      console.log("Creating content:", data);
-      // Here you would typically navigate to the Brain Dump tool
-      // or start the content creation process
-      setOpen(false);
-    }
+      // Convert the content type string to a valid WorkflowType
+      let workflowType: WorkflowType;
+      switch (contentType) {
+        case 'e-book': 
+          workflowType = 'ebook';
+          break;
+        case 'online-course': 
+          workflowType = 'course';
+          break;
+        case 'blog-post': 
+          workflowType = 'blog';
+          break;
+        case 'video-script': 
+          workflowType = 'video';
+          break;
+        case 'social-media': 
+          workflowType = 'social';
+          break;
+        default: 
+          console.warn(`Unknown content type: ${contentType}, defaulting to 'ebook'`);
+          workflowType = 'ebook';
+          break;
+      }
+      
+      console.log(`Mapped ${contentType} to workflow type: ${workflowType}`);
+      return workflowType;
+    };
+
+    // Store the content data in session storage for the workflow to use
+    sessionStorage.setItem('newProjectData', JSON.stringify({
+      title: data.title,
+      description: data.description
+    }));
+    
+    // Make sure the content type is properly typed
+    const contentType = data.contentType as 'e-book' | 'online-course' | 'blog-post' | 'video-script' | 'newsletter' | 'social-media';
+    console.log('Content type from form:', contentType);
+    
+    // Map the content type to workflow type
+    const workflowType = contentTypeToWorkflowType(contentType);
+    
+    // Use the mapped workflow type
+    console.log(`Starting workflow with type: ${workflowType}`);
+    
+    // Force the type to be the correct string literal type
+    const typedWorkflowType: WorkflowType = workflowType;
+    resetWorkflow(typedWorkflowType);
+    
+    // Close the modal
+    setOpen(false);
   };
 
   return (
@@ -181,7 +219,12 @@ const Creator = () => {
                 </Button>
                 <Button
                   className="gap-2 bg-accent-tertiary hover:bg-accent-tertiary/90 text-white font-serif px-6 py-5 text-base"
-                  onClick={() => resetWorkflow('ebook')}
+                  onClick={() => {
+                    console.log('Starting ebook workflow from hero section');
+                    const workflowType: WorkflowType = 'ebook';
+                    console.log('Using workflow type:', workflowType);
+                    resetWorkflow(workflowType);
+                  }}
                 >
                   <BookOpen className="h-5 w-5" />
                   Try eBook Workflow
@@ -233,7 +276,10 @@ const Creator = () => {
                         className="bg-accent-primary hover:bg-accent-primary/90 text-white font-serif w-full"
                         onClick={() => {
                           if (template.category === 'ebook') {
-                            resetWorkflow('ebook');
+                            console.log('Starting ebook workflow from featured template');
+                            const workflowType: WorkflowType = 'ebook';
+                            console.log('Template category:', template.category, '-> WorkflowType:', workflowType);
+                            resetWorkflow(workflowType);
                           } else {
                             setOpen(true);
                           }
@@ -340,7 +386,10 @@ const Creator = () => {
                         className="mt-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
                         onClick={() => {
                           if (template.category === 'ebook') {
-                            resetWorkflow('ebook');
+                            console.log('Starting ebook workflow from all templates');
+                            const workflowType: WorkflowType = 'ebook';
+                            console.log('Template category:', template.category, '-> WorkflowType:', workflowType);
+                            resetWorkflow(workflowType);
                           } else {
                             setOpen(true);
                           }

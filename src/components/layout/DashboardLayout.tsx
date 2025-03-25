@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../supabase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -62,22 +62,17 @@ const DashboardLayout = ({
       icon: <BookText className="h-5 w-5" />,
       href: "/products",
     },
-    {
-      label: "Analytics",
-      icon: <BarChart className="h-5 w-5" />,
-      href: "/analytics",
-    },
-    {
-      label: "Settings",
-      icon: <Settings className="h-5 w-5" />,
-      href: "/settings",
-    },
   ];
 
-  const handleSignOut = async () => {
+  const handleNavigate = useCallback((href: string) => {
+    navigate(href);
+    setSidebarOpen(false);
+  }, [navigate]);
+
+  const handleSignOut = useCallback(async () => {
     await signOut();
     navigate("/");
-  };
+  }, [signOut, navigate]);
 
   if (!user) return null;
 
@@ -110,16 +105,16 @@ const DashboardLayout = ({
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-paper border-r border-accent-tertiary/20 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:z-auto",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-paper border-r border-accent-tertiary transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:z-auto",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-16 flex items-center px-6 border-b border-accent-tertiary/20">
+          <div className="h-16 flex items-center px-6 border-b border-accent-tertiary">
             <div className="navbar-logo">
-              <BookOpen className="h-6 w-6 text-accent-primary" />
-              <span>Textera</span>
+              <PenTool className="w-6 h-6 text-accent-primary" />
+              <span className="font-display text-lg ml-1">Autopen</span>
             </div>
           </div>
 
@@ -133,13 +128,10 @@ const DashboardLayout = ({
                   className={cn(
                     "w-full justify-start gap-3 text-base font-serif",
                     activeTab === item.label
-                      ? "bg-accent-primary/10 text-accent-primary"
+                      ? "bg-accent-primary/10 text-ink-dark font-medium"
                       : "text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark",
                   )}
-                  onClick={() => {
-                    navigate(item.href);
-                    setSidebarOpen(false);
-                  }}
+                  onClick={() => handleNavigate(item.href)}
                 >
                   {activeTab === item.label ? (
                     <div className="text-accent-primary">{item.icon}</div>
@@ -166,10 +158,7 @@ const DashboardLayout = ({
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-3 text-base font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
-                  onClick={() => {
-                    navigate("/settings");
-                    setSidebarOpen(false);
-                  }}
+                  onClick={() => handleNavigate("/settings")}
                 >
                   <Settings className="h-5 w-5 text-ink-light" />
                   Settings
@@ -186,12 +175,12 @@ const DashboardLayout = ({
                   variant="ghost"
                   className="w-full justify-start gap-3 text-base font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
                 >
-                  <Avatar className="h-8 w-8 bg-accent-primary/10">
+                  <Avatar className="h-8 w-8 bg-accent-primary/20 border border-accent-primary/30">
                     <AvatarImage
                       src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
                       alt={user.email || ""}
                     />
-                    <AvatarFallback className="font-serif text-accent-primary">
+                    <AvatarFallback className="font-serif text-ink-dark">
                       {user.email ? user.email[0].toUpperCase() : "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -203,7 +192,7 @@ const DashboardLayout = ({
                   </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-paper border-accent-tertiary/20 shadow-medium">
+              <DropdownMenuContent align="end" className="w-56 bg-paper border-accent-tertiary/20 shadow-medium" side="top" sideOffset={5}>
                 <DropdownMenuLabel className="font-display text-ink-dark">My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-accent-tertiary/10" />
                 <DropdownMenuItem className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
@@ -211,7 +200,7 @@ const DashboardLayout = ({
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => navigate("/settings")}
+                  onClick={() => handleNavigate("/settings")}
                   className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
                 >
                   <Settings className="mr-2 h-4 w-4" />
@@ -234,7 +223,7 @@ const DashboardLayout = ({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top navigation */}
-        <header className="h-16 bg-paper border-b border-accent-tertiary/20 flex items-center justify-between px-6 sticky top-0 z-10">
+        <header className="h-16 bg-paper border-b border-accent-tertiary flex items-center justify-between px-6 sticky top-0 z-10">
           <div className="flex-1 lg:flex-none">
             <h1 className="font-display text-xl text-ink-dark">{activeTab}</h1>
           </div>
@@ -251,12 +240,12 @@ const DashboardLayout = ({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 font-serif">
-                    <Avatar className="h-8 w-8 bg-accent-primary/10">
+                    <Avatar className="h-8 w-8 bg-accent-primary/20 border border-accent-primary/30">
                       <AvatarImage
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
                         alt={user.email || ""}
                       />
-                      <AvatarFallback className="font-serif text-accent-primary">
+                      <AvatarFallback className="font-serif text-ink-dark">
                         {user.email ? user.email[0].toUpperCase() : "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -266,21 +255,21 @@ const DashboardLayout = ({
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-paper border-accent-tertiary/20 shadow-medium">
+                <DropdownMenuContent align="end" className="w-56 bg-paper border border-accent-tertiary/20 shadow-textera-md" side="bottom" sideOffset={5}>
                   <DropdownMenuLabel className="font-display text-ink-dark">My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-accent-tertiary/10" />
+                  <DropdownMenuSeparator className="bg-accent-tertiary/20" />
                   <DropdownMenuItem className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem 
-                    onClick={() => navigate("/settings")}
+                    onClick={() => handleNavigate("/settings")}
                     className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-accent-tertiary/10" />
+                  <DropdownMenuSeparator className="bg-accent-tertiary/20" />
                   <DropdownMenuItem
                     onClick={handleSignOut}
                     className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
@@ -295,7 +284,7 @@ const DashboardLayout = ({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 px-6 py-4 overflow-auto">{children}</main>
       </div>
     </div>
   );

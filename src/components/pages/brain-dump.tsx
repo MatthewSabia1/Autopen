@@ -90,7 +90,51 @@ const BrainDump = () => {
     }
   };
 
+  /**
+   * Handles text dropped into a container
+   */
   const handleTextDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    
+    if (e.dataTransfer.items) {
+      const items = Array.from(e.dataTransfer.items);
+      
+      // Check for plain text
+      const textItem = items.find(item => item.kind === 'string' && item.type === 'text/plain');
+      if (textItem) {
+        textItem.getAsString((text) => {
+          setContent(prevText => prevText ? `${prevText}\n\n${text}` : text);
+        });
+        return;
+      }
+      
+      // Handle files
+      const fileItems = items.filter(item => item.kind === 'file');
+      if (fileItems.length > 0) {
+        const droppedFiles = fileItems.map(item => item.getAsFile()).filter(Boolean) as File[];
+        
+        const newFiles = droppedFiles.map(file => {
+          const isImage = file.type.startsWith('image/');
+          
+          return {
+            id: generateUniqueId(),
+            file,
+            preview: isImage ? URL.createObjectURL(file) : undefined,
+            type: isImage ? 'image' : 'document',
+            name: file.name,
+            size: file.size
+          } as FileItem;
+        });
+        
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    }
+  };
+
+  /**
+   * Handles text dropped into a textarea element
+   */
+  const handleTextAreaDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     
     if (e.dataTransfer.items) {
@@ -239,13 +283,13 @@ const BrainDump = () => {
         <div>
           <h1 className="text-2xl font-display text-ink-dark">Brain Dump</h1>
           <p className="text-ink-light mt-1 font-serif">
-            Upload your thoughts, notes, or content in any format. Textera will
+            Upload your thoughts, notes, or content in any format. Autopen will
             analyze and organize it into structured e-book ideas.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-start text-red-700">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded flex items-start text-red-700">
             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
             <p className="font-serif text-sm">{error}</p>
           </div>
@@ -259,24 +303,24 @@ const BrainDump = () => {
           </div>
           <div className="pt-4">
             <Tabs defaultValue="paste" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6 bg-cream border border-accent-tertiary/20">
+              <TabsList className="grid w-full grid-cols-3 mb-6 bg-white border border-accent-tertiary">
                 <TabsTrigger 
                   value="paste" 
-                  className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
+                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
                 >
                   <FileText className="h-4 w-4" />
                   Paste Text
                 </TabsTrigger>
                 <TabsTrigger 
                   value="upload" 
-                  className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
+                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
                 >
                   <Upload className="h-4 w-4" />
                   Upload Files
                 </TabsTrigger>
                 <TabsTrigger 
                   value="link" 
-                  className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
+                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
                 >
                   <LinkIcon className="h-4 w-4" />
                   Add Link
@@ -307,7 +351,7 @@ const BrainDump = () => {
                     className="brain-dump-textarea min-h-[300px]"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    onDrop={handleTextDrop}
+                    onDrop={handleTextAreaDrop}
                     onDragOver={(e) => e.preventDefault()}
                   />
                 </div>
@@ -317,7 +361,7 @@ const BrainDump = () => {
                     <SelectTrigger id="content-type" className="form-input">
                       <SelectValue placeholder="Select content type" />
                     </SelectTrigger>
-                    <SelectContent className="bg-paper border-accent-tertiary/20">
+                    <SelectContent className="bg-paper border-accent-tertiary">
                       <SelectItem value="auto">Auto-detect</SelectItem>
                       <SelectItem value="blog">Blog Post</SelectItem>
                       <SelectItem value="article">Article</SelectItem>
@@ -331,7 +375,7 @@ const BrainDump = () => {
 
               <TabsContent value="upload" className="space-y-4">
                 <div 
-                  className="border-2 border-dashed border-accent-tertiary/30 rounded-lg p-12 text-center"
+                  className="border-2 border-dashed border-accent-tertiary rounded p-12 text-center"
                   onDrop={handleTextDrop}
                   onDragOver={(e) => e.preventDefault()}
                 >
@@ -391,227 +435,33 @@ const BrainDump = () => {
                         className={`flex-shrink-0 bg-cream border border-accent-tertiary/30 rounded-l-md p-3 flex items-center cursor-pointer ${isYouTube ? 'text-red-500' : 'text-accent-primary'}`}
                         onClick={() => setIsYouTube(!isYouTube)}
                       >
-                        {isYouTube ? (
-                          <Youtube className="w-5 h-5" />
-                        ) : (
-                          <LinkIcon className="w-5 h-5" />
-                        )}
+                        {isYouTube ? 'YouTube' : 'Web Page'}
                       </div>
+                    </div>
+                    <div className="flex flex-1">
                       <Input
-                        type="url" 
                         id="content-url"
-                        placeholder={isYouTube ? "https://www.youtube.com/watch?v=..." : "https://example.com"}
+                        placeholder="Enter URL"
+                        className="form-input"
                         value={linkUrl}
-                        onChange={(e) => {
-                          setLinkUrl(e.target.value);
-                          // Auto-detect if it's a YouTube link
-                          if (isYoutubeUrl(e.target.value) && !isYouTube) {
-                            setIsYouTube(true);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && linkUrl) {
-                            handleLinkAdd();
-                          }
-                        }}
-                        className="w-full border-l-0 rounded-r-md focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                        onChange={(e) => setLinkUrl(e.target.value)}
                       />
                     </div>
-                    <Button
-                      onClick={handleLinkAdd}
-                      disabled={!linkUrl}
-                      className="sm:ml-3"
-                    >
-                      Add Link
-                    </Button>
                   </div>
-                  <div className="flex mt-2 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => setIsYouTube(false)}
-                      className={`mr-4 py-1 font-serif ${!isYouTube ? 'text-accent-primary border-b border-accent-primary' : 'text-ink-light'}`}
-                    >
-                      Webpage
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsYouTube(true)}
-                      className={`py-1 font-serif ${isYouTube ? 'text-red-500 border-b border-red-500' : 'text-ink-light'}`}
-                    >
-                      YouTube Video
-                    </button>
-                  </div>
-                  {isYouTube && (
-                    <p className="mt-2 text-xs text-ink-faded font-serif">
-                      YouTube videos will be processed to extract the transcript for analysis if available.
-                    </p>
-                  )}
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         </div>
 
-        {/* Display uploaded files and links */}
-        {(files.length > 0 || links.length > 0) && (
-          <div className="mb-6">
-            <h3 className="font-serif font-semibold text-ink-dark mb-3">Added Content ({files.length + links.length})</h3>
-            
-            {/* Files */}
-            {files.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-serif text-sm text-ink-light mb-2">Files & Images ({files.length})</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {files.map(file => (
-                    <div 
-                      key={file.id} 
-                      className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-center"
-                    >
-                      {file.type === 'image' && file.preview ? (
-                        <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
-                          <img src={file.preview} alt={file.name} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-accent-primary" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-serif text-ink-dark text-sm truncate" title={file.name}>
-                          {file.name}
-                        </p>
-                        <p className="font-serif text-ink-faded text-xs">
-                          {formatFileSize(file.size)}
-                        </p>
-                      </div>
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeFile(file.id)}
-                        className="p-1.5 text-ink-faded hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Links */}
-            {links.length > 0 && (
-              <div>
-                <h4 className="font-serif text-sm text-ink-light mb-2">Links ({links.length})</h4>
-                <div className="grid grid-cols-1 gap-2">
-                  {links.map(link => (
-                    <div 
-                      key={link.id} 
-                      className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-start"
-                    >
-                      {link.type === 'youtube' && link.thumbnail ? (
-                        <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
-                          <img src={link.thumbnail} alt={link.title} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
-                          {link.type === 'youtube' ? (
-                            <Youtube className="w-5 h-5 text-red-500" />
-                          ) : (
-                            <LinkIcon className="w-5 h-5 text-accent-primary" />
-                          )}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <p className="font-serif text-ink-dark text-sm truncate" title={link.title}>
-                            {link.title}
-                          </p>
-                          <Button 
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeLink(link.id)}
-                            className="p-1.5 text-ink-faded hover:text-red-500 transition-colors ml-2 flex-shrink-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="font-serif text-ink-faded text-xs truncate mb-1" title={link.url}>
-                          {link.url}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6">
           <Button
-            className="gap-2"
+            variant="default"
+            className="w-full"
             onClick={handleAnalyzeContent}
-            disabled={isProcessing || (!content.trim() && files.length === 0 && links.length === 0)}
           >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Analyze Content
-              </>
-            )}
+            Analyze Content <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
-        </div>
-
-        <div className="brain-dump-container">
-          <div className="pb-4 border-b border-accent-tertiary/10">
-            <h2 className="font-display text-lg text-ink-dark">
-              How It Works
-            </h2>
-          </div>
-          <div className="pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="bg-accent-primary/10 p-3 rounded-full mb-4">
-                  <FileText className="h-6 w-6 text-accent-primary" />
-                </div>
-                <h3 className="font-display font-medium text-ink-dark mb-2">
-                  1. Input Your Content
-                </h3>
-                <p className="text-sm text-ink-light font-serif">
-                  Paste text, upload files, or provide a URL to extract content
-                </p>
-              </div>
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="bg-accent-primary/10 p-3 rounded-full mb-4">
-                  <Sparkles className="h-6 w-6 text-accent-primary" />
-                </div>
-                <h3 className="font-display font-medium text-ink-dark mb-2">
-                  2. AI Analysis
-                </h3>
-                <p className="text-sm text-ink-light font-serif">
-                  Our AI analyzes your content, identifies key topics, and
-                  organizes information
-                </p>
-              </div>
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="bg-accent-primary/10 p-3 rounded-full mb-4">
-                  <ArrowRight className="h-6 w-6 text-accent-primary" />
-                </div>
-                <h3 className="font-display font-medium text-ink-dark mb-2">
-                  3. Structured Output
-                </h3>
-                <p className="text-sm text-ink-light font-serif">
-                  Receive organized, structured content ready for further
-                  refinement or publication
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </DashboardLayout>

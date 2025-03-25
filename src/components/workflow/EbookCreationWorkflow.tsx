@@ -234,7 +234,7 @@ export default function EbookCreationWorkflow() {
         )}
         
         {/* Hero section */}
-        <div className="bg-gradient-to-br from-accent-primary/10 to-accent-tertiary/5 rounded-xl p-6 md:p-8 shadow-textera mb-8">
+        <div className="bg-gradient-to-br from-accent-primary/20 to-accent-primary/5 rounded-xl p-6 md:p-8 shadow-blue-sm mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h1 className="text-3xl font-display text-ink-dark mb-2 flex items-center gap-2">
@@ -270,17 +270,17 @@ export default function EbookCreationWorkflow() {
                 key={step.id} 
                 className={cn(
                   "flex items-center justify-center py-3 px-4 rounded-md transition-all duration-300 flex-1 relative",
-                  isActive ? "bg-accent-primary/10 text-accent-primary" : 
+                  isActive ? "bg-accent-primary/10 text-ink-dark font-medium" : 
                   isCompleted ? "text-accent-primary" : 
-                  "text-ink-light hover:text-ink"
+                  "text-ink-light hover:text-ink-dark"
                 )}
               >
                 <div className="flex items-center">
                   <div className={cn(
                     "h-6 w-6 rounded-full flex items-center justify-center mr-2 flex-shrink-0",
-                    isActive ? "bg-accent-primary text-white" :
-                    isCompleted ? "bg-accent-primary text-white" :
-                    "bg-slate-100 text-ink-light border border-slate-200"
+                    isActive ? "bg-accent-primary text-white shadow-blue-sm" :
+                    isCompleted ? "bg-accent-primary/80 text-white" :
+                    "bg-accent-tertiary/30 text-ink-light"
                   )}>
                     {isCompleted ? (
                       <CheckCircle className="h-4 w-4" />

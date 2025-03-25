@@ -17,8 +17,139 @@ import {
   Trash2,
   AlertCircle,
   Youtube,
-  ArrowRight
+  ArrowRight,
+  Brain
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Loading overlay component with fancy animations
+const LoadingOverlay = ({ 
+  visible, 
+  message, 
+  step, 
+  totalSteps,
+  status,
+  onCancel
+}: { 
+  visible: boolean; 
+  message: string;
+  step?: number;
+  totalSteps?: number;
+  status?: string;
+  onCancel?: () => void;
+}) => {
+  // Use AnimatePresence for proper exit animations
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+        >
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+            transition={{ duration: 0.3 }}
+            className="bg-paper rounded-xl p-8 max-w-md w-full shadow-textera border border-accent-tertiary/20"
+          >
+            <div className="text-center">
+              <div className="mb-6 relative">
+                <div className="w-20 h-20 mx-auto relative">
+                  {/* Fancy pulsing rings */}
+                  <motion.div 
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      opacity: [0.4, 0.6, 0.4]
+                    }}
+                    transition={{ 
+                      duration: 2.5, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="absolute inset-0 rounded-full bg-accent-primary/30"
+                  />
+                  <motion.div 
+                    animate={{ 
+                      scale: [1, 1.5, 1],
+                      opacity: [0.2, 0.4, 0.2]
+                    }}
+                    transition={{ 
+                      duration: 3, 
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.5
+                    }}
+                    className="absolute inset-0 rounded-full bg-accent-primary/20"
+                  />
+                  
+                  {/* Icon for processing */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {status === 'analyzing' ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Brain className="h-10 w-10 text-accent-primary" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Sparkles className="h-10 w-10 text-accent-primary" />
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-display text-ink-dark mb-2">{message}</h3>
+              
+              {step !== undefined && totalSteps !== undefined && (
+                <div className="mb-4">
+                  <p className="text-sm text-ink-light font-serif mb-2">
+                    Step {step} of {totalSteps}
+                  </p>
+                  <div className="w-full h-2 bg-accent-tertiary/20 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(step / totalSteps) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-full bg-accent-primary rounded-full"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-ink-light font-serif max-w-sm mx-auto">
+                {status === 'analyzing' 
+                  ? "Our AI is analyzing your content to generate structured ideas for your eBook. This may take a minute or two."
+                  : "Please wait while we process your content..."}
+              </p>
+              
+              {/* Optional cancel button */}
+              {onCancel && (
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={onCancel}
+                  className="mt-4 text-ink-light hover:text-ink-dark font-serif"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 /**
  * The second step in the eBook creation workflow.
@@ -37,7 +168,8 @@ const BrainDumpStep = () => {
     addBrainDumpLink,
     removeBrainDumpLink,
     analyzeBrainDump,
-    setCurrentStep
+    setCurrentStep,
+    loading
   } = useWorkflow();
 
   const [content, setContent] = useState(brainDump?.raw_content || '');
@@ -45,7 +177,12 @@ const BrainDumpStep = () => {
   const [linkUrl, setLinkUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isYouTube, setIsYouTube] = useState(false);
+  
+  // Local loading states for better UX control
   const [isSaving, setIsSaving] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(1);
+  const [loadingMessage, setLoadingMessage] = useState('Processing content...');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +193,25 @@ const BrainDumpStep = () => {
       setContent(brainDump.raw_content);
     }
   }, [brainDump]);
+  
+  // Track brain dump analyze status
+  useEffect(() => {
+    if (brainDump?.status === 'analyzing') {
+      setIsAnalyzing(true);
+      setLoadingMessage('Analyzing your content...');
+      setLoadingStep(2);
+    } else if (brainDump?.status === 'analyzed') {
+      setIsAnalyzing(false);
+    }
+  }, [brainDump?.status]);
+  
+  // Watch the global loading state to update our UI
+  useEffect(() => {
+    if (!loading) {
+      setIsSaving(false);
+      setIsAnalyzing(false);
+    }
+  }, [loading]);
 
   /**
    * Handles text content changes
@@ -74,6 +230,7 @@ const BrainDumpStep = () => {
     }
 
     setIsSaving(true);
+    setLoadingMessage('Saving your content...');
     setError(null);
 
     try {
@@ -261,31 +418,100 @@ const BrainDumpStep = () => {
    * Handles analyzing the brain dump content
    */
   const handleAnalyze = async () => {
+    // Check if we have any content to analyze
     if (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
       setError('Please add some content to analyze. You can paste text, upload files, or add links.');
       return;
     }
 
-    // First save any unsaved content
-    if (content !== brainDump?.raw_content) {
-      try {
-        await saveBrainDump(content);
-      } catch (err: any) {
-        setError(err.message || 'Failed to save content before analysis');
-        return;
-      }
+    // Check if analysis is already in progress
+    if (isAnalyzing) {
+      return;
     }
 
+    // Set local loading state
+    setIsAnalyzing(true);
+    setLoadingStep(1);
+    setLoadingMessage('Preparing content for analysis...');
+    setError(null);
+
     try {
-      await analyzeBrainDump();
-      setError(null);
+      // Step 1: Save any unsaved content first
+      if (content !== brainDump?.raw_content) {
+        try {
+          await saveBrainDump(content);
+          // Only update UI if still in analyzing state (not cancelled)
+          if (isAnalyzing) {
+            setLoadingStep(2);
+            setLoadingMessage('Content saved! Starting analysis...');
+          } else {
+            return; // Analysis was cancelled during save
+          }
+        } catch (err: any) {
+          setError(err.message || 'Failed to save content before analysis');
+          setIsAnalyzing(false);
+          return;
+        }
+      } else {
+        setLoadingStep(2);
+        setLoadingMessage('Starting analysis...');
+      }
+
+      // Short delay to show the loading steps
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Only proceed if we haven't been cancelled
+      if (!isAnalyzing) return;
+      
+      // Step 3: Analyze content
+      setLoadingStep(3);
+      setLoadingMessage('Analyzing your content...');
+      
+      try {
+        await analyzeBrainDump();
+        // If we reach here successfully, the workflow will automatically navigate to next step
+      } catch (err: any) {
+        // Specific error handling
+        if (err.message?.includes('timeout') || err.message?.includes('time out')) {
+          setError('Analysis timed out. Please try again with a smaller amount of content or fewer files.');
+        } else if (err.message?.includes('permission')) {
+          setError('You don\'t have permission to perform this action. Please check your account settings.');
+        } else {
+          setError(err.message || 'Failed to analyze content. Please try again.');
+        }
+        setIsAnalyzing(false);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to analyze content');
+      setError(err.message || 'An unexpected error occurred. Please try again.');
+      setIsAnalyzing(false);
     }
   };
 
   return (
     <div className="space-y-8">
+      {/* Loading overlay */}
+      <LoadingOverlay 
+        visible={isSaving} 
+        message="Saving your content..."
+        status="saving"
+        onCancel={() => setIsSaving(false)}
+      />
+      
+      <LoadingOverlay 
+        visible={isAnalyzing} 
+        message={loadingMessage}
+        step={loadingStep}
+        totalSteps={3}
+        status="analyzing"
+        onCancel={() => {
+          // Only allow cancellation during early steps
+          if (loadingStep < 3) {
+            setIsAnalyzing(false);
+            setError("Analysis cancelled by user");
+          }
+        }}
+      />
+      
       <div>
         <h2 className="text-2xl font-display text-ink-dark mb-4">
           Brain Dump
@@ -473,10 +699,15 @@ const BrainDumpStep = () => {
         </Tabs>
 
         <Button 
-          variant="outline" 
-          className="w-full border-accent-primary/20 text-accent-primary hover:bg-accent-primary/5 font-serif"
+          variant={isSaving ? "secondary" : "outline"}
+          className={cn(
+            "w-full font-serif transition-all duration-200",
+            isSaving 
+              ? "bg-accent-primary/10 text-accent-primary" 
+              : "border-accent-primary/20 text-accent-primary hover:bg-accent-primary/5"
+          )}
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isAnalyzing}
         >
           {isSaving ? (
             <>
@@ -526,6 +757,7 @@ const BrainDumpStep = () => {
                       size="icon"
                       onClick={() => removeBrainDumpFile(file.id)}
                       className="p-1.5 text-ink-faded hover:text-red-500 transition-colors"
+                      disabled={isSaving || isAnalyzing}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -568,6 +800,7 @@ const BrainDumpStep = () => {
                           size="icon"
                           onClick={() => removeBrainDumpLink(link.id)}
                           className="p-1.5 text-ink-faded hover:text-red-500 transition-colors ml-2 flex-shrink-0"
+                          disabled={isSaving || isAnalyzing}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -589,20 +822,39 @@ const BrainDumpStep = () => {
           variant="outline"
           onClick={() => setCurrentStep('creator')}
           className="font-serif"
+          disabled={isSaving || isAnalyzing}
         >
           Back
         </Button>
         <Button
-          className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+          className={cn(
+            "gap-2 font-serif transition-all duration-300",
+            isAnalyzing 
+              ? "bg-accent-secondary text-ink-dark shadow-yellow-sm" 
+              : "bg-accent-primary hover:bg-accent-secondary hover:shadow-yellow-sm text-ink-dark"
+          )}
           onClick={handleAnalyze}
-          disabled={(!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0)}
+          disabled={
+            (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) || 
+            isSaving || 
+            isAnalyzing
+          }
         >
-          <Sparkles className="h-4 w-4" />
-          Analyze Content
+          {isAnalyzing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Analyze Content
+            </>
+          )}
         </Button>
       </div>
     </div>
   );
 };
 
-export default BrainDumpStep; 
+export default BrainDumpStep;
