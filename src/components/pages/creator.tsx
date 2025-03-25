@@ -146,8 +146,8 @@ const Creator = () => {
         description: data.description
       }));
       
-      // Navigate to the workflow page
-      navigate('/workflow');
+      // Navigate to the ebook workflow page
+      navigate('/workflow/ebook');
     } else {
       // For other content types, show placeholder for now
       console.log("Creating content:", data);
@@ -179,7 +179,7 @@ const Creator = () => {
                 </Button>
                 <Button
                   className="gap-2 bg-accent-tertiary hover:bg-accent-tertiary/90 text-white font-serif px-6 py-5 text-base"
-                  onClick={() => navigate('/workflow')}
+                  onClick={() => navigate('/workflow/ebook')}
                 >
                   <BookOpen className="h-5 w-5" />
                   Try eBook Workflow
@@ -231,7 +231,7 @@ const Creator = () => {
                         className="bg-accent-primary hover:bg-accent-primary/90 text-white font-serif w-full"
                         onClick={() => {
                           if (template.category === 'ebook') {
-                            navigate('/workflow');
+                            navigate('/workflow/ebook');
                           } else {
                             setOpen(true);
                           }
@@ -338,7 +338,7 @@ const Creator = () => {
                         className="mt-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
                         onClick={() => {
                           if (template.category === 'ebook') {
-                            navigate('/workflow');
+                            navigate('/workflow/ebook');
                           } else {
                             setOpen(true);
                           }

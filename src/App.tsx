@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Navigate, Route, Routes, useRoutes } from "react-router-dom";
 import routes from "tempo-routes";
 import LoginForm from "./components/auth/LoginForm";
@@ -11,6 +11,10 @@ import Home from "./components/pages/home";
 import Settings from "./components/pages/settings";
 import { AuthProvider, useAuth } from "../supabase/auth";
 import { Toaster } from "./components/ui/toaster";
+import { WorkflowProvider } from "./lib/contexts/WorkflowContext";
+import AuthModal from "./components/auth/AuthModal";
+import WorkflowContainer from "./components/workflow/WorkflowContainer";
+import WorkflowSelectionPage from "./components/workflow/WorkflowSelectionPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -31,6 +35,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [initialAuthView, setInitialAuthView] = useState<'login' | 'signup'>('login');
+
+  const handleOpenAuthModal = (view: 'login' | 'signup') => {
+    setInitialAuthView(view);
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <>
       <Routes>
@@ -70,6 +82,34 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/workflow"
+          element={
+            <PrivateRoute>
+              <WorkflowSelectionPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/workflow/:type"
+          element={
+            <PrivateRoute>
+              <WorkflowProvider>
+                <WorkflowContainer />
+              </WorkflowProvider>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/workflow/:type/:id"
+          element={
+            <PrivateRoute>
+              <WorkflowProvider>
+                <WorkflowContainer />
+              </WorkflowProvider>
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/settings"
           element={
             <PrivateRoute>
@@ -81,6 +121,12 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialView={initialAuthView}
+      />
     </>
   );
 }

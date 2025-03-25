@@ -4,15 +4,26 @@ import { supabase } from '../../../supabase/supabase';
 import { useAuth } from '../../../supabase/auth';
 import { logError, logSupabaseOperation } from '../utils/debug';
 
-// Define the workflow steps
-export type WorkflowStep = 
-  | 'creator'         // Initial product creator form
-  | 'brain-dump'      // Brain dump input
-  | 'idea-selection'  // Select an idea from the brain dump analysis
+// Define common workflow steps
+export type BaseWorkflowStep =
+  | 'creator'       // Initial product creator form
+  | 'brain-dump'    // Brain dump input
+  | 'idea-selection'// Select an idea from the brain dump analysis
+  | 'completed';    // Workflow completed
+
+// Define eBook specific workflow steps
+export type EbookWorkflowStep =
+  | BaseWorkflowStep
   | 'ebook-structure' // Define ebook structure/outline
   | 'ebook-writing'   // Generate ebook content
-  | 'ebook-preview'   // Preview and download options
-  | 'completed';      // Workflow completed
+  | 'ebook-preview';  // Preview and download options
+
+// More workflow types will be added here as they are developed
+// export type CourseWorkflowStep = BaseWorkflowStep | 'course-structure' | 'course-modules' | 'course-preview';
+// export type VideoWorkflowStep = BaseWorkflowStep | 'video-script' | 'video-storyboard' | 'video-preview';
+
+// Combined type for all possible workflow steps
+export type WorkflowStep = EbookWorkflowStep; // | CourseWorkflowStep | VideoWorkflowStep;
 
 // Project type definition
 export interface Project {
@@ -99,23 +110,37 @@ export interface EbookChapter {
   updated_at: string;
 }
 
+// Define possible workflow types
+export type WorkflowType = 'ebook' | 'course' | 'video' | 'blog' | 'social';
+
 // Workflow context state type
 interface WorkflowContextState {
-  currentStep: WorkflowStep;
-  project: Project | null;
-  brainDump: BrainDump | null;
-  brainDumpFiles: BrainDumpFile[];
-  brainDumpLinks: BrainDumpLink[];
-  ebookIdeas: EbookIdea[];
-  selectedIdeaId: string | null;
+  workflowType: WorkflowType;      // Type of workflow (ebook, course, etc.)
+  currentStep: WorkflowStep;       // Current step in the workflow
+  project: Project | null;         // Associated project
+  brainDump: BrainDump | null;     // Brain dump data (common to all workflows)
+  brainDumpFiles: BrainDumpFile[]; // Uploaded files (common)
+  brainDumpLinks: BrainDumpLink[]; // Added links (common)
+  ebookIdeas: EbookIdea[];         // Ideas generated from brain dump (could be generalized)
+  selectedIdeaId: string | null;   // Selected idea ID (common)
+  
+  // eBook specific state
   ebook: Ebook | null;
   ebookChapters: EbookChapter[];
+  
+  // UI state
   loading: boolean;
   error: string | null;
+  
+  // Future workflow-specific state will be added here
+  // courseModules?: CourseModule[];
+  // videoScenes?: VideoScene[];
 }
 
 // Workflow context functions type
 interface WorkflowContextFunctions {
+  // Common functions for all workflow types
+  setWorkflowType: (type: WorkflowType) => void;
   setCurrentStep: (step: WorkflowStep) => void;
   createProject: (title: string, description: string) => Promise<string>;
   updateProject: (projectData: Partial<Project>) => Promise<void>;
@@ -126,11 +151,17 @@ interface WorkflowContextFunctions {
   addBrainDumpLink: (url: string, title: string, linkType: 'youtube' | 'webpage') => Promise<string>;
   removeBrainDumpLink: (linkId: string) => Promise<void>;
   analyzeBrainDump: () => Promise<void>;
+  resetWorkflow: () => void;
+  
+  // eBook specific functions
   selectEbookIdea: (ideaId: string) => Promise<void>;
   createEbook: (title: string, description: string) => Promise<string>;
   generateEbookChapter: (chapterId: string) => Promise<void>;
   finalizeEbook: () => Promise<void>;
-  resetWorkflow: () => void;
+  
+  // Future workflow-specific functions will be added here
+  // createCourse?: (title: string, description: string) => Promise<string>;
+  // createVideoScript?: (title: string, description: string) => Promise<string>;
 }
 
 // Combined workflow context type
@@ -141,6 +172,7 @@ const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined
 
 // Initial state
 const initialState: WorkflowContextState = {
+  workflowType: 'ebook', // Default to eBook workflow for now
   currentStep: 'brain-dump',
   project: null,
   brainDump: null,
@@ -167,6 +199,13 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
       loadProject(projectId);
     }
   }, [projectId, user]);
+
+  /**
+   * Sets the current workflow type (ebook, course, etc.)
+   */
+  const setWorkflowType = (type: WorkflowType) => {
+    setState(prevState => ({ ...prevState, workflowType: type }));
+  };
 
   /**
    * Updates the current workflow step
@@ -1196,10 +1235,19 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   /**
    * Resets the workflow state
+   * Optionally can specify a specific workflow type to reset to
    */
-  const resetWorkflow = () => {
-    setState(initialState);
-    navigate('/creator');
+  const resetWorkflow = (newWorkflowType?: WorkflowType) => {
+    if (newWorkflowType) {
+      setState({
+        ...initialState,
+        workflowType: newWorkflowType
+      });
+      navigate(`/workflow/${newWorkflowType}`);
+    } else {
+      setState(initialState);
+      navigate('/workflow');
+    }
   };
 
   /**
@@ -1222,6 +1270,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Context value
   const contextValue: WorkflowContextType = {
     ...state,
+    setWorkflowType,
     setCurrentStep,
     createProject,
     updateProject,

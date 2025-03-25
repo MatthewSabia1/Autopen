@@ -30,7 +30,7 @@ const TopNavigation = ({
     { label: "Dashboard", href: "/dashboard" },
     { label: "Brain Dump", href: "/brain-dump" },
     { label: "Creator", href: "/creator" },
-    { label: "eBook Workflow", href: "/workflow" },
+    { label: "AI Workflows", href: "/workflow" },
     { label: "Products", href: "/products" },
   ];
 
