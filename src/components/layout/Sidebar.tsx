@@ -1,136 +1,134 @@
+/**
+ * STANDALONE SIDEBAR COMPONENT
+ * 
+ * This component appears to be a standalone sidebar implementation that is currently
+ * not being directly imported anywhere in the application. The active sidebar
+ * navigation is built directly into DashboardLayout.tsx.
+ */
+
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  LayoutDashboard,
-  BrainCircuit,
+  Home,
+  FileText,
   PenTool,
-  BookOpen,
+  BookText,
   Settings,
-  BarChart3,
-  FolderKanban,
-  HelpCircle,
-  LogOut
+  HelpCircle
 } from "lucide-react";
-import { useAuth } from "../../../supabase/auth";
+import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+interface SidebarProps {
+  activeTab?: string;
+}
+
+export function Sidebar({ activeTab = "Dashboard" }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
   
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
   return (
-    <div className="py-4 h-full flex flex-col border-r border-gray-200">
-      <div className="px-4 mb-6">
-        <h2 className="flex items-center text-xl font-bold tracking-tight text-gray-900 pl-2">
-          AutoPen
-        </h2>
-      </div>
-      
-      <div className="flex-1 px-4">
-        <div className="space-y-6">
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-gray-500 px-2 mb-2">MAIN MENU</p>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/dashboard') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/dashboard')}
-            >
-              <LayoutDashboard className="mr-3 h-4 w-4 text-gray-500" />
-              Dashboard
-            </Button>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/brain-dump') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/brain-dump')}
-            >
-              <BrainCircuit className="mr-3 h-4 w-4 text-gray-500" />
-              Brain Dump
-            </Button>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/creator') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/creator')}
-            >
-              <PenTool className="mr-3 h-4 w-4 text-gray-500" />
-              Creator
-            </Button>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/ebooks') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/ebooks')}
-            >
-              <BookOpen className="mr-3 h-4 w-4 text-gray-500" />
-              eBooks
-            </Button>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/projects') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/projects')}
-            >
-              <FolderKanban className="mr-3 h-4 w-4 text-gray-500" />
-              Projects
-            </Button>
-          </div>
-          
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-gray-500 px-2 mb-2">WORKFLOWS</p>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/workflow/ebook') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/workflow/ebook')}
-            >
-              <BookOpen className="mr-3 h-4 w-4 text-gray-500" />
-              eBook Creation
-            </Button>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/analytics') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/analytics')}
-            >
-              <BarChart3 className="mr-3 h-4 w-4 text-gray-500" />
-              Content Analysis
-            </Button>
-          </div>
-          
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-gray-500 px-2 mb-2">SETTINGS</p>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/settings') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/settings')}
-            >
-              <Settings className="mr-3 h-4 w-4 text-gray-500" />
-              Account Settings
-            </Button>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-start py-2.5 ${isActive('/help') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'} font-medium`}
-              onClick={() => navigate('/help')}
-            >
-              <HelpCircle className="mr-3 h-4 w-4 text-gray-500" />
-              Help & Support
-            </Button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="mt-auto px-4 pt-4 border-t border-gray-200">
+    <div className="h-full flex flex-col p-4 bg-slate-50">
+      <div className="flex-1 space-y-4">
         <Button 
           variant="ghost" 
-          className="w-full justify-start py-2.5 text-gray-700 font-medium"
-          onClick={() => {
-            signOut();
-            navigate('/');
-          }}
+          className={cn(
+            "w-full justify-start text-base",
+            isActive('/dashboard') ? 
+              "bg-slate-100 text-slate-900 font-medium" : 
+              "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            "transition-all"
+          )}
+          onClick={() => navigate('/dashboard')}
         >
-          <LogOut className="mr-3 h-4 w-4 text-gray-500" />
-          Logout
+          <Home className={`mr-2 h-5 w-5 ${isActive('/dashboard') ? 'text-slate-900' : 'text-slate-400'}`} />
+          Dashboard
         </Button>
+        
+        <Button 
+          variant="ghost" 
+          className={cn(
+            "w-full justify-start text-base",
+            isActive('/brain-dump') ? 
+              "bg-slate-100 text-slate-900 font-medium" : 
+              "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            "transition-all"
+          )}
+          onClick={() => navigate('/brain-dump')}
+        >
+          <FileText className={`mr-2 h-5 w-5 ${isActive('/brain-dump') ? 'text-slate-900' : 'text-slate-400'}`} />
+          Brain Dump
+        </Button>
+        
+        <Button 
+          variant="ghost" 
+          className={cn(
+            "w-full justify-start text-base",
+            isActive('/creator') ? 
+              "bg-slate-100 text-slate-900 font-medium" : 
+              "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            "transition-all"
+          )}
+          onClick={() => navigate('/creator')}
+        >
+          <PenTool className={`mr-2 h-5 w-5 ${isActive('/creator') ? 'text-slate-900' : 'text-slate-400'}`} />
+          Creator
+        </Button>
+        
+        <Button 
+          variant="ghost" 
+          className={cn(
+            "w-full justify-start text-base",
+            isActive('/products') ? 
+              "bg-slate-100 text-slate-900 font-medium" : 
+              "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            "transition-all"
+          )}
+          onClick={() => navigate('/products')}
+        >
+          <BookText className={`mr-2 h-5 w-5 ${isActive('/products') ? 'text-slate-900' : 'text-slate-400'}`} />
+          Products
+        </Button>
+        
+        <div className="pt-6">
+          <p className="text-xs font-medium text-slate-400 px-2 mb-2 uppercase tracking-wider">
+            SUPPORT
+          </p>
+          
+          <Button 
+            variant="ghost" 
+            className={cn(
+              "w-full justify-start text-base",
+              isActive('/help-center') ? 
+                "bg-slate-100 text-slate-900 font-medium" : 
+                "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              "transition-all"
+            )}
+            onClick={() => navigate('/help-center')}
+          >
+            <HelpCircle className={`mr-2 h-5 w-5 ${isActive('/help-center') ? 'text-slate-900' : 'text-slate-400'}`} />
+            Help Center
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className={cn(
+              "w-full justify-start text-base",
+              isActive('/settings') ? 
+                "bg-slate-100 text-slate-900 font-medium" : 
+                "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              "transition-all"
+            )}
+            onClick={() => navigate('/settings')}
+          >
+            <Settings className={`mr-2 h-5 w-5 ${isActive('/settings') ? 'text-slate-900' : 'text-slate-400'}`} />
+            Settings
+          </Button>
+        </div>
       </div>
     </div>
   );

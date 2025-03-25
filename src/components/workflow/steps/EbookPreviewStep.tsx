@@ -92,12 +92,51 @@ const EbookPreviewStep = () => {
   const handleFinalize = async () => {
     try {
       setError(null);
-      await finalizeEbook();
-      setIsFinalized(true);
-      // Manually transition to the completed step after finalizing
-      setCurrentStep('completed');
+      setIsGenerating('finalizing');
+      
+      // Show finalizing progress message
+      const finalizingSteps = [
+        "Compiling all chapters...",
+        "Formatting content...", 
+        "Creating metadata...",
+        "Finalizing eBook..."
+      ];
+      
+      // Create a little animation for the steps
+      for (let i = 0; i < finalizingSteps.length; i++) {
+        // Use a visual indicator that this is a status, not an error
+        setError(`⏳ ${finalizingSteps[i]}`);
+        // Log to console as well
+        console.log(`Finalization step ${i+1}/${finalizingSteps.length}: ${finalizingSteps[i]}`);
+        
+        // If this is the last step, start the actual eBook finalization in parallel with the animation
+        if (i === finalizingSteps.length - 1) {
+          // Don't await here - let it run in parallel with the timeout
+          finalizeEbook()
+            .then(() => {
+              setIsFinalized(true);
+              setError("✅ eBook successfully finalized! Redirecting to completed page...");
+              
+              // Transition to completed step
+              setTimeout(() => {
+                setCurrentStep('completed');
+              }, 1500);
+            })
+            .catch((err) => {
+              setError(err.message || 'Failed to finalize eBook');
+              setIsGenerating(null);
+            });
+        }
+        
+        // Pause between steps
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
+      // Return early since we're handling the finalization and state updates in the callback above
+      return;
     } catch (err: any) {
       setError(err.message || 'Failed to finalize eBook');
+      setIsGenerating(null);
     }
   };
 
@@ -245,6 +284,24 @@ const EbookPreviewStep = () => {
     }
   };
 
+  // Calculate book statistics
+  const calculateBookStats = () => {
+    const totalWords = ebookChapters.reduce((sum, chapter) => {
+      return sum + (chapter.content ? chapter.content.split(/\s+/).length : 0);
+    }, 0);
+    
+    const readingTimeMinutes = Math.ceil(totalWords / 225); // Average reading speed 225 wpm
+    const readingTimeDisplay = readingTimeMinutes >= 60 
+      ? `${Math.floor(readingTimeMinutes / 60)}h ${readingTimeMinutes % 60}m` 
+      : `${readingTimeMinutes} minutes`;
+    
+    const pageCount = Math.ceil(totalWords / 400); // Approx 400 words per page
+    
+    return { totalWords, readingTimeDisplay, pageCount };
+  };
+  
+  const { totalWords, readingTimeDisplay, pageCount } = calculateBookStats();
+
   return (
     <div className="space-y-8">
       <div>
@@ -254,6 +311,22 @@ const EbookPreviewStep = () => {
         <p className="text-ink-light font-serif max-w-3xl">
           Your eBook is now ready! Preview the content and download it in your preferred format.
         </p>
+        
+        {/* Book statistics */}
+        <div className="flex flex-wrap gap-x-8 gap-y-2 mt-4">
+          <div className="flex items-center gap-2 text-accent-primary text-sm">
+            <span className="font-bold">{totalWords.toLocaleString()}</span> words
+          </div>
+          <div className="flex items-center gap-2 text-accent-primary text-sm">
+            <span className="font-bold">{pageCount}</span> pages
+          </div>
+          <div className="flex items-center gap-2 text-accent-primary text-sm">
+            <span className="font-bold">{readingTimeDisplay}</span> reading time
+          </div>
+          <div className="flex items-center gap-2 text-accent-primary text-sm">
+            <span className="font-bold">{ebookChapters.length}</span> chapters
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -438,11 +511,27 @@ const EbookPreviewStep = () => {
         </Button>
         
         <Button
-          className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+          className={`
+            gap-2 font-serif transition-all duration-300 relative overflow-hidden
+            ${isGenerating === 'finalizing' 
+              ? "bg-accent-primary text-white opacity-90 pointer-events-none" 
+              : isFinalized
+                ? "bg-green-500 hover:bg-green-600 text-white"
+                : "bg-accent-primary hover:bg-accent-primary/90 text-white"
+            }
+          `}
           onClick={handleFinalize}
-          disabled={!allChaptersGenerated || isFinalized}
+          disabled={!allChaptersGenerated || isFinalized || isGenerating === 'finalizing'}
         >
-          {isFinalized ? (
+          {isGenerating === 'finalizing' ? (
+            <>
+              <div className="absolute inset-0 bg-accent-primary animate-pulse"></div>
+              <div className="relative flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Finalizing...
+              </div>
+            </>
+          ) : isFinalized ? (
             <>
               <Check className="h-4 w-4" />
               eBook Finalized

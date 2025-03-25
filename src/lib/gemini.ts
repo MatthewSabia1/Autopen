@@ -5,7 +5,9 @@ import { logError } from './utils/debug';
  */
 
 // API Key for Gemini
-const GEMINI_API_KEY = 'AIzaSyDuVam0hncS3-xYE0oLjdifjtzfRf_0e9w';
+// NOTE: In production, this should be stored in an environment variable
+// Using a hardcoded key only for development purposes
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDuVam0hncS3-xYE0oLjdifjtzfRf_0e9w';
 
 // API endpoints
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';

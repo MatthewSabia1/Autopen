@@ -350,7 +350,7 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
           </form>
         </div>
         
-        <div className="border-t border-accent-tertiary/30 p-4 bg-accent-yellow/10 mt-auto flex-shrink-0 flex justify-end gap-3 sticky bottom-0 rounded-b-lg" style={{ boxShadow: "0 -2px 10px rgba(0,0,0,0.05)" }}>
+        <DialogFooter className="border-t border-accent-tertiary/30 p-4 bg-accent-yellow/10 mt-auto flex-shrink-0 sticky bottom-0 rounded-b-lg" style={{ boxShadow: "0 -2px 10px rgba(0,0,0,0.05)" }}>
           <Button
             type="button"
             variant="outline"
@@ -380,7 +380,7 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               </>
             )}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

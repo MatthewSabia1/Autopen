@@ -27,6 +27,7 @@ import {
   Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import UserNavDropdown from "./UserNavDropdown";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -37,7 +38,7 @@ const DashboardLayout = ({
   children,
   activeTab = "Dashboard",
 }: DashboardLayoutProps) => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -77,214 +78,162 @@ const DashboardLayout = ({
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-cream flex">
-      {/* Mobile sidebar toggle */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="paper"
-          size="icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="shadow-soft"
-        >
-          {sidebarOpen ? (
-            <X className="h-5 w-5 text-ink-dark" />
-          ) : (
-            <Menu className="h-5 w-5 text-ink-dark" />
-          )}
-        </Button>
-      </div>
-
-      {/* Sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-paper border-r border-accent-tertiary transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:z-auto",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
-        )}
-      >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="h-16 flex items-center px-6 border-b border-accent-tertiary">
-            <div className="navbar-logo">
-              <PenTool className="w-6 h-6 text-accent-primary" />
-              <span className="font-display text-lg ml-1">Autopen</span>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex-1 overflow-auto py-6 px-4">
-            <nav className="space-y-1">
-              {navItems.map((item) => (
-                <Button
-                  key={item.label}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-3 text-base font-serif",
-                    activeTab === item.label
-                      ? "bg-accent-primary/10 text-ink-dark font-medium"
-                      : "text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark",
-                  )}
-                  onClick={() => handleNavigate(item.href)}
-                >
-                  {activeTab === item.label ? (
-                    <div className="text-accent-primary">{item.icon}</div>
-                  ) : (
-                    <div className="text-ink-light">{item.icon}</div>
-                  )}
-                  {item.label}
-                </Button>
-              ))}
-            </nav>
-
-            <div className="mt-8">
-              <h3 className="text-xs font-serif text-ink-faded uppercase tracking-wider px-3 mb-2">
-                Support
-              </h3>
-              <nav className="space-y-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-base font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
-                >
-                  <HelpCircle className="h-5 w-5 text-ink-light" />
-                  Help Center
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-base font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
-                  onClick={() => handleNavigate("/settings")}
-                >
-                  <Settings className="h-5 w-5 text-ink-light" />
-                  Settings
-                </Button>
-              </nav>
-            </div>
-          </div>
-
-          {/* User profile */}
-          <div className="border-t border-accent-tertiary/20 p-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-base font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
-                >
-                  <Avatar className="h-8 w-8 bg-accent-primary/20 border border-accent-primary/30">
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                      alt={user.email || ""}
-                    />
-                    <AvatarFallback className="font-serif text-ink-dark">
-                      {user.email ? user.email[0].toUpperCase() : "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-serif text-ink-dark">
-                      {user.user_metadata?.full_name || user.email}
-                    </span>
-                    <span className="text-xs font-serif text-ink-faded">{user.email}</span>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-paper border-accent-tertiary/20 shadow-medium" side="top" sideOffset={5}>
-                <DropdownMenuLabel className="font-display text-ink-dark">My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-accent-tertiary/10" />
-                <DropdownMenuItem className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleNavigate("/settings")}
-                  className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-accent-tertiary/10" />
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top navigation */}
-        <header className="h-16 bg-paper border-b border-accent-tertiary flex items-center justify-between px-6 sticky top-0 z-10">
-          <div className="flex-1 lg:flex-none">
-            <h1 className="font-display text-xl text-ink-dark">{activeTab}</h1>
-          </div>
-
-          <div className="flex items-center gap-4">
+    <div className="flex flex-col min-h-screen w-full">
+      {/* Top navigation - Refined dark header */}
+      <header className="h-[68px] bg-[#191f25] border-b border-white/10 flex items-center px-8 sticky top-0 z-50 w-full shadow-md">
+        <div className="flex items-center w-52">
+          {/* Mobile sidebar toggle */}
+          <div className="lg:hidden mr-4">
             <Button
               variant="ghost"
               size="icon"
-              className="text-ink-light hover:text-ink-dark"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="text-white hover:bg-white/15 transition-colors duration-200"
             >
-              <Bell className="h-5 w-5" />
+              {sidebarOpen ? (
+                <X className="h-6 w-6 text-white" />
+              ) : (
+                <Menu className="h-6 w-6 text-white" />
+              )}
             </Button>
-            <div className="hidden lg:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 font-serif">
-                    <Avatar className="h-8 w-8 bg-accent-primary/20 border border-accent-primary/30">
-                      <AvatarImage
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                        alt={user.email || ""}
-                      />
-                      <AvatarFallback className="font-serif text-ink-dark">
-                        {user.email ? user.email[0].toUpperCase() : "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-ink-dark">
-                      {user.user_metadata?.full_name ||
-                        user.email?.split("@")[0]}
-                    </span>
+          </div>
+          
+          {/* Logo with gold icon and white text */}
+          <div className="flex items-center">
+            <PenTool className="w-7 h-7 text-accent-yellow" />
+            <span className="font-display text-2xl ml-2.5 text-white tracking-tight">Autopen</span>
+          </div>
+        </div>
+        
+        {/* Page title - positioned to the right of sidebar width */}
+        <div className="hidden md:block">
+          <h1 className="font-display text-2xl text-white tracking-tight">{activeTab}</h1>
+        </div>
+
+        <div className="flex-1"></div>
+
+        <div className="flex items-center gap-5">
+          {activeTab === "Dashboard" && (
+            <div className="hidden md:flex gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-white border-white/30 hover:bg-white/15 hover:text-white text-[15px] bg-transparent flex items-center px-4 py-2 rounded-md transition-all duration-200"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                New Brain Dump
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-white border-white/30 hover:bg-white/15 hover:text-white bg-transparent p-2 rounded-md transition-all duration-200"
+                onClick={() => handleNavigate("/settings")}
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white/90 hover:text-white hover:bg-white/15 mx-1 rounded-md p-2.5 transition-all duration-200"
+          >
+            <Bell className="h-5 w-5" />
+          </Button>
+          <div className="hidden lg:block">
+            <UserNavDropdown />
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1 relative">
+        {/* Sidebar overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar - refined styling */}
+        <aside
+          className={cn(
+            "fixed top-[68px] left-0 bottom-0 z-40 w-56 bg-white shadow-md overflow-y-auto transition-transform duration-200 border-r border-accent-tertiary/20",
+            "lg:sticky lg:top-[68px] lg:max-h-[calc(100vh-68px)] lg:block",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full",
+            "lg:translate-x-0"
+          )}
+        >
+          <div className="flex flex-col h-full py-4">
+            {/* Navigation */}
+            <div className="flex-1 px-2">
+              <nav className="space-y-1">
+                {navItems.map((item) => (
+                  <Button
+                    key={item.label}
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start gap-1.5 text-sm font-serif",
+                      activeTab === item.label
+                        ? "bg-accent-primary/10 text-ink-dark font-medium"
+                        : "text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark",
+                    )}
+                    onClick={() => handleNavigate(item.href)}
+                  >
+                    {activeTab === item.label ? (
+                      <div className="text-accent-primary">{item.icon}</div>
+                    ) : (
+                      <div className="text-ink-light">{item.icon}</div>
+                    )}
+                    {item.label}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-paper border border-accent-tertiary/20 shadow-textera-md" side="bottom" sideOffset={5}>
-                  <DropdownMenuLabel className="font-display text-ink-dark">My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-accent-tertiary/20" />
-                  <DropdownMenuItem className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
+                ))}
+              </nav>
+
+              <div className="mt-8">
+                <h3 className="text-xs font-serif text-ink-faded uppercase tracking-wider px-1 mb-2">
+                  SUPPORT
+                </h3>
+                <nav className="space-y-1">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-1.5 text-sm font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
+                  >
+                    <HelpCircle className="h-5 w-5 text-ink-light" />
+                    Help Center
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-1.5 text-sm font-serif text-ink-light hover:bg-accent-primary/5 hover:text-ink-dark"
                     onClick={() => handleNavigate("/settings")}
-                    className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
                   >
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="h-5 w-5 text-ink-light" />
                     Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-accent-tertiary/20" />
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="cursor-pointer py-2 text-ink-dark hover:bg-accent-primary/5 hover:text-accent-primary font-serif"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </Button>
+                </nav>
+              </div>
             </div>
           </div>
-        </header>
+        </aside>
 
-        {/* Page content */}
-        <main className="flex-1 px-6 py-4 overflow-auto">{children}</main>
+        {/* Main content */}
+        <main className="flex-1 p-8 md:p-10 overflow-auto bg-cream">
+          {/* We don't need to display the activeTab title in the main content area
+              since it's already shown in the header */}
+          {children}
+        </main>
       </div>
     </div>
   );

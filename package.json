@@ -9,7 +9,8 @@
     "build-no-errors": "tsc ; vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
+    "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts",
+    "apply:creator-contents": "node scripts/apply-creator-contents-schema.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.6.0",
@@ -45,6 +46,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.4.7",
     "embla-carousel-react": "^8.1.5",
     "epub-gen": "^0.1.0",
     "framer-motion": "^11.18.0",

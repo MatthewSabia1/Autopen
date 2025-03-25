@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Check, Lightbulb, Loader2, PencilLine, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 /**
  * The third step in the eBook creation workflow.
@@ -36,8 +36,28 @@ const IdeaSelectionStep = () => {
    * Handles idea selection
    */
   const handleIdeaSelect = (id: string) => {
+    // Add selection animation effect
     setSelectedIdea(id);
     setCustomMode(false);
+    
+    // Find proceed button more safely - only scroll if needed
+    setTimeout(() => {
+      try {
+        // Try to find the proceed button container first
+        const actionButtons = document.querySelector('[data-proceed-buttons]');
+        if (actionButtons) {
+          actionButtons.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          // Fallback to scrolling to the bottom
+          window.scrollTo({
+            top: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) - window.innerHeight,
+            behavior: 'smooth'
+          });
+        }
+      } catch (err) {
+        console.warn('Error scrolling to proceed button:', err);
+      }
+    }, 300);
   };
 
   /**
@@ -49,6 +69,28 @@ const IdeaSelectionStep = () => {
   };
 
   /**
+   * Validates an idea title and description
+   */
+  const validateIdea = (title: string, description: string): boolean => {
+    if (!title.trim()) {
+      setError('Please enter a title for your eBook');
+      return false;
+    }
+    
+    if (title.length < 5) {
+      setError('Your eBook title is too short. Please make it at least 5 characters long.');
+      return false;
+    }
+    
+    if (description.trim().length < 20 && customMode) {
+      setError('Please provide a more detailed description (at least 20 characters) to help generate better content.');
+      return false;
+    }
+    
+    return true;
+  };
+  
+  /**
    * Proceeds to the next step with the selected idea
    */
   const handleProceed = async () => {
@@ -58,8 +100,7 @@ const IdeaSelectionStep = () => {
       
       if (customMode) {
         // Validate custom idea
-        if (!customTitle.trim()) {
-          setError('Please enter a title for your eBook');
+        if (!validateIdea(customTitle, customDescription)) {
           setIsCreating(false);
           return;
         }
@@ -79,6 +120,11 @@ const IdeaSelectionStep = () => {
         await selectEbookIdea(selectedIdea);
         
         // Create eBook with selected idea's title and description
+        if (!validateIdea(idea.title, idea.description || '')) {
+          setIsCreating(false);
+          return;
+        }
+        
         await createEbook(idea.title, idea.description || '');
       } else {
         setError('Please select an idea or create your own');
@@ -292,7 +338,7 @@ const IdeaSelectionStep = () => {
         </AnimatePresence>
       </div>
 
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-end space-x-4" data-proceed-buttons>
         <Button
           variant="outline"
           onClick={() => setCurrentStep('brain-dump')}

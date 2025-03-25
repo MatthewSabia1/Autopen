@@ -282,7 +282,7 @@ const BrainDump = () => {
       <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
         <div>
           <h1 className="text-2xl font-display text-ink-dark">Brain Dump</h1>
-          <p className="text-ink-light mt-1 font-serif">
+          <p className="text-ink-light mt-1 font-serif text-[15px]">
             Upload your thoughts, notes, or content in any format. Autopen will
             analyze and organize it into structured e-book ideas.
           </p>
@@ -291,36 +291,36 @@ const BrainDump = () => {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded flex items-start text-red-700">
             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
-            <p className="font-serif text-sm">{error}</p>
+            <p className="font-serif text-[14px]">{error}</p>
           </div>
         )}
 
         <div className="brain-dump-container">
-          <div className="pb-4 border-b border-accent-tertiary/10">
+          <div className="pb-4 border-b border-accent-tertiary/30">
             <h2 className="font-display text-lg text-ink-dark">
               Content Input
             </h2>
           </div>
           <div className="pt-4">
             <Tabs defaultValue="paste" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6 bg-white border border-accent-tertiary">
+              <TabsList className="grid w-full grid-cols-3 mb-6 bg-white border border-accent-tertiary/40">
                 <TabsTrigger 
                   value="paste" 
-                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
+                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary flex items-center gap-2 text-ink-light font-serif text-[14px]"
                 >
                   <FileText className="h-4 w-4" />
                   Paste Text
                 </TabsTrigger>
                 <TabsTrigger 
                   value="upload" 
-                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
+                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary flex items-center gap-2 text-ink-light font-serif text-[14px]"
                 >
                   <Upload className="h-4 w-4" />
                   Upload Files
                 </TabsTrigger>
                 <TabsTrigger 
                   value="link" 
-                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary flex items-center gap-2 text-ink-light font-serif"
+                  className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary flex items-center gap-2 text-ink-light font-serif text-[14px]"
                 >
                   <LinkIcon className="h-4 w-4" />
                   Add Link
@@ -329,18 +329,18 @@ const BrainDump = () => {
 
               <TabsContent value="paste" className="space-y-4">
                 <div className="space-y-2 form-field">
-                  <Label htmlFor="content-title" className="form-label">Document Title</Label>
+                  <Label htmlFor="content-title" className="form-label text-[14px]">Document Title</Label>
                   <Input
                     id="content-title"
                     placeholder="Enter a title for your content"
-                    className="form-input"
+                    className="form-input text-[14px]"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2 form-field">
                   <div className="flex justify-between">
-                    <Label htmlFor="content" className="form-label">Content</Label>
+                    <Label htmlFor="content" className="form-label text-[14px]">Content</Label>
                     <span className="text-xs text-ink-faded font-serif">
                       {content.length} characters
                     </span>
@@ -348,7 +348,7 @@ const BrainDump = () => {
                   <Textarea
                     id="content"
                     placeholder="Paste your unorganized notes, ideas, or content here..."
-                    className="brain-dump-textarea min-h-[300px]"
+                    className="brain-dump-textarea min-h-[300px] text-[14px]"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     onDrop={handleTextAreaDrop}
@@ -356,18 +356,18 @@ const BrainDump = () => {
                   />
                 </div>
                 <div className="space-y-2 form-field">
-                  <Label htmlFor="content-type" className="form-label">Content Type</Label>
+                  <Label htmlFor="content-type" className="form-label text-[14px]">Content Type</Label>
                   <Select defaultValue="auto">
-                    <SelectTrigger id="content-type" className="form-input">
+                    <SelectTrigger id="content-type" className="form-input text-[14px]">
                       <SelectValue placeholder="Select content type" />
                     </SelectTrigger>
-                    <SelectContent className="bg-paper border-accent-tertiary">
-                      <SelectItem value="auto">Auto-detect</SelectItem>
-                      <SelectItem value="blog">Blog Post</SelectItem>
-                      <SelectItem value="article">Article</SelectItem>
-                      <SelectItem value="report">Report</SelectItem>
-                      <SelectItem value="notes">Meeting Notes</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
+                    <SelectContent className="bg-paper border-accent-tertiary/40">
+                      <SelectItem value="auto" className="text-[14px]">Auto-detect</SelectItem>
+                      <SelectItem value="blog" className="text-[14px]">Blog Post</SelectItem>
+                      <SelectItem value="article" className="text-[14px]">Article</SelectItem>
+                      <SelectItem value="report" className="text-[14px]">Report</SelectItem>
+                      <SelectItem value="notes" className="text-[14px]">Meeting Notes</SelectItem>
+                      <SelectItem value="email" className="text-[14px]">Email</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -375,7 +375,7 @@ const BrainDump = () => {
 
               <TabsContent value="upload" className="space-y-4">
                 <div 
-                  className="border-2 border-dashed border-accent-tertiary rounded p-12 text-center"
+                  className="border-2 border-dashed border-accent-tertiary/40 rounded p-12 text-center"
                   onDrop={handleTextDrop}
                   onDragOver={(e) => e.preventDefault()}
                 >
@@ -383,13 +383,13 @@ const BrainDump = () => {
                   <h3 className="text-lg font-medium text-ink-dark mb-2 font-display">
                     Drag & drop files here
                   </h3>
-                  <p className="text-sm text-ink-light mb-4 font-serif">
+                  <p className="text-[14px] text-ink-light mb-4 font-serif">
                     Support for .docx, .pdf, .txt, .md, and more
                   </p>
                   <div className="flex justify-center space-x-3">
                     <Button 
                       variant="outline" 
-                      className="text-sm"
+                      className="text-[14px]"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <File className="w-4 h-4 mr-1.5" />
@@ -454,13 +454,22 @@ const BrainDump = () => {
           </div>
         </div>
 
-        <div className="mt-6">
-          <Button
-            variant="default"
-            className="w-full"
+        <div className="flex justify-end mt-6">
+          <Button 
             onClick={handleAnalyzeContent}
+            disabled={isProcessing}
+            className="bg-accent-primary hover:bg-accent-secondary text-white shadow-blue-sm text-[15px]"
           >
-            Analyze Content <ArrowRight className="h-4 w-4 ml-2" />
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Analyze Content <Sparkles className="ml-2 w-4 h-4" />
+              </>
+            )}
           </Button>
         </div>
       </div>

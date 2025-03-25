@@ -4,57 +4,89 @@ import DashboardLayout from "../layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  BarChart3,
   BookText,
   FileText,
   PenTool,
   Plus,
-  Sparkles,
-  Users,
-  Zap,
-  Award,
-  Brain,
   ChevronRight,
   Settings,
   Clock,
-  CloudLightning as Lightning,
+  CloudLightning,
   Wand2,
   Layers,
-  Crown,
   ArrowRight,
+  Award,
+  Sparkles,
+  TrendingUp,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "../../../supabase/auth";
+import { useProducts, Product } from "../../hooks/useProducts";
+import { formatDistance } from "date-fns";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
+  const { products, isLoading, error } = useProducts();
   
   // Mock data for dashboard stats
   const dashboardStats = {
     completedProducts: 5,
     draftProducts: 7,
-    wordsWritten: 24350,
-    aiCredits: 850
+    wordsWritten: 24350
   };
 
-  // Mock data for recent products
-  const recentProducts = [
-    { id: 1, title: "Business Leadership Guide", date: "2 days ago", progress: 80, category: "Business" },
-    { id: 2, title: "Cooking Techniques", date: "1 week ago", progress: 45, category: "Food" },
-    { id: 3, title: "Travel Photography Tips", date: "2 weeks ago", progress: 90, category: "Photography" }
-  ];
+  // Get recent products from the real data
+  const getRecentProducts = (): Product[] => {
+    if (!products || products.length === 0) return [];
+    
+    // Sort by updated_at (newest first) and take the first 3
+    return [...products]
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 3);
+  };
 
-  // Mock brain dumps
-  const brainDumps = [
-    { id: 1, title: "Marketing Strategy Notes", created_at: "2023-05-15T10:30:00", content: JSON.stringify({summary: "Key insights on digital marketing trends and strategies for Q3"}) },
-    { id: 2, title: "Book Chapter Ideas", created_at: "2023-05-12T14:20:00", content: JSON.stringify({summary: "Outline and concepts for my upcoming non-fiction book on productivity"}) },
-    { id: 3, title: "Conference Notes", created_at: "2023-05-08T09:15:00", content: JSON.stringify({summary: "Important takeaways from the annual industry conference panels and workshops"}) }
-  ];
+  // Format the date to relative time (e.g. "2 days ago")
+  const formatRelativeDate = (dateString: string): string => {
+    try {
+      return formatDistance(new Date(dateString), new Date(), { addSuffix: true });
+    } catch (e) {
+      return "Unknown date";
+    }
+  };
+
+  // Calculate progress based on product status
+  const calculateProgress = (product: Product): number => {
+    if (product.status === "published") return 100;
+    if (product.status === "draft" && product.metadata?.wordCount) {
+      // If we have word count, use it as a factor in progress calculation
+      const wordCount = product.metadata.wordCount;
+      // Assuming 1000 words is about 40% progress, 5000 words is about 80% progress
+      if (wordCount >= 5000) return 80;
+      if (wordCount >= 1000) return 40 + (wordCount - 1000) / 4000 * 40;
+      return Math.min(Math.max(wordCount / 1000 * 40, 10), 40); // At least 10%, at most 40%
+    }
+    // Default values based on status
+    if (product.status === "draft") return 50;
+    if (product.status === "in_progress") return 75;
+    return 30; // Default progress
+  };
+
+  // Get category from product type or metadata
+  const getProductCategory = (product: Product): string => {
+    if (product.metadata?.category && typeof product.metadata.category === 'string') {
+      return product.metadata.category;
+    }
+    
+    if (product.type === "ebook") return "eBook";
+    if (product.type === "brain_dump") return "Notes";
+    if (product.type === "course") return "Course";
+    if (product.type === "blog") return "Blog";
+    
+    return product.type.charAt(0).toUpperCase() + product.type.slice(1);
+  };
 
   // Mock writing tips
   const writingTips = [
@@ -69,26 +101,22 @@ const Dashboard = () => {
     {
       id: "ebook",
       name: "E-Book",
-      description: "Create a structured digital book with chapters and sections",
-      features: ["Chapter organization", "Table of contents", "Multiple page layouts", "Footnotes & citations"]
+      description: "Create a structured digital book with chapters and sections"
     },
     {
       id: "course",
       name: "Online Course",
-      description: "Educational content organized into modules and lessons",
-      features: ["Module structure", "Progress tracking", "Quizzes & exercises", "Instructor notes"]
+      description: "Educational content organized into modules and lessons"
     },
     {
       id: "blog",
       name: "Blog Collection",
-      description: "Compile blog posts into a cohesive publication",
-      features: ["Post categorization", "Author profiles", "Comment highlights", "Unified styling"]
+      description: "Compile blog posts into a cohesive publication"
     },
     {
       id: "memoir",
       name: "Memoir/Biography",
-      description: "Tell a personal or historical story with timeline features",
-      features: ["Chronological organization", "Personal anecdotes", "Photo galleries", "Timeline view"]
+      description: "Tell a personal or historical story with timeline features"
     }
   ];
 
@@ -99,477 +127,384 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout activeTab="Dashboard">
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-8 bg-cream p-8 md:p-10">
         {/* Welcome section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h2 className="font-display text-2xl text-ink-dark/90 dark:text-gray-100/90 mb-1 font-medium">
-              Welcome{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ' Back'}!
+            <h2 className="text-page-title font-display mb-1 text-ink-dark tracking-tight">
+              Welcome Back!
             </h2>
-            <p className="font-serif text-ink-light/80 dark:text-gray-400/90 text-sm">Continue working on your e-book products</p>
+            <p className="text-body font-serif text-ink-light">Continue working on your e-book products</p>
           </div>
-          <div className="flex items-center space-x-3 mt-2 md:mt-0">
+          <div className="flex items-center space-x-3">
             <Button 
               onClick={() => handleNavigate('/settings')}
               variant="outline" 
-              className="px-3 py-1.5 text-sm font-serif text-accent-primary/90 border border-accent-primary/20 hover:bg-accent-primary/5 flex items-center"
+              className="border-accent-tertiary/30 text-ink-dark hover:border-accent-primary/30"
             >
-              <Settings className="w-3.5 h-3.5 mr-1.5 opacity-80" />
+              <Settings className="w-4 h-4 mr-2" />
               Settings
             </Button>
             <Button 
-              onClick={() => handleNavigate('/brain-dump')}
-              className="px-3 py-1.5 text-sm font-serif bg-accent-primary/90 text-white/95 rounded flex items-center hover:bg-accent-primary/80 transition-colors shadow-sm"
+              onClick={() => handleNavigate('/creator')}
+              className="bg-accent-primary text-white hover:bg-accent-secondary shadow-blue-sm hover:shadow-blue"
             >
-              <PenTool className="w-3.5 h-3.5 mr-1.5 opacity-90" />
-              New Brain Dump
+              <Sparkles className="w-4 h-4 mr-2" />
+              Create Content
             </Button>
           </div>
         </div>
 
         {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+          <Card variant="stat" className="overflow-hidden group hover:border-accent-yellow/50 hover:shadow-yellow-sm transition-all duration-300">
             <CardContent className="p-0">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-accent-secondary/5 dark:bg-accent-secondary/10 rounded-full flex items-center justify-center mr-3">
-                  <Award className="w-3.5 h-3.5 text-accent-secondary/80" />
+              <div className="flex flex-col p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-ink-light text-small font-medium">Completed Products</p>
+                  <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center group-hover:bg-accent-yellow/10 transition-colors duration-300">
+                    <Award className="w-5 h-5 text-accent-yellow group-hover:scale-110 transition-transform duration-300" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-ink-light/80 dark:text-gray-400/90 text-xs font-serif">Completed Products</p>
-                  <p className="text-ink-dark/90 dark:text-gray-100/90 text-xl font-display font-medium">{dashboardStats.completedProducts}</p>
+                <div className="flex items-baseline">
+                  <p className="text-ink-dark text-3xl font-serif font-medium">{dashboardStats.completedProducts}</p>
+                  <div className="ml-2 text-xs text-accent-yellow font-medium px-1.5 py-0.5 bg-accent-yellow/10 rounded flex items-center">
+                    <TrendingUp className="w-3 h-3 mr-0.5" />
+                    2 this month
+                  </div>
                 </div>
+              </div>
+              <div className="h-1.5 w-full bg-accent-yellow/10">
+                <div className="h-1.5 bg-accent-yellow w-1/3 rounded-r-full transition-all duration-1000"></div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
+          <Card variant="stat" className="overflow-hidden group hover:border-accent-primary/50 hover:shadow-blue-sm transition-all duration-300">
             <CardContent className="p-0">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-3">
-                  <BookText className="w-3.5 h-3.5 text-accent-primary/80" />
+              <div className="flex flex-col p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-ink-light text-small font-medium">Draft Products</p>
+                  <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center group-hover:bg-accent-primary/10 transition-colors duration-300">
+                    <BookText className="w-5 h-5 text-accent-primary group-hover:scale-110 transition-transform duration-300" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-ink-light/80 dark:text-gray-400/90 text-xs font-serif">Draft Products</p>
-                  <p className="text-ink-dark/90 dark:text-gray-100/90 text-xl font-display font-medium">{dashboardStats.draftProducts}</p>
+                <div className="flex items-baseline">
+                  <p className="text-ink-dark text-3xl font-serif font-medium">{dashboardStats.draftProducts}</p>
+                  <div className="ml-2 text-xs text-accent-primary font-medium px-1.5 py-0.5 bg-accent-primary/10 rounded">
+                    In progress
+                  </div>
                 </div>
+              </div>
+              <div className="h-1.5 w-full bg-accent-primary/10">
+                <div className="h-1.5 bg-accent-primary w-2/3 rounded-r-full transition-all duration-1000"></div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
+          <Card variant="stat" className="overflow-hidden group hover:border-accent-yellow/50 hover:shadow-yellow-sm transition-all duration-300">
             <CardContent className="p-0">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-accent-tertiary/5 dark:bg-accent-tertiary/10 rounded-full flex items-center justify-center mr-3">
-                  <FileText className="w-3.5 h-3.5 text-accent-tertiary/80" />
+              <div className="flex flex-col p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-ink-light text-small font-medium">Words Written</p>
+                  <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center group-hover:bg-accent-yellow/10 transition-colors duration-300">
+                    <FileText className="w-5 h-5 text-accent-yellow group-hover:scale-110 transition-transform duration-300" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-ink-light/80 dark:text-gray-400/90 text-xs font-serif">Words Written</p>
-                  <p className="text-ink-dark/90 dark:text-gray-100/90 text-xl font-display font-medium">{dashboardStats.wordsWritten.toLocaleString()}</p>
+                <div className="flex items-baseline">
+                  <p className="text-ink-dark text-3xl font-serif font-medium">{dashboardStats.wordsWritten.toLocaleString()}</p>
+                  <div className="ml-2 text-xs text-accent-yellow font-medium px-1.5 py-0.5 bg-accent-yellow/10 rounded flex items-center">
+                    <TrendingUp className="w-3 h-3 mr-0.5" />
+                    3.2k this week
+                  </div>
                 </div>
+              </div>
+              <div className="h-1.5 w-full bg-accent-yellow/10">
+                <div className="h-1.5 bg-accent-yellow w-4/5 rounded-r-full transition-all duration-1000"></div>
               </div>
             </CardContent>
           </Card>
         </div>
       
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Left column - Now starting with Quick Actions followed by Recent Products */}
-          <div className="lg:col-span-2">
-            {/* Quick Actions - Now first */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm mb-6">
-              <CardHeader className="pb-2 pt-4 px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
+          {/* Left column with Quick Actions and Recent Products */}
+          <div className="lg:col-span-2 space-y-7">
+            {/* Quick Actions */}
+            <Card className="overflow-hidden">
+              <CardHeader>
                 <div className="flex items-center">
-                  <Zap className="w-4 h-4 text-accent-secondary/80 mr-2" />
-                  <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Quick Actions</CardTitle>
+                  <PenTool className="w-5 h-5 text-accent-yellow mr-2" />
+                  <CardTitle>Quick Actions</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Card 
+                    variant="action"
                     onClick={() => handleNavigate('/brain-dump')}
-                    variant="outline"
-                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-7 h-7 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-primary/10 dark:group-hover:bg-accent-primary/20 transition-colors">
-                      <PenTool className="w-3 h-3 text-accent-primary/80" />
-                    </div>
-                    <div className="text-left">
-                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-primary/90 transition-colors text-sm">Brain Dump</h4>
-                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
-                        Transform your ideas into organized content
-                      </p>
-                    </div>
-                  </Button>
+                    <CardContent className="p-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-accent-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="flex items-start relative z-10">
+                        <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-white transition-colors duration-300">
+                          <PenTool className="w-5 h-5 text-accent-primary group-hover:scale-110 transition-transform duration-300" />
+                        </div>
+                        <div>
+                          <h4 className="text-ink-dark font-medium mb-1">Brain Dump</h4>
+                          <p className="text-ink-light text-small">
+                            Transform your ideas into organized content
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                   
-                  <Button 
+                  <Card 
+                    variant="action"
                     onClick={() => handleNavigate('/creator')}
-                    variant="outline"
-                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-7 h-7 bg-accent-secondary/5 dark:bg-accent-secondary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-secondary/10 dark:group-hover:bg-accent-secondary/20 transition-colors">
-                      <Wand2 className="w-3 h-3 text-accent-secondary/80" />
-                    </div>
-                    <div className="text-left">
-                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-secondary/90 transition-colors text-sm">AI Creator</h4>
-                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
-                        Generate complete content with AI
-                      </p>
-                    </div>
-                  </Button>
+                    <CardContent className="p-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-accent-yellow/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="flex items-start relative z-10">
+                        <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-white transition-colors duration-300">
+                          <Wand2 className="w-5 h-5 text-accent-yellow group-hover:scale-110 transition-transform duration-300" />
+                        </div>
+                        <div>
+                          <h4 className="text-ink-dark font-medium mb-1">AI Creator</h4>
+                          <p className="text-ink-light text-small">
+                            Generate complete content with AI
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                   
-                  <Button 
+                  <Card 
+                    variant="action"
                     onClick={() => handleNavigate('/products')}
-                    variant="outline"
-                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-7 h-7 bg-accent-tertiary/5 dark:bg-accent-tertiary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-tertiary/10 dark:group-hover:bg-accent-tertiary/20 transition-colors">
-                      <BookText className="w-3 h-3 text-accent-tertiary/80" />
-                    </div>
-                    <div className="text-left">
-                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-tertiary/90 transition-colors text-sm">All Products</h4>
-                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
-                        View and manage all your e-books
-                      </p>
-                    </div>
-                  </Button>
+                    <CardContent className="p-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-accent-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="flex items-start relative z-10">
+                        <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-white transition-colors duration-300">
+                          <BookText className="w-5 h-5 text-accent-primary group-hover:scale-110 transition-transform duration-300" />
+                        </div>
+                        <div>
+                          <h4 className="text-ink-dark font-medium mb-1">All Products</h4>
+                          <p className="text-ink-light text-small">
+                            View and manage all your e-books
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                   
-                  <Button 
+                  <Card 
+                    variant="action"
                     onClick={() => handleNavigate('/settings')}
-                    variant="outline"
-                    className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md bg-white dark:bg-gray-700 hover:shadow-sm transition-all flex items-start justify-start h-auto group"
                   >
-                    <div className="w-7 h-7 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-accent-primary/10 dark:group-hover:bg-accent-primary/20 transition-colors">
-                      <Settings className="w-3 h-3 text-accent-primary/80" />
-                    </div>
-                    <div className="text-left">
-                      <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 group-hover:text-accent-primary/90 transition-colors text-sm">Settings</h4>
-                      <p className="font-serif text-xs text-ink-light/70 dark:text-gray-400/80 mt-0.5">
-                        Customize your account preferences
-                      </p>
-                    </div>
-                  </Button>
+                    <CardContent className="p-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-accent-yellow/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="flex items-start relative z-10">
+                        <div className="w-10 h-10 bg-accent-tertiary/40 rounded-full flex items-center justify-center mr-3 flex-shrink-0 group-hover:bg-white transition-colors duration-300">
+                          <Settings className="w-5 h-5 text-accent-primary group-hover:scale-110 transition-transform duration-300" />
+                        </div>
+                        <div>
+                          <h4 className="text-ink-dark font-medium mb-1">Settings</h4>
+                          <p className="text-ink-light text-small">
+                            Customize your account preferences
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
             
             {/* Recent Products */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm mb-6">
-              <CardHeader className="pb-2 pt-4 px-4">
+            <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-3 pt-5 px-6 border-b border-[#F0F0F0]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Clock className="w-4 h-4 text-accent-primary/80 mr-2" />
-                    <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Recent Products</CardTitle>
+                    <Clock className="w-5 h-5 text-[#738996] mr-2" />
+                    <CardTitle className="text-lg font-medium font-serif text-[#333333]">Recent Products</CardTitle>
                   </div>
                   <Button 
                     onClick={() => handleNavigate('/products')}
                     variant="link"
-                    className="text-accent-primary dark:text-gray-100 text-sm font-serif flex items-center hover:underline p-0"
+                    className="text-[#738996] text-sm flex items-center hover:text-[#738996]/80 font-medium transition-colors"
                   >
                     View All
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                {recentProducts.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentProducts.map(product => (
-                      <div 
+              <CardContent className="px-6 py-5">
+                {error && (
+                  <div className="p-4 border border-red-200 rounded-lg bg-red-50 text-red-700 mb-4">
+                    <p className="text-sm font-medium mb-1">Error loading products</p>
+                    <p className="text-xs">{error}</p>
+                    <Button 
+                      onClick={() => window.location.reload()} 
+                      size="sm"
+                      className="bg-red-700 text-white hover:bg-red-800 mt-2"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Retry
+                    </Button>
+                  </div>
+                )}
+                
+                {isLoading ? (
+                  <div className="py-10 flex flex-col items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-[#738996] animate-spin mb-3" />
+                    <p className="text-[#666666] text-sm">Loading your products...</p>
+                  </div>
+                ) : getRecentProducts().length === 0 ? (
+                  <div className="py-10 flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 bg-[#F5F5F5] rounded-full flex items-center justify-center mb-4">
+                      <BookText className="w-8 h-8 text-[#CCCCCC]" />
+                    </div>
+                    <p className="text-[#666666] text-center">No products found. Get started by creating your first content!</p>
+                    <Button 
+                      onClick={() => handleNavigate('/creator')}
+                      className="mt-4 bg-[#738996] text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Product
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {getRecentProducts().map(product => (
+                      <Card 
                         key={product.id} 
-                        className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md hover:shadow-sm transition-all cursor-pointer bg-white/50 dark:bg-gray-800/50"
-                        onClick={() => handleNavigate(`/products/${product.id}`)}
+                        className="border border-[#E8E8E8] bg-white hover:border-[#738996]/30 transition-all cursor-pointer shadow-none rounded-lg overflow-hidden group"
+                        onClick={() => {
+                          console.log("Dashboard: navigating to product:", product.id);
+                          navigate(`/products/${product.id}`);
+                        }}
                       >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 text-sm">{product.title}</h4>
-                            <div className="flex items-center mt-1">
-                              <Badge variant="outline" className="text-xs font-serif bg-accent-secondary/5 dark:bg-accent-secondary/10 text-accent-secondary/80 dark:text-gray-400/90 mr-2 px-1.5 py-0">
-                                {product.category}
-                              </Badge>
-                              <span className="text-xs font-serif text-ink-faded/70 dark:text-gray-500/80">
-                                Updated {product.date}
-                              </span>
+                        <CardContent className="p-4 relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#738996]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="text-[#2A2A2A] font-medium mb-1">{product.title}</h4>
+                                <div className="flex items-center">
+                                  <Badge className="bg-[#F9F5ED] text-[#ccb595] border-[#ccb595] border mr-2 font-normal px-2 py-0.5 rounded text-xs">
+                                    {getProductCategory(product)}
+                                  </Badge>
+                                  <span className="text-xs text-[#666666]">
+                                    Updated {formatRelativeDate(product.updated_at)}
+                                  </span>
+                                </div>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-[#666666] group-hover:text-[#738996] group-hover:translate-x-1 transition-all duration-300" />
+                            </div>
+                            <div className="w-full bg-[#E8E8E8] rounded-full h-1.5 mb-1">
+                              <div className="bg-[#738996] h-1.5 rounded-full transition-all duration-1000" style={{ width: `${calculateProgress(product)}%` }}></div>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-[#666666]">Progress</span>
+                              <span className="text-[#2A2A2A] font-medium">{calculateProgress(product)}%</span>
                             </div>
                           </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-accent-tertiary/70 dark:text-gray-400/70" />
-                        </div>
-                        <div className="w-full bg-cream/50 dark:bg-gray-700/50 rounded-full h-1.5 mt-2 mb-1">
-                          <Progress value={product.progress} className="h-1.5 bg-accent-primary/80 dark:bg-gray-200/90" />
-                        </div>
-                        <div className="flex justify-between text-xs font-serif">
-                          <span className="text-ink-light/70 dark:text-gray-400/80 text-[10px]">Progress</span>
-                          <span className="text-accent-primary/80 dark:text-gray-200/80 text-[10px]">{product.progress}%</span>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <BookText className="w-10 h-10 text-accent-tertiary/40 dark:text-gray-400 mx-auto mb-2" />
-                    <p className="font-serif text-ink-light dark:text-gray-400 mb-3">You haven't created any products yet</p>
-                    <Button 
-                      onClick={() => handleNavigate('/products')}
-                      className="px-3 py-1.5 font-serif text-sm bg-accent-primary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-primary/90 dark:hover:bg-gray-300"
-                    >
-                      Create Your First Product
-                    </Button>
-                  </div>
                 )}
                 
-                {recentProducts.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-accent-tertiary/20 dark:border-gray-700">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button 
-                        onClick={() => handleNavigate('/creator')}
-                        className="flex-1 px-3 py-1.5 text-xs font-serif bg-accent-secondary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-secondary/90 dark:hover:bg-gray-300 transition-colors flex items-center justify-center"
-                      >
-                        <Wand2 className="w-3 h-3 mr-1.5" />
-                        New AI Content
-                      </Button>
-                      <Button 
-                        onClick={() => handleNavigate('/products')}
-                        variant="outline"
-                        className="flex-1 px-3 py-1.5 text-xs font-serif bg-accent-primary/10 dark:bg-gray-700 text-accent-primary dark:text-gray-200 rounded hover:bg-accent-primary/20 dark:hover:bg-gray-600 transition-colors flex items-center justify-center"
-                      >
-                        <Plus className="w-3 h-3 mr-1.5" />
-                        New Product
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Recent Brain Dumps */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm mb-6">
-              <CardHeader className="pb-2 pt-4 px-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Brain className="w-4 h-4 text-accent-secondary/80 mr-2" />
-                    <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Recent Brain Dumps</CardTitle>
-                  </div>
+                <div className="mt-6 pt-4 border-t border-[#F0F0F0] flex gap-4">
                   <Button 
-                    onClick={() => handleNavigate('/brain-dumps')}
-                    variant="link"
-                    className="text-accent-primary dark:text-gray-100 text-sm font-serif flex items-center hover:underline p-0"
+                    onClick={() => handleNavigate('/creator')}
+                    className="flex-1 bg-[#ccb595] text-white hover:bg-[#ccb595]/90 font-medium shadow-sm hover:shadow transition-all duration-300"
                   >
-                    View All
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    New AI Content
+                  </Button>
+                  <Button 
+                    onClick={() => handleNavigate('/products')}
+                    variant="outline"
+                    className="flex-1 border-[#E8E8E8] text-[#2A2A2A] font-medium hover:bg-[#F9F7F4] transition-colors duration-300"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Product
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                {brainDumps.length > 0 ? (
-                  <div className="space-y-3">
-                    {brainDumps.map(dump => {
-                      // Try to parse the content to get the summary
-                      let summary = '';
-                      try {
-                        if (dump.content) {
-                          const parsedContent = JSON.parse(dump.content);
-                          summary = parsedContent.summary || '';
-                        }
-                      } catch (e) {
-                        console.error('Error parsing brain dump content:', e);
-                      }
-                      
-                      // Format date
-                      const formattedDate = new Date(dump.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      });
-                      
-                      return (
-                        <div 
-                          key={dump.id} 
-                          className="p-3 border border-accent-tertiary/10 dark:border-gray-700/80 rounded-md hover:shadow-sm transition-all cursor-pointer bg-white/50 dark:bg-gray-800/50"
-                          onClick={() => handleNavigate(`/brain-dump/${dump.id}`)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 text-sm">{dump.title}</h4>
-                              <div className="flex items-center mt-1">
-                                <span className="text-xs font-serif text-ink-faded/70 dark:text-gray-500/80">
-                                  Created {formattedDate}
-                                </span>
-                              </div>
-                            </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-accent-tertiary/70 dark:text-gray-400/70" />
-                          </div>
-                          {summary && (
-                            <p className="mt-1.5 font-serif text-xs text-ink-light/80 dark:text-gray-400/90 line-clamp-2">
-                              {summary}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <Brain className="w-10 h-10 text-accent-tertiary/40 dark:text-gray-400 mx-auto mb-2" />
-                    <p className="font-serif text-ink-light dark:text-gray-400 mb-3">You haven't created any brain dumps yet</p>
-                    <Button 
-                      onClick={() => handleNavigate('/brain-dump')}
-                      className="px-3 py-1.5 font-serif text-sm bg-accent-primary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-primary/90 dark:hover:bg-gray-300 transition-colors"
-                    >
-                      Create Your First Brain Dump
-                    </Button>
-                  </div>
-                )}
-                
-                {brainDumps.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-accent-tertiary/20 dark:border-gray-700">
-                    <Button 
-                      onClick={() => handleNavigate('/brain-dump')}
-                      variant="outline"
-                      className="w-full px-3 py-1.5 text-xs font-serif bg-accent-secondary/10 dark:bg-accent-secondary/20 text-accent-secondary dark:text-accent-secondary/90 border border-accent-secondary/20 dark:border-accent-secondary/30 rounded hover:bg-accent-secondary/20 dark:hover:bg-accent-secondary/30 transition-colors flex items-center justify-center"
-                    >
-                      <Brain className="w-3 h-3 mr-1.5" />
-                      New Brain Dump
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
           
           {/* Right sidebar column */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-7">
             {/* Product Templates */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-4">
+            <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-3 pt-5 px-6 border-b border-[#F0F0F0]">
                 <div className="flex items-center">
-                  <Layers className="w-4 h-4 text-accent-secondary/80 mr-2" />
-                  <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Product Templates</CardTitle>
+                  <Layers className="w-5 h-5 text-[#ccb595] mr-2" />
+                  <CardTitle className="text-lg font-medium font-serif text-[#333333]">Product Templates</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <CardContent className="px-6 py-5">
+                <div className="space-y-3">
                   {templates.map(template => (
-                    <div 
+                    <Card 
                       key={template.id}
-                      className={`p-3 border ${activeTemplate === template.id ? 'border-accent-primary/50 bg-accent-primary/5' : 'border-accent-tertiary/10 dark:border-gray-700/80'} rounded-md cursor-pointer transition-all bg-white/50 dark:bg-gray-800/50`}
-                      onClick={() => setActiveTemplate(activeTemplate === template.id ? null : template.id)}
+                      className="border border-[#E8E8E8] bg-white hover:border-[#ccb595]/40 transition-all cursor-pointer shadow-none rounded-lg overflow-hidden group"
+                      onClick={() => handleNavigate(`/creator?template=${template.id}`)}
                     >
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-serif font-medium text-ink-dark/90 dark:text-gray-100/90 text-sm">{template.name}</h4>
-                        <ChevronRight className={`w-3.5 h-3.5 text-accent-primary/70 dark:text-gray-200/70 transition-transform ${activeTemplate === template.id ? 'rotate-90' : ''}`} />
-                      </div>
-                      
-                      <p className="font-serif text-xs text-ink-light/80 dark:text-gray-400/90 mt-0.5 mb-1">
-                        {template.description}
-                      </p>
-                      
-                      {activeTemplate === template.id && (
-                        <div className="mt-2 pt-2 border-t border-accent-tertiary/20 dark:border-gray-700">
-                          <ul className="space-y-1 mb-2">
-                            {template.features.map((feature, idx) => (
-                              <li key={idx} className="flex items-start text-xs font-serif text-ink-light/70 dark:text-gray-400/80">
-                                <div className="w-2 h-2 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mt-0.5 mr-1.5 flex-shrink-0">
-                                  <div className="w-0.5 h-0.5 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
-                                </div>
-                                {feature}
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() => handleNavigate('/creator')}
-                              className="flex-1 px-3 py-1.5 text-xs font-serif bg-accent-secondary dark:bg-gray-200 text-white dark:text-gray-900 rounded hover:bg-accent-secondary/90 dark:hover:bg-gray-300 transition-colors flex items-center justify-center"
-                            >
-                              <Wand2 className="w-3 h-3 mr-1.5" />
-                              AI Create
-                            </Button>
-                            <Button
-                              onClick={() => handleNavigate('/products')}
-                              variant="outline"
-                              className="flex-1 px-3 py-1.5 text-xs font-serif bg-accent-primary/10 dark:bg-gray-700 text-accent-primary dark:text-gray-200 rounded hover:bg-accent-primary/20 dark:hover:bg-gray-600 transition-colors flex items-center justify-center"
-                            >
-                              <Plus className="w-3 h-3 mr-1.5" />
-                              Manual
-                            </Button>
+                      <CardContent className="p-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#ccb595]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="flex justify-between items-start relative z-10">
+                          <div>
+                            <h4 className="text-[#2A2A2A] font-medium mb-1">{template.name}</h4>
+                            <p className="text-[#666666] text-sm">
+                              {template.description}
+                            </p>
                           </div>
+                          <ChevronRight className="w-4 h-4 text-[#738996] group-hover:text-[#ccb595] group-hover:translate-x-1 transition-all duration-300" />
                         </div>
-                      )}
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </CardContent>
             </Card>
           
             {/* Writing Tips */}
-            <Card className="bg-paper dark:bg-gray-800 rounded-lg border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-4">
+            <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-3 pt-5 px-6 border-b border-[#F0F0F0]">
                 <div className="flex items-center">
-                  <Lightning className="w-4 h-4 text-accent-primary/80 mr-2" />
-                  <CardTitle className="font-display text-lg text-ink-dark/80 dark:text-gray-100/90 font-medium">Writing Tips</CardTitle>
+                  <CloudLightning className="w-5 h-5 text-[#738996] mr-2" />
+                  <CardTitle className="text-lg font-medium font-serif text-[#333333]">Writing Tips</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <CardContent className="px-6 py-5">
+                <div className="space-y-4">
                   {writingTips.map((tip, index) => (
-                    <div key={index} className="flex items-start">
-                      <div className="w-4.5 h-4.5 bg-accent-primary/5 dark:bg-accent-primary/10 rounded-full flex items-center justify-center mr-2 flex-shrink-0 text-accent-primary/80 dark:text-gray-200/90 font-serif text-[10px] font-medium">
+                    <div key={index} className="flex items-start group cursor-default">
+                      <div className="w-6 h-6 bg-[#F5F5F5] rounded-full flex items-center justify-center mr-3 flex-shrink-0 text-[#666666] text-sm group-hover:bg-[#738996]/10 group-hover:text-[#738996] transition-colors duration-300">
                         {index + 1}
                       </div>
-                      <p className="font-serif text-xs text-ink-light/80 dark:text-gray-400/90">{tip}</p>
+                      <p className="text-[#666666] text-sm group-hover:text-[#333333] transition-colors duration-300">{tip}</p>
                     </div>
                   ))}
                 </div>
                 
-                <div className="mt-3 pt-3 border-t border-accent-tertiary/10 dark:border-gray-700/80">
+                <div className="mt-4 pt-4 border-t border-[#F0F0F0]">
                   <Button 
                     variant="link"
-                    className="w-full text-accent-primary/80 dark:text-gray-200/90 text-sm font-serif flex items-center justify-center hover:underline"
+                    className="w-full text-[#738996] text-sm flex items-center justify-center hover:text-[#738996]/80 font-medium transition-colors"
                   >
                     View All Tips
-                    <ArrowRight className="w-2.5 h-2.5 ml-1 opacity-80" />
+                    <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          
-            {/* Pro Features Teaser */}
-            <div className="bg-gradient-to-r from-accent-primary/90 to-accent-secondary/90 dark:bg-gray-800 rounded-lg shadow-sm p-4 text-white/95 dark:text-gray-200/95">
-              <div className="flex items-center mb-2">
-                <Crown className="w-4 h-4 mr-2 opacity-90" />
-                <h3 className="font-display text-lg font-medium">Autopen Pro</h3>
-              </div>
-              
-              <p className="font-serif text-xs mb-3 opacity-90 dark:opacity-80">
-                Unlock advanced features to take your e-book creation to the next level.
-              </p>
-              
-              <ul className="space-y-1.5 mb-3">
-                <li className="flex items-center text-xs font-serif">
-                  <div className="w-3 h-3 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mr-1.5">
-                    <div className="w-1 h-1 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
-                  </div>
-                  Premium templates and layouts
-                </li>
-                <li className="flex items-center text-xs font-serif">
-                  <div className="w-3 h-3 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mr-1.5">
-                    <div className="w-1 h-1 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
-                  </div>
-                  Advanced AI writing assistance
-                </li>
-                <li className="flex items-center text-xs font-serif">
-                  <div className="w-3 h-3 rounded-full border border-white/80 dark:border-gray-700/80 flex items-center justify-center mr-1.5">
-                    <div className="w-1 h-1 bg-white/90 dark:bg-gray-700/90 rounded-full"></div>
-                  </div>
-                  Export to multiple formats
-                </li>
-              </ul>
-              
-              <Button 
-                className="w-full py-1.5 bg-white/95 dark:bg-gray-200/95 text-accent-primary/90 dark:text-gray-900/90 font-serif rounded hover:bg-opacity-90 dark:hover:bg-opacity-80 transition-colors text-xs shadow-sm"
-              >
-                Upgrade Now
-              </Button>
-            </div>
           </div>
         </div>
       </div>

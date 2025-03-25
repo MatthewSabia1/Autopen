@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Camera, CheckCircle, Loader, Mail, PenTool, Save, Upload, User, WifiOff } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle, ImageOff, Loader, Mail, PenTool, Save, Upload, User, WifiOff } from 'lucide-react';
 import { useAuth } from '../../../supabase/auth';
+import { useToast } from '@/components/ui/use-toast';
 
 const Settings = () => {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
+  const { user, profile, profileLoading, updateUserProfile, updateUserAvatar } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
@@ -21,33 +22,19 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [imageError, setImageError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mock function to load profile (in a real app, this would come from Supabase)
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      try {
-        // In a real app, we would fetch this from Supabase
-        // This is just mocked data
-        const mockProfile = {
-          username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '',
-          bio: "Writer and content creator passionate about technology and education",
-          avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'user'}`
-        };
-        
-        setProfile(mockProfile);
-        setUsername(mockProfile.username);
-        setBio(mockProfile.bio || '');
-      } catch (err) {
-        console.error('Error loading profile:', err);
-        setError('Failed to load profile. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Update local state when profile changes
+    if (profile) {
+      setUsername(profile.username || '');
+      setBio(profile.bio || '');
+      setImageError(false); // Reset image error state when profile updates
+    }
     
-    fetchProfile();
+    // Set loading state based on profile loading
+    setLoading(profileLoading);
     
     // Monitor online status
     const handleOnlineStatus = () => {
@@ -62,7 +49,12 @@ const Settings = () => {
       window.removeEventListener('online', handleOnlineStatus);
       window.removeEventListener('offline', handleOnlineStatus);
     };
-  }, [user]);
+  }, [profile, profileLoading]);
+
+  const handleImageError = () => {
+    setImageError(true);
+    console.error('Failed to load profile image:', profile?.avatar_url);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,21 +64,27 @@ const Settings = () => {
       return;
     }
 
+    if (!user) {
+      return;
+    }
+
     setIsSaving(true);
     setSaveMessage(null);
 
     try {
-      // Mock profile update - in a real app, this would call Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-      
-      // Update local state
-      setProfile({
-        ...profile,
+      await updateUserProfile({
         username,
         bio
       });
       
       setIsEditing(false);
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully.",
+        variant: "default",
+      });
+      
       setSaveMessage({
         type: 'success',
         text: 'Profile updated successfully!'
@@ -101,6 +99,12 @@ const Settings = () => {
       setSaveMessage({
         type: 'error',
         text: 'Failed to update profile. Please try again.'
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
@@ -120,13 +124,19 @@ const Settings = () => {
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     // Check file type
     if (!file.type.startsWith('image/')) {
       setSaveMessage({
         type: 'error',
         text: 'Please upload an image file'
+      });
+      
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file (JPEG, PNG, etc.)",
+        variant: "destructive",
       });
       return;
     }
@@ -137,23 +147,27 @@ const Settings = () => {
         type: 'error',
         text: 'Image size should be less than 2MB'
       });
+      
+      toast({
+        title: "File Too Large",
+        description: "Image size should be less than 2MB",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsUploadingAvatar(true);
+    setImageError(false);
     setSaveMessage(null);
 
     try {
-      // Mock avatar upload - in a real app, this would call Supabase Storage
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate upload delay
+      // Upload the avatar using the Auth context function
+      await updateUserAvatar(file);
       
-      // Create a fake object URL just to demonstrate the UI
-      const avatarUrl = URL.createObjectURL(file);
-      
-      // Update local state
-      setProfile({
-        ...profile,
-        avatar_url: avatarUrl
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully!",
+        variant: "default",
       });
       
       setSaveMessage({
@@ -167,12 +181,23 @@ const Settings = () => {
       }, 3000);
     } catch (err) {
       console.error('Error uploading avatar:', err);
+      
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive",
+      });
+      
       setSaveMessage({
         type: 'error',
         text: 'Failed to upload profile picture. Please try again.'
       });
     } finally {
       setIsUploadingAvatar(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -223,15 +248,23 @@ const Settings = () => {
                 </div>
               ) : (
                 <>
-                  {profile?.avatar_url ? (
+                  {profile?.avatar_url && !imageError ? (
                     <img 
                       src={profile.avatar_url} 
                       alt="Profile" 
                       className="w-full h-full object-cover"
+                      onError={handleImageError}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-accent-primary/10 text-accent-primary">
-                      <User className="w-24 h-24" />
+                      {imageError ? (
+                        <div className="text-center">
+                          <ImageOff className="w-16 h-16 mx-auto mb-2" />
+                          <p className="text-xs text-ink-faded">Image failed to load</p>
+                        </div>
+                      ) : (
+                        <User className="w-24 h-24" />
+                      )}
                     </div>
                   )}
 

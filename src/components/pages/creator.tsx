@@ -41,7 +41,7 @@ const Creator = () => {
       title: "Blog Post",
       description: "Create engaging blog content with SEO optimization",
       category: "content",
-      icon: <FileEdit className="h-10 w-10 text-accent-primary" />,
+      icon: <FileEdit className="h-10 w-10 text-accent-yellow" />,
       featured: true,
     },
     {
@@ -50,7 +50,7 @@ const Creator = () => {
       description:
         "Generate a complete digital book with our new AI-powered workflow",
       category: "ebook",
-      icon: <BookOpen className="h-10 w-10 text-accent-primary" />,
+      icon: <BookOpen className="h-10 w-10 text-accent-yellow" />,
       featured: true,
     },
     {
@@ -58,7 +58,7 @@ const Creator = () => {
       title: "Video Script",
       description: "Create compelling scripts for video content",
       category: "video",
-      icon: <Video className="h-10 w-10 text-accent-primary" />,
+      icon: <Video className="h-10 w-10 text-accent-yellow" />,
       featured: false,
     },
     {
@@ -66,7 +66,7 @@ const Creator = () => {
       title: "Newsletter",
       description: "Design email newsletters with engaging content",
       category: "content",
-      icon: <FileText className="h-10 w-10 text-accent-primary" />,
+      icon: <FileText className="h-10 w-10 text-accent-yellow" />,
       featured: false,
     },
     {
@@ -74,7 +74,7 @@ const Creator = () => {
       title: "Social Media Posts",
       description: "Generate posts for various social media platforms",
       category: "social",
-      icon: <MessageSquare className="h-10 w-10 text-accent-primary" />,
+      icon: <MessageSquare className="h-10 w-10 text-accent-yellow" />,
       featured: true,
     },
     {
@@ -83,7 +83,7 @@ const Creator = () => {
       description:
         "Create educational content organized into modules and lessons",
       category: "ebook",
-      icon: <BookCopy className="h-10 w-10 text-accent-primary" />,
+      icon: <BookCopy className="h-10 w-10 text-accent-yellow" />,
       featured: false,
     },
     {
@@ -91,7 +91,7 @@ const Creator = () => {
       title: "Landing Page Content",
       description: "Craft compelling landing page copy that converts",
       category: "content",
-      icon: <Layout className="h-10 w-10 text-accent-primary" />,
+      icon: <Layout className="h-10 w-10 text-accent-yellow" />,
       featured: false,
     },
     {
@@ -99,7 +99,7 @@ const Creator = () => {
       title: "Event Promotion",
       description: "Create promotional content for events and webinars",
       category: "social",
-      icon: <Calendar className="h-10 w-10 text-accent-primary" />,
+      icon: <Calendar className="h-10 w-10 text-accent-yellow" />,
       featured: false,
     },
   ];
@@ -112,7 +112,7 @@ const Creator = () => {
       type: "E-Book",
       date: "2 days ago",
       progress: 75,
-      icon: <BookOpen className="h-4 w-4 text-accent-primary" />,
+      icon: <BookOpen className="h-4 w-4 text-accent-yellow" />,
     },
     {
       id: "c2",
@@ -120,7 +120,7 @@ const Creator = () => {
       type: "Newsletter",
       date: "1 week ago",
       progress: 100,
-      icon: <FileText className="h-4 w-4 text-accent-primary" />,
+      icon: <FileText className="h-4 w-4 text-accent-yellow" />,
     },
     {
       id: "c3",
@@ -128,7 +128,7 @@ const Creator = () => {
       type: "Social Media",
       date: "3 days ago",
       progress: 90,
-      icon: <Share2 className="h-4 w-4 text-accent-primary" />,
+      icon: <Share2 className="h-4 w-4 text-accent-yellow" />,
     },
   ];
 
@@ -140,6 +140,7 @@ const Creator = () => {
       : templates.filter((template) => template.category === activeFilter);
 
   const handleCreateContent = (data: ContentData) => {
+    console.log('Creator handleCreateContent called with data:', data);
     // Map from ContentData.contentType to WorkflowType
     const contentTypeToWorkflowType = (contentType: string): WorkflowType => {
       // Log the contentType we're trying to map
@@ -173,11 +174,7 @@ const Creator = () => {
       return workflowType;
     };
 
-    // Store the content data in session storage for the workflow to use
-    sessionStorage.setItem('newProjectData', JSON.stringify({
-      title: data.title,
-      description: data.description
-    }));
+    // Note: contentType is already stored in the CreateContentModal component
     
     // Make sure the content type is properly typed
     const contentType = data.contentType as 'e-book' | 'online-course' | 'blog-post' | 'video-script' | 'newsletter' | 'social-media';
@@ -191,34 +188,48 @@ const Creator = () => {
     
     // Force the type to be the correct string literal type
     const typedWorkflowType: WorkflowType = workflowType;
-    resetWorkflow(typedWorkflowType);
     
-    // Close the modal
-    setOpen(false);
+    try {
+      console.log('About to reset workflow with type:', typedWorkflowType);
+      
+      // First close the modal to avoid any UI conflicts
+      setOpen(false);
+      
+      // Short delay before navigation to ensure modal is closed 
+      setTimeout(() => {
+        resetWorkflow(typedWorkflowType);
+        // Navigation is handled automatically by the resetWorkflow function
+        console.log('Workflow reset complete, navigation should happen automatically');
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error starting workflow:', error);
+      alert('There was an error starting the workflow. Please try again.');
+    }
   };
 
   return (
     <DashboardLayout activeTab="Creator">
       <div className="space-y-8 animate-fade-in">
         {/* Hero section */}
-        <div className="bg-gradient-to-br from-accent-primary/10 to-accent-tertiary/5 rounded-xl p-6 md:p-8 shadow-textera mb-8">
+        <div className="bg-gradient-to-br from-accent-yellow/10 to-cream rounded-xl p-6 md:p-8 shadow-sm mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="max-w-lg">
               <h1 className="text-3xl font-display text-ink-dark mb-3">AI Creator Studio</h1>
-              <p className="text-ink-light font-serif text-lg mb-4">
+              <p className="text-ink-light font-serif text-[15px] mb-4">
                 Transform your ideas into polished content with the power of AI assistance.
-                Try our <b>NEW eBook Workflow</b> for creating professional eBooks!
+                Try our <span className="font-medium text-accent-yellow">NEW eBook Workflow</span> for creating professional eBooks!
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif px-6 py-5 text-base"
+                  className="gap-2 bg-accent-primary hover:bg-accent-secondary text-white font-serif px-6 py-5 text-[15px] shadow-blue-sm"
                   onClick={() => setOpen(true)}
                 >
                   <Wand2 className="h-5 w-5" />
                   Create New Content
                 </Button>
                 <Button
-                  className="gap-2 bg-accent-tertiary hover:bg-accent-tertiary/90 text-white font-serif px-6 py-5 text-base"
+                  className="gap-2 bg-white hover:bg-white/90 text-accent-primary border border-accent-primary/30 font-serif px-6 py-5 text-[15px] shadow-sm"
                   onClick={() => {
                     console.log('Starting ebook workflow from hero section');
                     const workflowType: WorkflowType = 'ebook';
@@ -248,7 +259,7 @@ const Creator = () => {
             <h2 className="text-xl font-display text-ink-dark">Featured Templates</h2>
             <Button 
               variant="ghost" 
-              className="text-accent-primary hover:text-accent-primary/80 font-serif"
+              className="text-accent-primary hover:text-accent-secondary font-serif text-[14px]"
               onClick={() => setActiveFilter("all")}
             >
               View All Templates
@@ -258,22 +269,22 @@ const Creator = () => {
             {featuredTemplates.map((template) => (
               <Card 
                 key={template.id}
-                className="bg-paper border-accent-tertiary/20 shadow-textera hover:shadow-textera-md transition-all duration-200"
+                className="bg-white border border-accent-tertiary/30 shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="bg-accent-primary/10 p-3 rounded-lg">
+                    <div className="bg-cream p-3 rounded-lg">
                       {template.icon}
                     </div>
                     <div>
                       <h3 className="font-display text-lg text-ink-dark mb-1">
                         {template.title}
                       </h3>
-                      <p className="text-sm text-ink-light font-serif mb-4">
+                      <p className="text-[14px] text-ink-light font-serif mb-4">
                         {template.description}
                       </p>
                       <Button 
-                        className="bg-accent-primary hover:bg-accent-primary/90 text-white font-serif w-full"
+                        className="bg-accent-primary hover:bg-accent-secondary text-white font-serif w-full shadow-blue-sm text-[14px]"
                         onClick={() => {
                           if (template.category === 'ebook') {
                             console.log('Starting ebook workflow from featured template');
@@ -298,17 +309,17 @@ const Creator = () => {
         {/* Recent creations section */}
         <section className="mb-8">
           <h2 className="text-xl font-display text-ink-dark mb-4">Recent Creations</h2>
-          <div className="bg-paper rounded-lg border border-accent-tertiary/20 shadow-textera overflow-hidden">
-            <div className="divide-y divide-accent-tertiary/10">
+          <div className="bg-white rounded-lg border border-accent-tertiary/30 shadow-sm overflow-hidden">
+            <div className="divide-y divide-accent-tertiary/20">
               {recentCreations.map((item) => (
-                <div key={item.id} className="p-4 hover:bg-accent-primary/5 transition-colors duration-200">
+                <div key={item.id} className="p-4 hover:bg-cream/30 transition-colors duration-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="bg-accent-primary/10 p-2 rounded-md">
+                      <div className="bg-cream p-2 rounded-md">
                         {item.icon}
                       </div>
                       <div>
-                        <h3 className="font-serif font-medium text-ink-dark">{item.title}</h3>
+                        <h3 className="font-serif font-medium text-ink-dark text-[15px]">{item.title}</h3>
                         <div className="flex items-center gap-2 text-xs text-ink-light mt-1">
                           <span>{item.type}</span>
                           <span className="h-1 w-1 bg-ink-faded rounded-full"></span>
@@ -319,13 +330,13 @@ const Creator = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-32 bg-accent-tertiary/10 rounded-full h-2">
+                      <div className="w-32 bg-cream rounded-full h-2">
                         <div 
                           className="bg-accent-primary h-2 rounded-full" 
                           style={{ width: `${item.progress}%` }}
                         ></div>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-accent-primary hover:bg-accent-primary/10">
+                      <Button variant="ghost" size="sm" className="text-accent-primary hover:bg-accent-primary/10 text-[14px]">
                         Continue
                       </Button>
                     </div>
@@ -344,7 +355,7 @@ const Creator = () => {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faded h-4 w-4" />
-                <Input placeholder="Search templates..." className="pl-10 font-serif bg-cream border-accent-tertiary/20" />
+                <Input placeholder="Search templates..." className="pl-10 font-serif bg-cream/50 border-accent-tertiary/30 shadow-sm text-[14px]" />
               </div>
 
               <Tabs
@@ -353,12 +364,12 @@ const Creator = () => {
                 onValueChange={setActiveFilter}
                 value={activeFilter}
               >
-                <TabsList className="grid grid-cols-5 w-full md:w-auto bg-cream border border-accent-tertiary/20">
-                  <TabsTrigger value="all" className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary font-serif">All</TabsTrigger>
-                  <TabsTrigger value="content" className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary font-serif">Content</TabsTrigger>
-                  <TabsTrigger value="ebook" className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary font-serif">E-Books</TabsTrigger>
-                  <TabsTrigger value="social" className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary font-serif">Social</TabsTrigger>
-                  <TabsTrigger value="video" className="data-[state=active]:bg-paper data-[state=active]:text-accent-primary font-serif">Video</TabsTrigger>
+                <TabsList className="grid grid-cols-5 w-full md:w-auto bg-cream/50 border border-accent-tertiary/30">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary font-serif text-[14px]">All</TabsTrigger>
+                  <TabsTrigger value="content" className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary font-serif text-[14px]">Content</TabsTrigger>
+                  <TabsTrigger value="ebook" className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary font-serif text-[14px]">E-Books</TabsTrigger>
+                  <TabsTrigger value="social" className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary font-serif text-[14px]">Social</TabsTrigger>
+                  <TabsTrigger value="video" className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary font-serif text-[14px]">Video</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -369,21 +380,21 @@ const Creator = () => {
               {filteredTemplates.map((template) => (
                 <div
                   key={template.id}
-                  className="bg-paper p-6 rounded-lg border border-accent-tertiary/20 shadow-textera hover:shadow-textera-md transition-all duration-200 cursor-pointer"
+                  className="bg-white p-6 rounded-lg border border-accent-tertiary/30 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="bg-accent-primary/10 p-3 rounded-lg">
+                    <div className="bg-cream p-3 rounded-lg">
                       {template.icon}
                     </div>
                     <div>
                       <h3 className="font-display text-lg text-ink-dark">
                         {template.title}
                       </h3>
-                      <p className="text-sm text-ink-light mt-1 font-serif">
+                      <p className="text-[14px] text-ink-light mt-1 font-serif">
                         {template.description}
                       </p>
                       <Button 
-                        className="mt-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+                        className="mt-4 bg-accent-primary hover:bg-accent-secondary text-white font-serif shadow-blue-sm text-[14px]"
                         onClick={() => {
                           if (template.category === 'ebook') {
                             console.log('Starting ebook workflow from all templates');
@@ -403,7 +414,7 @@ const Creator = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 bg-paper rounded-lg border border-accent-tertiary/20 shadow-textera">
+            <div className="text-center py-12 bg-white rounded-lg border border-accent-tertiary/30 shadow-sm">
               <Sparkles className="h-12 w-12 mx-auto text-ink-faded mb-4" />
               <h3 className="text-xl font-display text-ink-dark mb-2">
                 No templates found
@@ -415,7 +426,7 @@ const Creator = () => {
               <Button
                 variant="outline"
                 onClick={() => setActiveFilter("all")}
-                className="mx-auto font-serif"
+                className="mx-auto font-serif border-accent-primary/30 text-accent-primary hover:bg-accent-primary/5"
               >
                 View All Templates
               </Button>
@@ -423,7 +434,7 @@ const Creator = () => {
           )}
         </section>
 
-        <div className="bg-accent-primary/5 p-6 rounded-lg border border-accent-primary/20">
+        <div className="bg-cream/50 p-6 rounded-lg border border-accent-primary/20 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="bg-accent-primary/20 p-3 rounded-full">
               <Star className="h-6 w-6 text-accent-primary" />

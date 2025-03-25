@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { DialogTitle } from '@/components/ui/dialog';
+import { DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 /**
  * The eBook writing step in the workflow.
@@ -54,8 +54,27 @@ const EbookWritingStep = () => {
     try {
       setError(null);
       setGeneratingChapter(chapterId);
+      
+      // Find the chapter to generate
+      const chapterToGenerate = ebookChapters.find(c => c.id === chapterId);
+      if (!chapterToGenerate) throw new Error('Chapter not found');
+      
+      // Auto-expand the chapter being generated
+      setExpandedChapter(chapterId);
+      
+      // Scroll to the chapter being generated
+      const chapterElement = document.getElementById(`chapter-${chapterId}`);
+      if (chapterElement) {
+        chapterElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      // Show a toast or notification that generation started
+      console.log(`Generating chapter: ${chapterToGenerate.title}`);
+      
+      // Start generation with optimistic UI update
       await generateEbookChapter(chapterId);
       
+      // Show success feedback
       // Check if all chapters are now generated
       const allGenerated = ebookChapters.every(c => 
         (c.id === chapterId) ? true : c.status === 'generated'
@@ -89,15 +108,28 @@ const EbookWritingStep = () => {
   const formatContent = (content: string | null): string => {
     if (!content) return '';
     
-    // Simple markdown formatting
+    // More comprehensive markdown formatting
     return content
+      // Headers
       .replace(/# (.*)/g, '<h1 class="text-xl font-bold mt-4 mb-2">$1</h1>')
       .replace(/## (.*)/g, '<h2 class="text-lg font-bold mt-3 mb-2">$1</h2>')
       .replace(/### (.*)/g, '<h3 class="text-base font-bold mt-2 mb-1">$1</h3>')
+      .replace(/#### (.*)/g, '<h4 class="text-sm font-bold mt-2 mb-1">$1</h4>')
+      // Bold and italic
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/- (.*)/g, '<li class="ml-4">$1</li>')
-      .replace(/\n\n/g, '<p class="mb-2"></p>')
+      // Lists
+      .replace(/^\s*\d+\.\s*(.*)/gm, '<li class="ml-6 list-decimal">$1</li>')
+      .replace(/^\s*-\s*(.*)/gm, '<li class="ml-4 list-disc">$1</li>')
+      // Code blocks
+      .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto my-2">$1</pre>')
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded font-mono text-sm">$1</code>')
+      // Blockquotes
+      .replace(/^>\s*(.*)/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 italic my-2">$1</blockquote>')
+      // Horizontal rule
+      .replace(/^---$/gm, '<hr class="my-4 border-t border-gray-300">')
+      // Paragraphs and line breaks
+      .replace(/\n\n/g, '<p class="mb-4"></p>')
       .replace(/\n/g, '<br />');
   };
 
@@ -166,11 +198,14 @@ const EbookWritingStep = () => {
             transition={{ delay: index * 0.1 }}
           >
             <Card 
+              id={`chapter-${chapter.id}`}
               className={cn(
                 "border overflow-hidden transition-all duration-300",
                 expandedChapter === chapter.id 
                   ? "border-accent-primary/30 shadow-md" 
-                  : "border-accent-tertiary/20"
+                  : chapter.status === 'generated'
+                    ? "border-green-200 hover:border-green-300" 
+                    : "border-accent-tertiary/20"
               )}
             >
               <div 
@@ -203,13 +238,21 @@ const EbookWritingStep = () => {
                     <h4 className="font-serif font-medium text-ink-dark">
                       {chapter.title}
                     </h4>
-                    <p className="text-xs text-ink-light font-serif">
-                      {chapter.status === 'generated' 
-                        ? 'Generated'
-                        : chapter.status === 'generating'
-                          ? 'Generating...'
-                          : 'Pending generation'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-ink-light font-serif">
+                        {chapter.status === 'generated' 
+                          ? 'Generated'
+                          : chapter.status === 'generating'
+                            ? 'Generating...'
+                            : 'Pending generation'}
+                      </p>
+                      {chapter.status === 'generated' && chapter.content && (
+                        <>
+                          <span className="h-1 w-1 bg-ink-faded rounded-full"></span>
+                          <p className="text-xs text-ink-light font-serif">{chapter.content.split(/\s+/).length.toLocaleString()} words</p>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -296,25 +339,53 @@ const EbookWritingStep = () => {
           </Button>
           
           <Button
-            className="gap-2 w-full bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+            className="gap-2 w-full bg-gradient-to-r from-accent-primary to-accent-secondary hover:from-accent-secondary hover:to-accent-primary text-white font-serif shadow-lg transition-all duration-300"
             onClick={async () => {
               // Get all pending chapters
               const pendingChapters = ebookChapters
                 .filter(c => c.status === 'pending')
                 .sort((a, b) => a.order_index - b.order_index);
-                
+              
+              // Calculate total work to do  
+              const totalChapters = pendingChapters.length;
+              
               // Start with the first chapter
               if (pendingChapters.length > 0) {
                 setError(null);
                 
                 try {
+                  // Show a message notifying about batch generation
+                  console.log(`Starting batch generation of ${totalChapters} chapters. This may take a few minutes.`);
+                  
                   // Process one at a time to ensure proper context flow
-                  for (const chapter of pendingChapters) {
+                  for (let i = 0; i < pendingChapters.length; i++) {
+                    const chapter = pendingChapters[i];
                     setGeneratingChapter(chapter.id);
+                    
+                    // Update progress message - use non-error status messaging
+                    const statusMessage = `Generating chapter ${i+1} of ${totalChapters}: "${chapter.title}"...`;
+                    console.log(statusMessage);
+                    // We shouldn't use error state for status messages, but since we don't have
+                    // a separate status state, we'll use a visually different style
+                    setError(`✨ ${statusMessage}`);
+                    
+                    // Expand the current chapter
+                    setExpandedChapter(chapter.id);
+                    
+                    // Scroll to the chapter being generated
+                    const chapterElement = document.getElementById(`chapter-${chapter.id}`);
+                    if (chapterElement) {
+                      chapterElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    
                     await generateEbookChapter(chapter.id);
+                    
                     // Short pause between chapters
                     await new Promise(resolve => setTimeout(resolve, 500));
                   }
+                  
+                  // When all done, clear error message (which was being used as a status)
+                  setError(null);
                   
                   // When all done, proceed to preview
                   setTimeout(() => {

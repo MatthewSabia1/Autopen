@@ -150,7 +150,7 @@ interface WorkflowContextFunctions {
   removeBrainDumpFile: (fileId: string) => Promise<void>;
   addBrainDumpLink: (url: string, title: string, linkType: 'youtube' | 'webpage') => Promise<string>;
   removeBrainDumpLink: (linkId: string) => Promise<void>;
-  analyzeBrainDump: () => Promise<void>;
+  analyzeBrainDump: (progressCallback?: (status: string) => void) => Promise<void>;
   resetWorkflow: (newWorkflowType?: WorkflowType) => void;
   
   // eBook specific functions
@@ -173,7 +173,7 @@ const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined
 // Initial state
 const initialState: WorkflowContextState = {
   workflowType: 'ebook', // Default to eBook workflow for now
-  currentStep: 'brain-dump',
+  currentStep: 'creator', // Start at the creator step rather than brain-dump
   project: null,
   brainDump: null,
   brainDumpFiles: [],
@@ -764,7 +764,9 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   /**
    * Analyzes the brain dump data and generates e-book ideas
    */
-  const analyzeBrainDump = async (): Promise<void> => {
+  const analyzeBrainDump = async (
+    progressCallback?: (status: string) => void
+  ): Promise<void> => {
     if (!state.brainDump?.id) throw new Error('No active brain dump');
     
     setState(prevState => ({ 
@@ -796,8 +798,27 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
       // Get link URLs
       const linkUrls = state.brainDumpLinks.map(link => link.url);
       
-      // Generate ideas using OpenRouter API
-      const ideas = await generateIdeasFromBrainDump(content, fileNames, linkUrls);
+      // Handle API progress updates
+      const handleApiProgress = (status: {retry: number, maxRetries: number, message: string}) => {
+        if (progressCallback) {
+          // Send more friendly message to the user
+          if (status.message.includes('retrying')) {
+            progressCallback(`Still analyzing... (attempt ${status.retry}/${status.maxRetries})`);
+          } else if (status.message.includes('error')) {
+            progressCallback(`Encountered an issue: ${status.message}`);
+          } else {
+            progressCallback(status.message);
+          }
+        }
+      };
+      
+      // Generate ideas using OpenRouter API with progress updates
+      const ideas = await generateIdeasFromBrainDump(
+        content, 
+        fileNames, 
+        linkUrls,
+        handleApiProgress
+      );
       
       // Create analyzed content summary
       // Extract common themes from the ideas

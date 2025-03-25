@@ -60,21 +60,23 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Autopen colors based on mockups
+        // Autopen colors based on style guide
         cream: "#FAF9F5",  // Light cream background
         paper: "#FFFFFF",  // White background for cards
+        dark: "#191f25",   // Dark background for nav and sidebar
+        gold: "#ccb595",   // Gold accent color for logo and highlights
         ink: {
           dark: "#333333", // Main text color
           light: "#666666", // Secondary text color
           faded: "#888888", // Lighter text for placeholders
         },
         accent: {
-          primary: "#738996",    // Primary grayish blue accent
-          secondary: "#5e7282",  // Slightly darker blue
+          primary: "#738996",    // Primary grayish blue accent - 55% of UI
+          secondary: "#5e7282",  // Slightly darker blue for hover states
           tertiary: "#F1F0EC",   // Light beige/gray for subtle backgrounds and borders
-          yellow: "#ccb595",     // Dull yellowish color (secondary accent used sparingly)
+          yellow: "#ccb595",     // Secondary gold color - 25% of UI
         },
-        danger: "#DC2626", // For error messages
+        danger: "#DC2626", // For error messages and destructive actions
         slate: {
           50: "#f8fafc",
           100: "#f1f5f9",
@@ -107,11 +109,30 @@ export default {
         display: ["Georgia", "serif"],
         mono: ["Consolas", "Monaco", "monospace"],
       },
+      fontSize: {
+        // Custom font sizes based on style guide
+        "page-title": ["32px", { lineHeight: "1.2", fontWeight: "500" }],
+        "section-header": ["20px", { lineHeight: "1.3", fontWeight: "500" }],
+        "card-title": ["18px", { lineHeight: "1.3", fontWeight: "500" }],
+        "body": ["16px", { lineHeight: "1.5", fontWeight: "400" }],
+        "small": ["14px", { lineHeight: "1.5", fontWeight: "400" }],
+        "button": ["15px", { lineHeight: "1.4", fontWeight: "500" }],
+        "label": ["14px", { lineHeight: "1.4", fontWeight: "500" }],
+      },
       borderRadius: {
         lg: "8px",
         md: "6px",
         sm: "4px",
         DEFAULT: "4px",
+      },
+      spacing: {
+        // Consistent spacing based on style guide
+        "base": "0.25rem", // 4px
+        "component": "1.5rem", // 24px
+        "grid-sm": "1.25rem", // 20px
+        "grid-lg": "1.75rem", // 28px
+        "section-sm": "2rem", // 32px
+        "section-lg": "2.5rem", // 40px
       },
       keyframes: {
         "accordion-down": {
@@ -151,14 +172,14 @@ export default {
         textera: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
         "textera-md": "0 2px 5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
         "textera-lg": "0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02)",
-        soft: "0 1px 2px rgba(0, 0, 0, 0.03)",
-        medium: "0 2px 4px rgba(0, 0, 0, 0.05)",
-        hard: "0 4px 8px rgba(0, 0, 0, 0.08)",
-        blue: "0 4px 12px rgba(115, 137, 150, 0.15)",
+        "soft": "0 1px 2px rgba(0, 0, 0, 0.03)",
+        "medium": "0 2px 4px rgba(0, 0, 0, 0.05)",
+        "hard": "0 4px 8px rgba(0, 0, 0, 0.08)",
+        "blue": "0 4px 12px rgba(115, 137, 150, 0.15)",
         "blue-sm": "0 2px 5px rgba(115, 137, 150, 0.1)",
-        yellow: "0 4px 12px rgba(204, 181, 149, 0.15)",
+        "yellow": "0 4px 12px rgba(204, 181, 149, 0.15)",
         "yellow-sm": "0 2px 5px rgba(204, 181, 149, 0.1)",
-        none: "none"
+        "none": "none"
       },
     },
   },

@@ -126,11 +126,20 @@ const LoadingOverlay = ({
                 </div>
               )}
               
-              <p className="text-ink-light font-serif max-w-sm mx-auto">
+              <p className="text-ink-light font-serif max-w-md mx-auto">
                 {status === 'analyzing' 
-                  ? "Our AI is analyzing your content to generate structured ideas for your eBook. This may take a minute or two."
+                  ? message.includes("API") || message.includes("model") || message.includes("retry")
+                    ? message // Show detailed API status messages
+                    : "Our AI is analyzing your content to generate structured ideas for your eBook. This may take a few minutes."
                   : "Please wait while we process your content..."}
               </p>
+              
+              {/* Show additional helper text for long-running operations */}
+              {status === 'analyzing' && !message.includes("failed") && !message.includes("error") && (
+                <p className="text-xs text-ink-faded mt-3 font-serif max-w-sm mx-auto">
+                  For large content, this could take 2-3 minutes. You'll see updates here as processing continues.
+                </p>
+              )}
               
               {/* Optional cancel button */}
               {onCancel && (
@@ -415,12 +424,31 @@ const BrainDumpStep = () => {
   };
 
   /**
+   * Validates if there is enough content to analyze
+   */
+  const validateContent = (): boolean => {
+    // Check if we have enough content to analyze
+    const wordCount = content.trim().split(/\s+/).length;
+    
+    if (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
+      setError('Please add some content to analyze. You can paste text, upload files, or add links.');
+      return false;
+    }
+    
+    if (content.trim() && wordCount < 50 && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
+      setError('Please add more content to analyze. We need at least 50 words to generate meaningful ideas.');
+      return false;
+    }
+    
+    return true;
+  };
+  
+  /**
    * Handles analyzing the brain dump content
    */
   const handleAnalyze = async () => {
-    // Check if we have any content to analyze
-    if (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
-      setError('Please add some content to analyze. You can paste text, upload files, or add links.');
+    // Validate content before proceeding
+    if (!validateContent()) {
       return;
     }
 
@@ -434,6 +462,15 @@ const BrainDumpStep = () => {
     setLoadingStep(1);
     setLoadingMessage('Preparing content for analysis...');
     setError(null);
+    
+    // Set a failsafe timeout - if analysis takes more than 3 minutes, 
+    // show an error and allow the user to try again
+    const failsafeTimeout = setTimeout(() => {
+      if (isAnalyzing) {
+        setIsAnalyzing(false);
+        setError('Analysis took longer than expected. Please try again with a smaller amount of content or verify your internet connection.');
+      }
+    }, 180000); // 3 minutes
 
     try {
       // Step 1: Save any unsaved content first
@@ -445,9 +482,11 @@ const BrainDumpStep = () => {
             setLoadingStep(2);
             setLoadingMessage('Content saved! Starting analysis...');
           } else {
+            clearTimeout(failsafeTimeout);
             return; // Analysis was cancelled during save
           }
         } catch (err: any) {
+          clearTimeout(failsafeTimeout);
           setError(err.message || 'Failed to save content before analysis');
           setIsAnalyzing(false);
           return;
@@ -461,16 +500,22 @@ const BrainDumpStep = () => {
       await new Promise(resolve => setTimeout(resolve, 800));
       
       // Only proceed if we haven't been cancelled
-      if (!isAnalyzing) return;
+      if (!isAnalyzing) {
+        clearTimeout(failsafeTimeout);
+        return;
+      }
       
       // Step 3: Analyze content
       setLoadingStep(3);
       setLoadingMessage('Analyzing your content...');
       
       try {
+        // Call analyzeBrainDump without parameters - we'll handle status updates in the context
         await analyzeBrainDump();
         // If we reach here successfully, the workflow will automatically navigate to next step
+        clearTimeout(failsafeTimeout);
       } catch (err: any) {
+        clearTimeout(failsafeTimeout);
         // Specific error handling
         if (err.message?.includes('timeout') || err.message?.includes('time out')) {
           setError('Analysis timed out. Please try again with a smaller amount of content or fewer files.');
@@ -482,6 +527,7 @@ const BrainDumpStep = () => {
         setIsAnalyzing(false);
       }
     } catch (err: any) {
+      clearTimeout(failsafeTimeout);
       setError(err.message || 'An unexpected error occurred. Please try again.');
       setIsAnalyzing(false);
     }
@@ -508,9 +554,26 @@ const BrainDumpStep = () => {
           if (loadingStep < 3) {
             setIsAnalyzing(false);
             setError("Analysis cancelled by user");
+            // Clear any remaining timeouts
+            const currentTimeoutId = window.setTimeout(() => {}, 0);
+            // Clear recent timeout IDs (safer approach than using subtraction on timeout IDs)
+            for (let i = currentTimeoutId; i > currentTimeoutId - 100; i--) {
+              window.clearTimeout(i);
+            }
           }
         }}
       />
+      
+      {/* Word count indicator */}
+      {content.trim() && !isAnalyzing && !isSaving && (
+        <div className="fixed bottom-4 right-4 z-50 bg-accent-primary/90 text-white py-2 px-4 rounded-full shadow-sm flex items-center gap-2 text-sm transition-opacity duration-300 opacity-90 hover:opacity-100">
+          <FileText className="h-4 w-4" />
+          <span>{content.trim().split(/\s+/).length.toLocaleString()} words</span>
+          {content.trim().split(/\s+/).length < 50 && (
+            <span className="bg-yellow-400 text-ink-dark text-xs px-2 py-0.5 rounded-full ml-1">Need 50+ words</span>
+          )}
+        </div>
+      )}
       
       <div>
         <h2 className="text-2xl font-display text-ink-dark mb-4">

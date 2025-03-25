@@ -6,6 +6,9 @@ import SignUpForm from "./components/auth/SignUpForm";
 import Dashboard from "./components/pages/dashboard";
 import BrainDump from "./components/pages/brain-dump";
 import Creator from "./components/pages/creator";
+import Products from "./components/pages/products";
+import ProductDetail from "./components/pages/product-detail";
+import Debug from "./components/pages/debug";
 import Success from "./components/pages/success";
 import Home from "./components/pages/home";
 import Settings from "./components/pages/settings";
@@ -21,8 +24,8 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-yellow"></div>
       </div>
     );
   }
@@ -112,10 +115,34 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/products"
+          element={
+            <PrivateRoute>
+              <Products />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/products/:id"
+          element={
+            <PrivateRoute>
+              <ProductDetail />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/settings"
           element={
             <PrivateRoute>
               <Settings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/debug"
+          element={
+            <PrivateRoute>
+              <Debug />
             </PrivateRoute>
           }
         />
@@ -138,8 +165,8 @@ function App() {
     <AuthProvider>
       <Suspense
         fallback={
-          <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+          <div className="min-h-screen flex items-center justify-center bg-cream">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-yellow"></div>
           </div>
         }
       >
