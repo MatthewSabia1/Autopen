@@ -769,6 +769,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   ): Promise<void> => {
     if (!state.brainDump?.id) throw new Error('No active brain dump');
     
+    // Immediately update state to show analyzing
     setState(prevState => ({ 
       ...prevState, 
       loading: true, 
@@ -781,16 +782,106 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
     
     try {
       // Update brain dump status in database
-      await supabase
-        .from('brain_dumps')
-        .update({ status: 'analyzing' })
-        .eq('id', state.brainDump.id);
+      try {
+        await supabase
+          .from('brain_dumps')
+          .update({ status: 'analyzing' })
+          .eq('id', state.brainDump.id);
+          
+        if (progressCallback) {
+          progressCallback("Database updated, starting content analysis...");
+        }
+      } catch (statusError) {
+        console.error("Error updating brain dump status:", statusError);
+        if (progressCallback) {
+          progressCallback("Database connection limited. Continuing with analysis...");
+        }
+      }
       
       // Import OpenRouter API integration
-      const { generateIdeasFromBrainDump } = await import('../openRouter');
+      let openRouterModule;
+      try {
+        openRouterModule = await import('../openRouter');
+        
+        if (progressCallback) {
+          progressCallback("AI module loaded, preparing to analyze content...");
+        }
+        
+        // Test OpenRouter connectivity before proceeding
+        if (progressCallback) {
+          progressCallback("Testing OpenRouter API connectivity...");
+        }
+        
+        const { testOpenRouterConnectivity } = openRouterModule;
+        const connectivityTest = await testOpenRouterConnectivity();
+        
+        if (!connectivityTest.success) {
+          if (progressCallback) {
+            progressCallback(`OpenRouter API connectivity test failed: ${connectivityTest.message}`);
+          }
+          
+          setState(prevState => ({ 
+            ...prevState, 
+            loading: false, 
+            error: `OpenRouter API connectivity issue: ${connectivityTest.message}`,
+            brainDump: { 
+              ...prevState.brainDump!, 
+              status: 'pending' // Reset to pending to allow retrying 
+            }
+          }));
+          
+          throw new Error(`OpenRouter API connectivity issue: ${connectivityTest.message}`);
+        }
+        
+        if (progressCallback) {
+          progressCallback("OpenRouter API connectivity confirmed. Starting analysis...");
+        }
+      } catch (importError: any) {
+        console.error("Failed to import OpenRouter module:", importError);
+        
+        // Provide more detailed error information
+        const errorMessage = importError.message 
+          ? `Failed to load OpenRouter module: ${importError.message}` 
+          : "Failed to load OpenRouter module";
+          
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: errorMessage,
+          brainDump: { 
+            ...prevState.brainDump!, 
+            status: 'pending' // Reset to pending to allow retrying 
+          }
+        }));
+        
+        if (progressCallback) {
+          progressCallback(`Error: ${errorMessage}. Please try again.`);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const { generateIdeasFromBrainDump } = openRouterModule as any;
+      
+      if (!generateIdeasFromBrainDump) {
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: "OpenRouter functionality not available. Please check your installation." 
+        }));
+        throw new Error("OpenRouter generateIdeasFromBrainDump function not available");
+      }
       
       // Get content for analysis
       const content = state.brainDump.raw_content || '';
+      if (!content.trim()) {
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: "Brain dump content is empty. Please add content and try again." 
+        }));
+        throw new Error("Brain dump content is empty");
+      }
       
       // Get file names
       const fileNames = state.brainDumpFiles.map(file => file.file_name);
@@ -801,62 +892,125 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
       // Handle API progress updates
       const handleApiProgress = (status: {retry: number, maxRetries: number, message: string}) => {
         if (progressCallback) {
-          // Send more friendly message to the user
-          if (status.message.includes('retrying')) {
-            progressCallback(`Still analyzing... (attempt ${status.retry}/${status.maxRetries})`);
-          } else if (status.message.includes('error')) {
-            progressCallback(`Encountered an issue: ${status.message}`);
-          } else {
-            progressCallback(status.message);
-          }
+          progressCallback(status.message);
         }
       };
       
-      // Generate ideas using OpenRouter API with progress updates
-      const ideas = await generateIdeasFromBrainDump(
-        content, 
-        fileNames, 
-        linkUrls,
-        handleApiProgress
-      );
+      // Generate ideas with explicit error handling
+      let ideas;
+      try {
+        if (progressCallback) {
+          progressCallback("Sending content to AI for analysis...");
+        }
+        
+        ideas = await generateIdeasFromBrainDump(content, fileNames, linkUrls, handleApiProgress);
+        
+        if (!ideas || !Array.isArray(ideas) || ideas.length === 0) {
+          setState(prevState => ({ 
+            ...prevState, 
+            loading: false, 
+            error: "OpenRouter API did not return any ideas. Please try again." 
+          }));
+          throw new Error("No ideas returned from API");
+        }
+        
+        if (progressCallback) {
+          progressCallback(`Analysis complete! Generated ${ideas.length} ideas.`);
+        }
+      } catch (apiError) {
+        console.error("API error during analysis:", apiError);
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: `OpenRouter API error: ${apiError.message || "Unknown error during analysis"}` 
+        }));
+        throw apiError;
+      }
       
       // Create analyzed content summary
-      // Extract common themes from the ideas
-      const topics = [...new Set(ideas.map(idea => {
-        // Extract likely topics from title
-        const words = idea.title.split(' ');
-        return words.filter(word => word.length > 3 && !['with', 'that', 'from', 'your', 'this'].includes(word.toLowerCase()));
-      }).flat())].slice(0, 5);
-      
       const analyzedContent = {
-        topics,
-        keyPoints: ideas.map(idea => idea.title),
+        topics: ideas.map((idea: any) => idea.title.split(' ')[0]).slice(0, 5),
+        keyPoints: ideas.map((idea: any) => idea.title),
         generateDate: new Date().toISOString(),
         ideaCount: ideas.length
       };
       
       // Update brain dump with analyzed content
-      await supabase
-        .from('brain_dumps')
-        .update({ 
-          analyzed_content: analyzedContent,
-          status: 'analyzed'
-        })
-        .eq('id', state.brainDump.id);
+      try {
+        if (progressCallback) {
+          progressCallback("Saving analysis results...");
+        }
+        
+        const { error } = await supabase
+          .from('brain_dumps')
+          .update({ 
+            analyzed_content: analyzedContent,
+            status: 'analyzed'
+          })
+          .eq('id', state.brainDump.id);
+          
+        if (error) {
+          console.error("Database error during brain dump update:", error);
+          if (progressCallback) {
+            progressCallback("Warning: Database update failed, but analysis completed.");
+          }
+        } else if (progressCallback) {
+          progressCallback("Analysis saved successfully!");
+        }
+      } catch (updateError) {
+        console.error("Error updating brain dump with analysis:", updateError);
+        if (progressCallback) {
+          progressCallback("Warning: Failed to save analysis to database.");
+        }
+      }
       
-      // Insert ideas into database
-      const { data: createdIdeas, error: ideasError } = await supabase
-        .from('ebook_ideas')
-        .insert(ideas.map(idea => ({
-          brain_dump_id: state.brainDump!.id,
-          title: idea.title,
-          description: idea.description,
-          source_data: idea.source_data
-        })))
-        .select();
+      // Store the generated ideas in the database
+      let createdIdeas = [];
+      try {
+        if (progressCallback) {
+          progressCallback("Saving generated ideas...");
+        }
+        
+        const { data, error } = await supabase
+          .from('ebook_ideas')
+          .insert(ideas.map((idea: any) => ({
+            brain_dump_id: state.brainDump!.id,
+            title: idea.title,
+            description: idea.description,
+            source_data: idea.source_data
+          })))
+          .select();
+          
+        if (!error && data) {
+          createdIdeas = data;
+          if (progressCallback) {
+            progressCallback(`${data.length} ideas saved successfully.`);
+          }
+        } else if (error) {
+          console.error("Error inserting ideas:", error);
+          throw error;
+        }
+      } catch (ideasError) {
+        console.error("Error inserting ebook ideas:", ideasError);
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: `Failed to save ideas: ${ideasError.message || "Database error"}` 
+        }));
+        throw ideasError;
+      }
       
-      if (ideasError) throw ideasError;
+      // Use local state if no created ideas (this should normally not happen given the error throwing above)
+      if (createdIdeas.length === 0) {
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: "Failed to save ideas to database" 
+        }));
+        throw new Error("No ideas were created in the database");
+      }
       
+      // Update state and proceed to next step
       setState(prevState => ({ 
         ...prevState, 
         brainDump: { 
@@ -866,21 +1020,41 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         },
         ebookIdeas: createdIdeas,
         loading: false,
-        currentStep: 'idea-selection' // Automatically advance to idea selection
+        currentStep: 'idea-selection', // Automatically advance to idea selection
+        error: null
       }));
+      
+      if (progressCallback) {
+        progressCallback("Analysis complete! Moving to idea selection.");
+      }
+      
     } catch (error: any) {
-      logError('analyzeBrainDump', error);
+      console.error('Error in analyzeBrainDump:', error);
+      
+      // Make sure the UI reflects the error state
       setState(prevState => ({ 
         ...prevState, 
         loading: false, 
-        error: error.message || 'Failed to analyze brain dump',
-        brainDump: {
-          ...prevState.brainDump!,
-          status: 'pending'
+        error: error.message || "An unexpected error occurred during analysis",
+        brainDump: { 
+          ...prevState.brainDump!, 
+          status: 'pending' // Reset to pending to allow retrying
         }
       }));
-      throw error;
+      
+      if (progressCallback) {
+        progressCallback(`Error: ${error.message || "Analysis failed"}`);
+      }
     }
+  };
+
+  /**
+   * Helper function to generate fallback ideas when AI analysis fails
+   * This function is kept for reference but should no longer be used
+   */
+  const generateFallbackIdeas = (content: string, brainDumpId: string) => {
+    console.warn("generateFallbackIdeas called but should not be used");
+    throw new Error("Fallback ideas should not be used");
   };
 
   /**
@@ -1108,7 +1282,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         referenceContent = JSON.stringify(brainDump.analyzed_content);
       }
       
-      // Generate chapter content using Gemini API
+      // Generate chapter content using AI
       const chapterContent = await generateChapterContent(
         state.ebook.title,
         state.ebook.description || '',

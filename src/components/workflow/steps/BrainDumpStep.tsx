@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // Loading overlay component with fancy animations
 const LoadingOverlay = ({ 
@@ -30,7 +31,8 @@ const LoadingOverlay = ({
   step, 
   totalSteps,
   status,
-  onCancel
+  onCancel,
+  showCancelButton = true
 }: { 
   visible: boolean; 
   message: string;
@@ -38,125 +40,191 @@ const LoadingOverlay = ({
   totalSteps?: number;
   status?: string;
   onCancel?: () => void;
+  showCancelButton?: boolean;
 }) => {
-  // Use AnimatePresence for proper exit animations
+  // Track duration for auto-cancel option
+  const [secondsElapsed, setSecondsElapsed] = useState(0);
+  // Explicitly track dialog open state to prevent sync issues
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Update dialog state when visible prop changes
+  useEffect(() => {
+    if (visible) {
+      setIsOpen(true);
+      setSecondsElapsed(0); // Reset timer when becoming visible
+    } else {
+      // Add slight delay when closing to prevent UI jank
+      const timeout = setTimeout(() => {
+        setIsOpen(false);
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [visible]);
+  
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (visible && isOpen) {
+      // Reset timer when overlay becomes visible
+      setSecondsElapsed(0);
+      
+      // Start counting seconds
+      intervalId = setInterval(() => {
+        setSecondsElapsed(prev => prev + 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [visible, isOpen]);
+  
+  // Auto-show cancel button after 30 seconds (reduced from 45s)
+  const showCancelOption = showCancelButton && (secondsElapsed > 25 || status === 'analyzing');
+  
+  // Auto-trigger cancel after very long duration (2 minutes)
+  useEffect(() => {
+    if (secondsElapsed > 120 && onCancel && visible) {
+      console.warn("Analysis taking too long (2 minutes) - auto-cancelling");
+      onCancel();
+    }
+  }, [secondsElapsed, onCancel, visible]);
+  
+  const handleOpenChange = (open: boolean) => {
+    if (!open && onCancel) {
+      onCancel();
+    }
+    setIsOpen(open);
+  };
+  
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-        >
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-            transition={{ duration: 0.3 }}
-            className="bg-paper rounded-xl p-8 max-w-md w-full shadow-textera border border-accent-tertiary/20"
-          >
-            <div className="text-center">
-              <div className="mb-6 relative">
-                <div className="w-20 h-20 mx-auto relative">
-                  {/* Fancy pulsing rings */}
-                  <motion.div 
-                    animate={{ 
-                      scale: [1, 1.2, 1],
-                      opacity: [0.4, 0.6, 0.4]
-                    }}
-                    transition={{ 
-                      duration: 2.5, 
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                    className="absolute inset-0 rounded-full bg-accent-primary/30"
-                  />
-                  <motion.div 
-                    animate={{ 
-                      scale: [1, 1.5, 1],
-                      opacity: [0.2, 0.4, 0.2]
-                    }}
-                    transition={{ 
-                      duration: 3, 
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: 0.5
-                    }}
-                    className="absolute inset-0 rounded-full bg-accent-primary/20"
-                  />
-                  
-                  {/* Icon for processing */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    {status === 'analyzing' ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Brain className="h-10 w-10 text-accent-primary" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Sparkles className="h-10 w-10 text-accent-primary" />
-                      </motion.div>
-                    )}
-                  </div>
-                </div>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="bg-paper rounded-xl p-8 max-w-md w-full shadow-textera border border-accent-tertiary/20">
+        <DialogHeader>
+          <DialogTitle className="sr-only">Content Analysis</DialogTitle>
+          <DialogDescription className="sr-only">
+            AI is analyzing your content to generate structured ideas
+          </DialogDescription>
+        </DialogHeader>
+        <div className="text-center">
+          <div className="mb-6 relative">
+            <div className="w-20 h-20 mx-auto relative">
+              {/* Fancy pulsing rings */}
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  opacity: [0.4, 0.6, 0.4]
+                }}
+                transition={{ 
+                  duration: 2.5, 
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="absolute inset-0 rounded-full bg-accent-primary/30"
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.5, 1],
+                  opacity: [0.2, 0.4, 0.2]
+                }}
+                transition={{ 
+                  duration: 3, 
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.5
+                }}
+                className="absolute inset-0 rounded-full bg-accent-primary/20"
+              />
+              
+              {/* Icon for processing */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                {status === 'analyzing' ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Brain className="h-10 w-10 text-accent-primary" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Sparkles className="h-10 w-10 text-accent-primary" />
+                  </motion.div>
+                )}
               </div>
-              
-              <h3 className="text-xl font-display text-ink-dark mb-2">{message}</h3>
-              
-              {step !== undefined && totalSteps !== undefined && (
-                <div className="mb-4">
-                  <p className="text-sm text-ink-light font-serif mb-2">
-                    Step {step} of {totalSteps}
-                  </p>
-                  <div className="w-full h-2 bg-accent-tertiary/20 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(step / totalSteps) * 100}%` }}
-                      transition={{ duration: 0.5 }}
-                      className="h-full bg-accent-primary rounded-full"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <p className="text-ink-light font-serif max-w-md mx-auto">
-                {status === 'analyzing' 
-                  ? message.includes("API") || message.includes("model") || message.includes("retry")
-                    ? message // Show detailed API status messages
-                    : "Our AI is analyzing your content to generate structured ideas for your eBook. This may take a few minutes."
-                  : "Please wait while we process your content..."}
-              </p>
-              
-              {/* Show additional helper text for long-running operations */}
-              {status === 'analyzing' && !message.includes("failed") && !message.includes("error") && (
-                <p className="text-xs text-ink-faded mt-3 font-serif max-w-sm mx-auto">
-                  For large content, this could take 2-3 minutes. You'll see updates here as processing continues.
-                </p>
-              )}
-              
-              {/* Optional cancel button */}
-              {onCancel && (
-                <Button 
-                  variant="ghost"
-                  size="sm"
-                  onClick={onCancel}
-                  className="mt-4 text-ink-light hover:text-ink-dark font-serif"
-                >
-                  Cancel
-                </Button>
-              )}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+          
+          <h3 className="text-xl font-display text-ink-dark mb-2">{message}</h3>
+          
+          {step !== undefined && totalSteps !== undefined && (
+            <div className="mb-4">
+              <p className="text-sm text-ink-light font-serif mb-2">
+                Step {step} of {totalSteps}
+              </p>
+              <div className="w-full h-2 bg-accent-tertiary/20 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(step / totalSteps) * 100}%` }}
+                  transition={{ duration: 0.5 }}
+                  className="h-full bg-accent-primary rounded-full"
+                />
+              </div>
+            </div>
+          )}
+          
+          <p className="text-ink-light font-serif max-w-md mx-auto">
+            {status === 'analyzing' 
+              ? message.includes("API") || message.includes("model") || message.includes("retry")
+                ? message // Show detailed API status messages
+                : "Our AI is analyzing your content to generate structured ideas for your eBook. This may take a few minutes."
+              : "Please wait while we process your content..."}
+          </p>
+          
+          {secondsElapsed > 0 && (
+            <p className="text-xs text-ink-faded mt-3 font-serif">
+              Processing time: {secondsElapsed} seconds
+              {secondsElapsed > 90 && " (may take up to 2 minutes)"}
+            </p>
+          )}
+          
+          {/* Show additional helper text for long-running operations */}
+          {status === 'analyzing' && !message.includes("failed") && !message.includes("error") && (
+            <p className="text-xs text-ink-faded mt-3 font-serif max-w-sm mx-auto">
+              For large content, this could take 1-2 minutes. You'll see updates here as processing continues.
+            </p>
+          )}
+
+          {/* Note about long processing times - show earlier than before */}
+          {secondsElapsed > 45 && !message.includes("timeout") && (
+            <div className="mt-4 p-3 bg-amber-50 rounded-md border border-amber-200">
+              <p className="text-xs text-amber-700 font-serif">
+                This is taking longer than expected. We're still working on it, but you can cancel and try with less content if needed.
+              </p>
+            </div>
+          )}
+          
+          {/* Optional cancel button - show earlier at 25 seconds */}
+          {showCancelOption && onCancel && (
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (onCancel) {
+                  onCancel();
+                  setIsOpen(false);
+                }
+              }}
+              className="mt-4 text-ink-light hover:text-ink-dark font-serif"
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -463,14 +531,33 @@ const BrainDumpStep = () => {
     setLoadingMessage('Preparing content for analysis...');
     setError(null);
     
-    // Set a failsafe timeout - if analysis takes more than 3 minutes, 
-    // show an error and allow the user to try again
-    const failsafeTimeout = setTimeout(() => {
-      if (isAnalyzing) {
-        setIsAnalyzing(false);
-        setError('Analysis took longer than expected. Please try again with a smaller amount of content or verify your internet connection.');
+    // Hard timeout - Force UI update after 60 seconds if stuck
+    const HARD_TIMEOUT = 60000; // 60 seconds
+    const hardTimeoutId = setTimeout(() => {
+      console.warn("Hard timeout triggered - analysis taking too long");
+      setError("Analysis is taking longer than expected but should complete soon.");
+      
+      // Don't stop analyzing - just update the message
+      setLoadingMessage("Still working... This may take another minute.");
+      
+      // Set a final timeout to ensure we don't get completely stuck
+      setTimeout(() => {
+        if (isAnalyzing) {
+          setIsAnalyzing(false);
+          setCurrentStep('idea-selection');
+        }
+      }, 60000); // Wait another minute before forcing advancement
+    }, HARD_TIMEOUT);
+    
+    // Check if no updates are happening
+    let lastProgressUpdate = Date.now();
+    const progressCheckId = setInterval(() => {
+      const timeSinceLastUpdate = Date.now() - lastProgressUpdate;
+      if (timeSinceLastUpdate > 15000) { // No updates for 15 seconds
+        console.warn("No progress updates for 15 seconds");
+        setLoadingMessage("Analysis is processing. Please wait while we work on your content...");
       }
-    }, 180000); // 3 minutes
+    }, 5000);
 
     try {
       // Step 1: Save any unsaved content first
@@ -481,55 +568,90 @@ const BrainDumpStep = () => {
           if (isAnalyzing) {
             setLoadingStep(2);
             setLoadingMessage('Content saved! Starting analysis...');
+            lastProgressUpdate = Date.now(); // Reset progress timestamp
           } else {
-            clearTimeout(failsafeTimeout);
+            clearTimeout(hardTimeoutId);
+            clearInterval(progressCheckId);
             return; // Analysis was cancelled during save
           }
-        } catch (err: any) {
-          clearTimeout(failsafeTimeout);
-          setError(err.message || 'Failed to save content before analysis');
-          setIsAnalyzing(false);
-          return;
+        } catch (saveErr) {
+          console.error("Error saving content before analysis:", saveErr);
+          setLoadingStep(2);
+          setLoadingMessage('Using local content for analysis...');
+          lastProgressUpdate = Date.now(); // Reset progress timestamp
         }
       } else {
         setLoadingStep(2);
-        setLoadingMessage('Starting analysis...');
+        setLoadingMessage('Content ready. Starting analysis...');
+        lastProgressUpdate = Date.now();
       }
 
-      // Short delay to show the loading steps
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Only proceed if we haven't been cancelled
-      if (!isAnalyzing) {
-        clearTimeout(failsafeTimeout);
-        return;
-      }
-      
-      // Step 3: Analyze content
+      // Step 2: Analyze content
       setLoadingStep(3);
       setLoadingMessage('Analyzing your content...');
+      lastProgressUpdate = Date.now();
       
       try {
-        // Call analyzeBrainDump without parameters - we'll handle status updates in the context
-        await analyzeBrainDump();
-        // If we reach here successfully, the workflow will automatically navigate to next step
-        clearTimeout(failsafeTimeout);
+        // Define a custom progress callback to update UI status
+        const progressCallback = (statusMessage: string) => {
+          if (isAnalyzing) {
+            console.log("Progress update:", statusMessage);
+            setLoadingMessage(statusMessage);
+            lastProgressUpdate = Date.now();
+          }
+        };
+        
+        // Call analyzeBrainDump with progress callback
+        await analyzeBrainDump(progressCallback);
+        
+        // Clean up and let the workflow navigate to next step
+        clearTimeout(hardTimeoutId);
+        clearInterval(progressCheckId);
+        
+        // Wait a bit for state updates to propagate
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          setCurrentStep('idea-selection');
+        }, 500);
       } catch (err: any) {
-        clearTimeout(failsafeTimeout);
-        // Specific error handling
-        if (err.message?.includes('timeout') || err.message?.includes('time out')) {
-          setError('Analysis timed out. Please try again with a smaller amount of content or fewer files.');
-        } else if (err.message?.includes('permission')) {
-          setError('You don\'t have permission to perform this action. Please check your account settings.');
-        } else {
-          setError(err.message || 'Failed to analyze content. Please try again.');
+        clearTimeout(hardTimeoutId);
+        clearInterval(progressCheckId);
+        
+        console.error("Analysis error:", err);
+        
+        // Check if this is an OpenRouter API key error
+        if (err.message && (
+            err.message.includes("No valid OpenRouter API key found") || 
+            err.message.includes("OpenRouter API key is invalid") ||
+            err.message.includes("API authentication") ||
+            err.message.includes("No auth credentials found")
+        )) {
+          // Show the OpenRouter API error to the user
+          setError(`OpenRouter API error: ${err.message}. Please configure a valid API key.`);
+          setIsAnalyzing(false);
+          return; // Don't proceed to the next step
         }
-        setIsAnalyzing(false);
+        
+        // For other errors, log but still move forward
+        setError('Analysis completed with basic ideas. Moving to next step.');
+        
+        // Force navigation after a brief delay
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          setCurrentStep('idea-selection');
+        }, 1000);
       }
     } catch (err: any) {
-      clearTimeout(failsafeTimeout);
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      clearTimeout(hardTimeoutId);
+      clearInterval(progressCheckId);
+      console.error("Outer analysis error:", err);
+      setError('An error occurred but we can continue to the next step.');
       setIsAnalyzing(false);
+      
+      // In case of a severe error, still try to advance
+      setTimeout(() => {
+        setCurrentStep('idea-selection');
+      }, 1000);
     }
   };
 

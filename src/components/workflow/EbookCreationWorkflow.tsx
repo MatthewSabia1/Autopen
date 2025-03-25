@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Sparkles,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import CreatorStep from './steps/CreatorStep';
 import BrainDumpStep from './steps/BrainDumpStep';
@@ -41,7 +42,10 @@ export default function EbookCreationWorkflow() {
     loading,
     error,
     resetWorkflow,
-    workflowType
+    workflowType,
+    brainDump,
+    ebookIdeas,
+    ebook,
   } = useWorkflow();
   
   // Safety check - ensure we're in the ebook workflow
@@ -68,6 +72,20 @@ export default function EbookCreationWorkflow() {
   
   // Loading state for project creation
   const [isCreating, setIsCreating] = useState(false);
+  // State for database warning banner
+  const [showDatabaseWarning, setShowDatabaseWarning] = useState(false);
+
+  // Check for database errors and show warning if needed
+  useEffect(() => {
+    if (error && (
+      error.includes('database') || 
+      error.includes('400') || 
+      error.includes('Warning:') || 
+      error.includes("won't affect your analysis")
+    )) {
+      setShowDatabaseWarning(true);
+    }
+  }, [error]);
 
   // Handle one-time navigation only
   useEffect(() => {
@@ -146,7 +164,9 @@ export default function EbookCreationWorkflow() {
     if (currentStep === 'ebook-structure' && !hasTransitionedFromStructureRef.current) {
       hasTransitionedFromStructureRef.current = true;
       console.log('Auto-transitioning from ebook-structure to ebook-writing step');
-      setCurrentStep('ebook-writing');
+      
+      // Use short timeout to ensure state has settled
+      setTimeout(() => setCurrentStep('ebook-writing'), 100);
     }
     
     // Auto-transition to completed step if needed when all ebook steps are done
@@ -154,7 +174,27 @@ export default function EbookCreationWorkflow() {
       console.log('eBook is finalized, auto-transitioning to completed step');
       setCurrentStep('completed');
     }
-  }, [currentStep, setCurrentStep, project?.status]);
+    
+    // Handle recovery from potentially stuck states
+    if (project && brainDump) {
+      // If we're on brain-dump step but already have analyzed content, advance
+      if (currentStep === 'brain-dump' && brainDump.status === 'analyzed' && ebookIdeas.length > 0) {
+        console.log('Brain dump already analyzed, advancing to idea selection');
+        setCurrentStep('idea-selection');
+      }
+      
+      // If we're on idea selection but already have an ebook, advance
+      if (currentStep === 'idea-selection' && ebook) {
+        console.log('eBook already created, advancing to writing step');
+        setCurrentStep('ebook-writing');
+      }
+    }
+  }, [currentStep, setCurrentStep, project?.status, brainDump?.status, ebookIdeas.length, ebook]);
+
+  // Dismiss database warning
+  const dismissDatabaseWarning = () => {
+    setShowDatabaseWarning(false);
+  };
 
   // Step configuration with titles, icons, and descriptions
   const steps = [
@@ -258,6 +298,33 @@ export default function EbookCreationWorkflow() {
             <div className="bg-paper rounded-lg p-8 flex flex-col items-center shadow-blue">
               <Loader2 className="h-10 w-10 text-accent-primary animate-spin mb-4" />
               <p className="font-serif text-ink-light">Creating your eBook project...</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Database warning banner */}
+        {showDatabaseWarning && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-amber-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-amber-700 font-serif">
+                  We encountered database connection issues. Your work is still being saved locally, 
+                  and you can continue creating your eBook. Some features might be limited.
+                </p>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+                    onClick={dismissDatabaseWarning}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

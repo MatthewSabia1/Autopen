@@ -84,19 +84,21 @@ export function useProducts() {
   // Helper function to fetch products from database with optimized queries
   const fetchProductsFromDatabase = async (userId: string) => {
     try {
-      // Only select the fields we need
-      const fields = 'id, title, type, status, created_at, updated_at, user_id, project_id, metadata';
+      // Only select the fields we need - customized for each table
+      const contentFields = 'id, title, type, status, created_at, updated_at, user_id, project_id, metadata';
+      // Don't select project_id from projects table since it doesn't exist there
+      const projectFields = 'id, title, type, status, created_at, updated_at, user_id, metadata';
       
       // Run queries in parallel
       const [contentResults, projectResults] = await Promise.allSettled([
         supabase
           .from('creator_contents')
-          .select(fields)
+          .select(contentFields)
           .eq('user_id', userId)
           .order('updated_at', { ascending: false }),
         supabase
           .from('projects')
-          .select(fields)
+          .select(projectFields)
           .eq('user_id', userId)
           .order('updated_at', { ascending: false })
       ]);
@@ -121,6 +123,16 @@ export function useProducts() {
           projectProducts: projectProducts ? projectProducts.length : 0, 
           error: projectError 
         });
+        
+        // Log details about projects error if there is one
+        if (projectError) {
+          console.error("Projects query error details:", {
+            code: projectError.code,
+            details: projectError.details,
+            hint: projectError.hint,
+            message: projectError.message
+          });
+        }
       }
       
       let allProducts = [];
@@ -152,12 +164,19 @@ export function useProducts() {
         }
       }
       
-      // Process projects results
+      // Process projects results - with improved error handling
       if (projectResults.status === 'fulfilled') {
         const { data: projectProducts, error: projectError } = projectResults.value;
         
-        if (projectError && projectError.code !== '42P01') {
-          console.error("Error fetching projects:", projectError);
+        if (projectError) {
+          if (projectError.code === '42P01') {
+            console.log("The projects table doesn't exist yet. You may need to run migrations.");
+          } else if (projectError.code?.toString() === '400' || projectError.code?.toString() === '42703') {
+            console.log("Database schema issue: The projects table might not have the expected columns. Using limited functionality.");
+          } else {
+            console.error("Error fetching projects:", projectError);
+          }
+          // Continue with whatever data we have from creator_contents
         } else if (projectProducts && projectProducts.length > 0) {
           const normalizedProjectProducts = projectProducts.map(project => ({
             id: project.id,
@@ -167,8 +186,9 @@ export function useProducts() {
             created_at: project.created_at,
             updated_at: project.updated_at,
             user_id: project.user_id,
+            // For projects, the project_id is the same as the id
             project_id: project.id,
-            metadata: null,
+            metadata: project.metadata || null,
             source: 'projects'
           }));
           
@@ -179,6 +199,9 @@ export function useProducts() {
             }
           });
         }
+      } else if (projectResults.status === 'rejected') {
+        // Handle Promise rejection for projects query
+        console.error("Projects query rejected:", projectResults.reason);
       }
       
       // Sort by updated_at (newest first)
@@ -203,7 +226,9 @@ export function useProducts() {
         setError("Database table not found. The system needs to be initialized with the proper schema.");
         return [];
       }
-      throw supaError;
+      console.error("Error fetching products from database:", supaError);
+      setError("There was an error loading your products. The application will continue with limited functionality.");
+      return [];
     }
   };
 
@@ -399,7 +424,8 @@ export function useProducts() {
       console.log("Fetching product by ID:", id);
       
       // Optimize the database query - select only needed fields
-      const fields = 'id, title, type, status, created_at, updated_at, user_id, project_id, metadata';
+      const contentFields = 'id, title, type, status, created_at, updated_at, user_id, project_id, metadata';
+      const projectFields = 'id, title, type, status, created_at, updated_at, user_id, metadata';
       
       // Instead of concurrent requests that might cause issues,
       // try one table first and then the other if needed
@@ -409,7 +435,7 @@ export function useProducts() {
       try {
         const { data, error } = await supabase
           .from('creator_contents')
-          .select(fields)
+          .select(contentFields)
           .eq('id', id)
           .maybeSingle();
           
@@ -438,7 +464,7 @@ export function useProducts() {
         try {
           const { data, error } = await supabase
             .from('projects')
-            .select(fields)
+            .select(projectFields)
             .eq('id', id)
             .maybeSingle();
             
@@ -453,7 +479,7 @@ export function useProducts() {
               created_at: data.created_at,
               updated_at: data.updated_at,
               user_id: data.user_id,
-              project_id: data.id,
+              project_id: data.id, // For projects, use the id as project_id
               metadata: data.metadata || null,
               source: 'projects'
             };

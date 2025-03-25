@@ -94,8 +94,8 @@ export default function LoginForm({ onToggle }: { onToggle?: () => void }) {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <PenTool className="h-8 w-8 text-accent-primary" />
-            <h1 className="text-3xl font-bold text-slate-800">Autopen</h1>
+            <PenTool className="w-7 h-7 text-accent-yellow" />
+            <span className="font-display text-2xl ml-2.5 text-slate-800 tracking-tight">Autopen</span>
           </div>
           <p className="text-slate-600">Sign in to your account to continue</p>
         </div>

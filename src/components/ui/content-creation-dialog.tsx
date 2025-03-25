@@ -1,6 +1,6 @@
 import React from "react";
 import { X, Sparkles } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "./dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "./dialog";
 import { RadioGroup, RadioGroupItem } from "./radio-group";
 import { Label } from "./label";
 import { Input } from "./input";
@@ -59,10 +59,10 @@ export function ContentCreationDialog({
             <Sparkles className="h-5 w-5 text-accent-primary" />
             Create AI Content
           </DialogTitle>
+          <DialogDescription>
+            Start a new AI-assisted content creation project.
+          </DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-ink-light font-serif mb-6">
-          Start a new AI-assisted content creation project.
-        </p>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">

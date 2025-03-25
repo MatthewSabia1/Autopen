@@ -166,12 +166,26 @@ erDiagram
 ### Environment Setup
 Create a `.env` file with the following variables:
 ```
+# Supabase Configuration
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-VITE_OPENROUTER_API_KEY=your_openrouter_api_key
-VITE_GEMINI_API_KEY=your_gemini_api_key
+
+# OpenRouter Configuration - Required for AI features
+VITE_OPENROUTER_API_KEY=your_openrouter_api_key  # Get from https://openrouter.ai/
+VITE_OPENROUTER_MODEL=deepseek/deepseek-r1:free  # Default model to use
+VITE_OPENROUTER_API_URL=https://openrouter.ai/api/v1/chat/completions  # API endpoint
+
+# Other Services (optional)
+VITE_GEMINI_API_KEY=your_gemini_api_key  # Only needed if using Google Gemini
 ```
+
+You can copy the `.env.example` file to get started:
+```bash
+cp .env.example .env
+```
+
+Then edit the file to add your API keys. **You must add a valid OpenRouter API key** for the eBook idea generation functionality to work.
 
 ### Database Setup
 

@@ -4,34 +4,108 @@ import { logError } from './utils/debug';
  * OpenRouter API integration for AutoPen
  */
 
-// API Key for OpenRouter
-// NOTE: In production, this should be stored in an environment variable
-// Using a hardcoded key only for development purposes
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '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';
+// Constants for OpenRouter API - Use environment variables only
+const OPENROUTER_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
+const OPENROUTER_API_URL = import.meta.env.VITE_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
 
-// API endpoints
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// Flag to check if API key is potentially valid (at least has correct format)
+const API_KEY_IS_VALID = OPENROUTER_KEY && OPENROUTER_KEY.length > 30;
+
+// Default model to use from environment
+const DEFAULT_MODEL = import.meta.env.VITE_OPENROUTER_MODEL || 'deepseek/deepseek-r1:free';
 
 // Specific models to use per user request
-// Only use deepseek models
+// Only use deepseek models by default
 const MODELS = [
-  'deepseek/deepseek-r1:free',         // Primary model
-  'deepseek/deepseek-chat-v3-0324:free' // Fallback model
+  DEFAULT_MODEL,                           // Primary model from env or default
+  'deepseek/deepseek-chat-v3-0324:free'    // Fallback model
+];
+
+// Fallback models if the primary models are unavailable
+const BACKUP_MODELS = [
+  'gryphe/mythomist-7b:free',              // Backup model 1
+  'nousresearch/nous-hermes-2-mistral-7b:free', // Backup model 2
+  'anthropic/claude-instant-1:free'        // Last resort
 ];
 
 // Start with the primary model
 let OPENROUTER_MODEL = MODELS[0];
 
+// Add a flag to indicate if we're using fallback models
+let usingFallbackModels = false;
+
 // Expose a function to switch models in case of failures
 const switchToNextModel = () => {
   const currentIndex = MODELS.indexOf(OPENROUTER_MODEL);
+  
   if (currentIndex < MODELS.length - 1) {
+    // Switch to next model in primary list
     OPENROUTER_MODEL = MODELS[currentIndex + 1];
     console.log(`Switched to model: ${OPENROUTER_MODEL}`);
     return true;
+  } else if (!usingFallbackModels) {
+    // Switch to fallback models if we've exhausted primary models
+    usingFallbackModels = true;
+    OPENROUTER_MODEL = BACKUP_MODELS[0];
+    console.log(`Switched to backup model: ${OPENROUTER_MODEL}`);
+    return true;
+  } else {
+    // Try next fallback model
+    const fallbackIndex = BACKUP_MODELS.indexOf(OPENROUTER_MODEL);
+    if (fallbackIndex < BACKUP_MODELS.length - 1) {
+      OPENROUTER_MODEL = BACKUP_MODELS[fallbackIndex + 1];
+      console.log(`Switched to backup model: ${OPENROUTER_MODEL}`);
+      return true;
+    }
   }
+  
   return false; // No more models to try
 };
+
+// Add this new function to handle API timeouts with a proper AbortController
+const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
+  const controller = new AbortController();
+  const { signal } = controller;
+  
+  // Create a timeout that will abort the fetch
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeout);
+  
+  try {
+    console.log(`DEBUG: Sending request to ${url} with options:`, {
+      method: options.method,
+      headers: options.headers,
+      bodyLength: options.body ? JSON.stringify(options.body).length : 0
+    });
+    
+    // Combine the provided signal (if any) with our timeout signal
+    const mergedOptions = {
+      ...options,
+      signal,
+      mode: 'cors' as RequestMode // Explicitly set CORS mode
+    };
+    
+    const response = await fetch(url, mergedOptions);
+    clearTimeout(timeoutId);
+    console.log(`DEBUG: Received response with status: ${response.status}`);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    console.error(`DEBUG: Fetch error:`, error);
+    
+    // Enhanced error handling for timeouts
+    if (error.name === 'AbortError') {
+      throw new Error(`API request timed out after ${timeout/1000} seconds. The server did not respond in time.`);
+    }
+    
+    throw error;
+  }
+};
+
+// Update the timeout value to be more reasonable
+const API_TIMEOUT = 20000; // 20 seconds instead of 30
 
 /**
  * Interface for API request parameters
@@ -130,40 +204,40 @@ export async function generateOpenRouterResponse(
       const params: OpenRouterRequestParams = {
         model: OPENROUTER_MODEL,
         messages,
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 4096
+        temperature: 1.0,
       };
 
-      // Make API request with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout - increased from 30s
-      
       // Debug the request
       notifyProgress(`Calling OpenRouter API with model: ${OPENROUTER_MODEL}`);
       console.log(`OpenRouter request params:`, {
         model: params.model,
         temperature: params.temperature,
-        max_tokens: params.max_tokens,
         messageCount: params.messages.length,
         url: OPENROUTER_API_URL
       });
-      
+
+      // IMPORTANT: Actually use the fetchWithTimeout method we defined (was previously unused)
       try {
-        const response = await fetch(OPENROUTER_API_URL, {
+        console.log("DEBUG: Preparing to call OpenRouter API with:", {
+          url: OPENROUTER_API_URL,
+          model: OPENROUTER_MODEL,
+          messagesCount: messages.length,
+          promptLength: prompt.length,
+          apiKeyLength: OPENROUTER_KEY.length,
+        });
+        
+        const response = await fetchWithTimeout(OPENROUTER_API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${OPENROUTER_KEY}`,
-            'HTTP-Referer': 'https://autopen.app',
-            'X-Title': 'AutoPen',
-            'User-Agent': 'AutoPen/1.0.0'
+            'HTTP-Referer': window.location.origin, // Use actual origin
+            'X-Title': 'AutoPen App',
+            'Origin': window.location.origin
           },
-          body: JSON.stringify(params),
-          signal: controller.signal
-        });
+          body: JSON.stringify(params)
+        }, API_TIMEOUT); // 20-second timeout
         
-        clearTimeout(timeoutId);
-
         if (!response.ok) {
           let errorMessage = `API error: ${response.status} ${response.statusText}`;
           try {
@@ -217,8 +291,12 @@ export async function generateOpenRouterResponse(
 
         // Extract the text from the response
         return data.choices[0].message.content;
-      } finally {
-        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        // Explicitly handle abort errors (timeouts)
+        if (fetchError.name === 'AbortError') {
+          throw new Error(`API request timed out after 30 seconds: ${fetchError.message}`);
+        }
+        throw fetchError;
       }
     } catch (error: any) {
       lastError = error;
@@ -277,7 +355,7 @@ export async function generateOpenRouterResponse(
         notifyProgress(retryMessage);
         
         // Exponential backoff: wait longer between each retry but cap at 10 seconds
-        const delay = Math.min(2000 * Math.pow(2, retries), 10000); // Max 10 seconds (reduced from 20s)
+        const delay = Math.min(2000 * Math.pow(2, retries), 10000); // Max 10 seconds
         await new Promise(resolve => setTimeout(resolve, delay));
       } else if (!shouldRetry) {
         const errorMessage = 'Non-retryable error encountered: ' + error.message;
@@ -300,26 +378,16 @@ export async function generateOpenRouterResponse(
 // Fallback ideas for when the API fails completely
 const FALLBACK_EBOOK_IDEAS = [
   {
-    title: "Complete Guide to Personal Development",
-    description: "A comprehensive guide covering essential aspects of personal growth, including goal setting, habit formation, time management, and mindfulness practices.",
-    source_data: "Generated as a fallback option based on common personal development themes."
-  },
-  {
-    title: "Effective Communication in the Digital Age",
-    description: "Strategies and techniques for clear, impactful communication across digital platforms, social media, and remote work environments.",
-    source_data: "Generated as a fallback option based on communication trends."
-  },
-  {
-    title: "The Art of Productivity: From Overwhelm to Flow",
-    description: "A practical approach to productivity that focuses on creating flow states, managing energy instead of time, and creating systems that work for your unique needs.",
-    source_data: "Generated as a fallback option based on productivity concepts."
-  },
-  {
-    title: "Financial Independence: A Step-by-Step Blueprint",
-    description: "A structured guide to achieving financial freedom through smart budgeting, investing strategies, passive income creation, and wealth mindset development.",
-    source_data: "Generated as a fallback option based on personal finance principles."
+    title: "FALLBACK_DISABLED",
+    description: "Fallback ideas are disabled. Please ensure the OpenRouter API is properly configured.",
+    source_data: "N/A"
   }
 ];
+
+// Create additional fallback ideas based on content
+const createContentBasedFallbackIdeas = (content: string) => {
+  throw new Error("Fallback ideas are disabled. Please ensure the OpenRouter API is properly configured.");
+};
 
 export async function generateIdeasFromBrainDump(
   content: string, 
@@ -331,6 +399,32 @@ export async function generateIdeasFromBrainDump(
   description: string;
   source_data: string;
 }[]> {
+  // Debugging information
+  console.log("generateIdeasFromBrainDump called with:", { 
+    contentLength: content?.length || 0,
+    filesCount: files?.length || 0,
+    linksCount: links?.length || 0,
+    apiKeyValid: API_KEY_IS_VALID
+  });
+  
+  // Check if API key is valid
+  if (!API_KEY_IS_VALID) {
+    console.warn("OpenRouter API key invalid or not configured");
+    if (onProgress) {
+      onProgress({
+        retry: 0,
+        maxRetries: 0,
+        message: "API configuration issue. OpenRouter API key is not valid."
+      });
+    }
+    throw new Error("OpenRouter API key is invalid or not configured");
+  }
+
+  // Validate content
+  if (!content || content.trim().length < 50) {
+    throw new Error("Content is too short or empty. Please provide more substantial content for analysis.");
+  }
+
   const systemPrompt = `You are an expert content strategist helping generate high-quality eBook ideas from unstructured content.
 Analyze the content, identify key themes and topics, and generate 4-8 compelling eBook ideas that would make excellent 
 full-length eBooks (approx. 50-100 pages). Each idea should include a catchy title, a brief description, and a note 
@@ -338,12 +432,12 @@ about what part of the input data inspired this idea.`;
 
   const prompt = `
 CONTENT:
-${content.substring(0, 25000)}
+${content.substring(0, 10000)}
 
 ${files.length > 0 ? `FILES: ${files.join(', ')}` : ''}
 ${links.length > 0 ? `LINKS: ${links.join(', ')}` : ''}
 
-Based on this content, generate 4-8 high-quality eBook ideas. For each idea, provide:
+Based on this content, generate 4-6 high-quality eBook ideas. For each idea, provide:
 1. Title: A catchy, marketable title
 2. Description: A brief description of what the eBook would cover (2-3 sentences)
 3. Source: Which part of the input data inspired this idea
@@ -358,66 +452,105 @@ Format each idea as:
 Return the ideas as a valid JSON array.
 `;
 
+  // Set a strict timeout for the entire operation
+  let hasTimedOut = false;
+  const globalTimeoutId = setTimeout(() => {
+    hasTimedOut = true;
+    console.warn("Global timeout reached for idea generation");
+    if (onProgress) {
+      onProgress({
+        retry: 0,
+        maxRetries: 0,
+        message: "Analysis is taking too long. The operation timed out."
+      });
+    }
+    throw new Error("Idea generation timed out. The OpenRouter API is taking too long to respond.");
+  }, 40000); // 40 seconds timeout - longer to allow for API delays
+
   try {
     // Notify that we're starting the process
     if (onProgress) {
       onProgress({
         retry: 0,
-        maxRetries: 3,
+        maxRetries: 1,
         message: "Starting content analysis..."
       });
     }
-    
-    const response = await generateOpenRouterResponse(prompt, {
-      systemPrompt,
-      temperature: 0.7,
-      onProgress: onProgress
-    });
 
-    // Extract the JSON from the response - handle different response formats
+    // Initialize API call
+    const responsePromise = generateOpenRouterResponse(prompt, {
+      systemPrompt,
+      temperature: 1.0,
+      maxRetries: 2, // Allow more retries
+      onProgress
+    });
+    
+    // Wait for the response with a timeout
+    const apiTimeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error("API request timed out")), 35000); // 35 seconds
+    });
+    
+    // Wait for either the response or timeout
+    let response: string;
+    try {
+      response = await Promise.race([responsePromise, apiTimeoutPromise]);
+    } catch (error) {
+      console.warn("API error:", error);
+      clearTimeout(globalTimeoutId);
+      throw error;
+    }
+    
+    // Process the response
     try {
       // First try to extract JSON array
       const jsonMatch = response.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          // Validate the parsed response
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+            clearTimeout(globalTimeoutId);
+            return parsed;
+          }
+        } catch (parseError) {
+          console.warn("JSON parsing error in matched array:", parseError);
+          throw new Error("Failed to parse API response");
+        }
       }
       
       // If no JSON array, try to parse whole response
       try {
         const parsedResponse = JSON.parse(response);
-        if (Array.isArray(parsedResponse)) {
+        if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+          clearTimeout(globalTimeoutId);
           return parsedResponse;
         }
       } catch (e) {
-        // Not valid JSON
+        console.warn("Failed to parse response as JSON:", e);
+        throw new Error("Invalid API response format");
       }
       
-      // We can't process the response, throw an error instead of using fallbacks
-      throw new Error('Failed to parse ideas from response. Please try again.');
+      // If we get here, the response isn't in the expected format
+      throw new Error("API returned invalid data format");
     } catch (parseError) {
-      logError('generateIdeasFromBrainDump:parsing', parseError);
-      throw new Error(`Failed to parse ideas: ${parseError.message}`);
+      clearTimeout(globalTimeoutId);
+      throw parseError;
     }
   } catch (error: any) {
-    logError('generateIdeasFromBrainDump', error);
-    
-    // Use fallback ideas after notifying the user
-    if (onProgress) {
-      onProgress({
-        retry: 0,
-        maxRetries: 0,
-        message: "API connection failed. Using backup ideas instead."
-      });
-    }
-    
-    console.warn("Using fallback ebook ideas due to API failure:", error.message);
-    
-    // Wait a moment to ensure user sees the message
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Return fallback ideas
-    return FALLBACK_EBOOK_IDEAS;
+    clearTimeout(globalTimeoutId);
+    console.error("Error during idea generation:", error);
+    throw error;
   }
+}
+
+// Helper function to extract ideas from non-JSON text response
+function extractIdeasFromText(text: string, content: string): Array<any> {
+  throw new Error("Extracting ideas from text is disabled. The API must return properly formatted JSON.");
+}
+
+// Create higher quality fallback ideas based on content
+function createEnhancedFallbackIdeas(content: string) {
+  throw new Error("Fallback ideas are disabled. Please ensure the OpenRouter API is properly configured.");
 }
 
 /**
@@ -425,22 +558,7 @@ Return the ideas as a valid JSON array.
  */
 // Fallback ebook structure for when the API fails
 const generateFallbackStructure = (idea: { title: string; description: string }) => {
-  return {
-    title: idea.title,
-    description: idea.description || "A comprehensive guide covering key concepts and practical advice.",
-    chapters: [
-      { title: "Introduction", description: "Overview of the book and what readers will learn.", order_index: 0 },
-      { title: "Understanding the Basics", description: "Fundamental concepts and terminology.", order_index: 1 },
-      { title: "Key Principles", description: "Core principles and frameworks.", order_index: 2 },
-      { title: "Common Challenges", description: "Typical obstacles and how to overcome them.", order_index: 3 },
-      { title: "Practical Strategies", description: "Actionable techniques and methods.", order_index: 4 },
-      { title: "Real-World Applications", description: "Case studies and examples.", order_index: 5 },
-      { title: "Advanced Concepts", description: "Taking your understanding to the next level.", order_index: 6 },
-      { title: "Tools and Resources", description: "Essential tools and resources to support your journey.", order_index: 7 },
-      { title: "Future Trends", description: "Emerging developments and what to expect.", order_index: 8 },
-      { title: "Conclusion", description: "Summary and final thoughts.", order_index: 9 }
-    ]
-  };
+  throw new Error("Fallback structures should not be used. Please ensure the OpenRouter API is properly configured.");
 };
 
 export async function generateEbookStructure(idea: {
@@ -492,7 +610,7 @@ Plan for a substantial book that will total approximately 30,000-40,000 words wh
   try {
     const response = await generateOpenRouterResponse(prompt, {
       systemPrompt,
-      temperature: 0.5
+      temperature: 1.0
     });
 
     // Extract the JSON from the response - handle different response formats
@@ -521,8 +639,7 @@ Plan for a substantial book that will total approximately 30,000-40,000 words wh
     }
   } catch (error: any) {
     logError('generateEbookStructure', error);
-    console.warn("Using fallback ebook structure due to API failure:", error.message);
-    return generateFallbackStructure(idea);
+    throw new Error(`Failed to generate eBook structure: ${error.message}`);
   }
 }
 
@@ -537,98 +654,7 @@ const generateFallbackChapterContent = (
   chapterIndex: number,
   totalChapters: number
 ): string => {
-  const isIntroduction = chapterIndex === 0;
-  const isConclusion = chapterIndex === totalChapters - 1;
-  
-  if (isIntroduction) {
-    return `# Introduction
-    
-## Welcome to "${bookTitle}"
-
-This book aims to provide you with a comprehensive understanding of ${chapterTitle.toLowerCase()}. In the following chapters, we'll explore various aspects of this topic, from fundamental concepts to practical applications.
-
-## Why This Matters
-
-${chapterDescription || "This subject is increasingly important in today's rapidly changing world."}
-
-## What You'll Learn
-
-Throughout this book, you'll gain insights into:
-
-- Core principles and methodologies
-- Practical techniques and strategies
-- Real-world applications and case studies
-- Tools and resources to support your journey
-
-## How to Use This Book
-
-Whether you're a beginner or have some experience in this field, this book is designed to meet you where you are. Each chapter builds upon the previous one, so I recommend reading them in sequence for the best understanding.
-
-Let's begin our exploration of ${bookTitle}.`;
-  } else if (isConclusion) {
-    return `# Conclusion
-
-## Key Takeaways
-
-Throughout this book, we've explored the various dimensions of ${bookTitle.toLowerCase()}. Let's revisit some of the key points we've covered:
-
-- The fundamental principles that form the foundation of this subject
-- Practical strategies for implementation and growth
-- Common challenges and how to overcome them
-- Tools and resources to support your ongoing journey
-
-## Next Steps
-
-As you move forward, consider how you might apply what you've learned in your specific context. Remember that mastery comes through consistent practice and application.
-
-## Final Thoughts
-
-Thank you for joining me on this journey through ${bookTitle}. I hope the insights and strategies shared in this book will serve as valuable tools in your personal and professional growth.
-
-Keep learning, keep growing, and keep pushing the boundaries of what's possible.`;
-  } else {
-    return `# ${chapterTitle}
-
-## Overview
-
-${chapterDescription || "This chapter explores important concepts and practical applications."}
-
-## Key Concepts
-
-In this chapter, we'll examine several important ideas:
-
-### Concept 1: Foundation
-
-Understanding the basics is crucial before moving to advanced topics. This section covers the essential elements that form the foundation of this subject.
-
-### Concept 2: Application
-
-Theory without application has limited value. Here, we'll look at how to put these ideas into practice in real-world scenarios.
-
-### Concept 3: Integration
-
-Learning how these concepts integrate with existing knowledge and systems is vital for comprehensive understanding.
-
-## Practical Examples
-
-Let's consider a few examples that illustrate these concepts:
-
-1. **Example A**: This demonstrates how the principles can be applied in a business context.
-2. **Example B**: Here we see how individuals have successfully implemented these ideas.
-3. **Example C**: This case study shows both challenges and solutions.
-
-## Common Challenges
-
-When working with these concepts, you might encounter several challenges:
-
-- Challenge 1 and strategies to overcome it
-- Challenge 2 and effective approaches
-- Challenge 3 and proven solutions
-
-## Summary
-
-This chapter has explored ${chapterTitle.toLowerCase()}, covering key concepts, practical applications, and common challenges. In the next chapter, we'll build on these ideas as we examine [next topic].`;
-  }
+  throw new Error("Fallback chapter content should not be used. Please ensure the OpenRouter API is properly configured.");
 };
 
 export async function generateChapterContent(
@@ -747,21 +773,11 @@ Make this chapter substantial and valuable. It should stand on its own while con
   try {
     return await generateOpenRouterResponse(prompt, {
       systemPrompt,
-      temperature: 0.7,
-      maxTokens: 4096 // Maximum token limit for a substantial chapter
+      temperature: 1.0,
     });
   } catch (error: any) {
     logError('generateChapterContent', error);
-    console.warn(`Failed to generate chapter content: ${error.message}`);
-    
-    // Use fallback content instead of throwing an error
-    return generateFallbackChapterContent(
-      bookTitle,
-      chapterTitle,
-      chapterDescription,
-      chapterIndex,
-      totalChapters
-    );
+    throw new Error(`Failed to generate chapter content: ${error.message}`);
   }
 }
 
@@ -806,4 +822,83 @@ export function formatEbookForExport(
   });
   
   return ebookContent;
+}
+
+/**
+ * Test function to verify OpenRouter connectivity
+ * This will make a simple API call with minimal content to check if the API is accessible
+ */
+export async function testOpenRouterConnectivity(): Promise<{success: boolean, message: string}> {
+  try {
+    console.log("Testing OpenRouter connectivity...");
+    
+    // First check if we have a potentially valid API key
+    if (!API_KEY_IS_VALID) {
+      return {
+        success: false,
+        message: "No valid OpenRouter API key found. Please add your OpenRouter API key to the environment variables (VITE_OPENROUTER_API_KEY)."
+      };
+    }
+    
+    const testParams = {
+      model: OPENROUTER_MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: 'Hello, this is a test message. Please respond with "Connectivity test successful".'
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 20
+    };
+    
+    const response = await fetchWithTimeout(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_KEY}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'AutoPen App',
+        'Origin': window.location.origin
+      },
+      body: JSON.stringify(testParams)
+    }, 10000); // 10 second timeout for test
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenRouter test failed:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          message: "OpenRouter API key is invalid or unauthorized. Please check your API key."
+        };
+      }
+      
+      return {
+        success: false,
+        message: `API returned error ${response.status}: ${response.statusText}`
+      };
+    }
+    
+    const data = await response.json();
+    console.log("OpenRouter test succeeded:", data);
+    
+    return {
+      success: true,
+      message: data.choices && data.choices[0] ? 
+        `Success: ${data.choices[0].message?.content}` : 
+        "Success, but received unexpected response format"
+    };
+  } catch (error: any) {
+    console.error("OpenRouter connectivity test error:", error);
+    return {
+      success: false, 
+      message: `Connection error: ${error.message || "Unknown error"}`
+    };
+  }
 }
