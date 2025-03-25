@@ -13,12 +13,16 @@ import {
   Loader2, 
   RotateCcw, 
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Save,
+  Edit,
+  X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useProducts } from '@/hooks/useProducts';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * The eBook writing step in the workflow.
@@ -38,7 +42,19 @@ const EbookWritingStep = () => {
   const [error, setError] = useState<string | null>(null);
   const [generatingChapter, setGeneratingChapter] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [editingChapter, setEditingChapter] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState<string>('');
+  const [savingChapter, setSavingChapter] = useState<string | null>(null);
+  // Keep a local copy of chapters that we can update directly for UI purposes
+  const [localChapters, setLocalChapters] = useState<any[]>([]);
   
+  // When ebookChapters from context change, update our local copy
+  useEffect(() => {
+    if (ebookChapters && ebookChapters.length > 0) {
+      setLocalChapters(ebookChapters);
+    }
+  }, [ebookChapters]);
+
   // Create or update draft product when chapters are generated
   useEffect(() => {
     const saveDraftProduct = async () => {
@@ -132,8 +148,8 @@ const EbookWritingStep = () => {
   }, [ebookChapters, ebook, project, draftId]);
 
   // Calculate progress percentage
-  const completedChapters = ebookChapters.filter(c => c.status === 'generated').length;
-  const totalChapters = ebookChapters.length;
+  const completedChapters = localChapters.filter(c => c.status === 'generated').length;
+  const totalChapters = localChapters.length;
   const progressPercentage = totalChapters > 0 ? (completedChapters / totalChapters) * 100 : 0;
   const allChaptersGenerated = completedChapters === totalChapters;
 
@@ -141,7 +157,111 @@ const EbookWritingStep = () => {
    * Toggles the expanded state of a chapter
    */
   const toggleChapter = (chapterId: string) => {
+    // If we're editing, don't collapse the chapter
+    if (editingChapter === chapterId) return;
+    
     setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
+  };
+
+  /**
+   * Starts editing a chapter
+   */
+  const handleStartEditing = (chapter) => {
+    setEditingChapter(chapter.id);
+    setEditContent(chapter.content || '');
+  };
+
+  /**
+   * Cancels editing a chapter
+   */
+  const handleCancelEditing = () => {
+    setEditingChapter(null);
+    setEditContent('');
+  };
+
+  /**
+   * Saves edited chapter content
+   */
+  const handleSaveEdits = async (chapterId) => {
+    try {
+      setSavingChapter(chapterId);
+      setError(null);
+      
+      // Find the chapter to update
+      const chapterToUpdate = ebookChapters.find(c => c.id === chapterId);
+      if (!chapterToUpdate) throw new Error('Chapter not found');
+      
+      // Update chapter in database using the Supabase client
+      const { supabase } = await import('../../../../supabase/supabase');
+      
+      const { error, data } = await supabase
+        .from('ebook_chapters')
+        .update({ 
+          content: editContent,
+          status: 'generated'
+        })
+        .eq('id', chapterId)
+        .select();
+      
+      if (error) throw error;
+      
+      // Create updated chapter object with new content
+      const updatedChapter = {
+        ...chapterToUpdate,
+        content: editContent,
+        status: 'generated' as const
+      };
+      
+      // Update the local state directly with React useState setter pattern
+      // This is a workaround since we don't have a direct setter in the context
+      setLocalChapters(prevChapters => prevChapters.map(c => 
+        c.id === chapterId ? updatedChapter : c
+      ));
+      
+      // Update the draft product with the new chapter content
+      if (draftId) {
+        try {
+          const chapterMetadata = {
+            id: chapterId,
+            title: chapterToUpdate.title,
+            status: 'generated',
+            updatedAt: new Date().toISOString()
+          };
+          
+          if (editContent.length > 30000) {
+            (chapterMetadata as any).contentPreview = editContent.substring(0, 500) + '... (truncated)';
+            (chapterMetadata as any).contentLength = editContent.length;
+          } else {
+            (chapterMetadata as any).content = editContent;
+          }
+          
+          await updateProduct(draftId, {
+            metadata: {
+              lastUpdatedChapter: chapterMetadata,
+              updatedAt: new Date().toISOString()
+            }
+          });
+          
+          console.log('Successfully updated chapter content in product metadata');
+        } catch (updateErr) {
+          console.error('Error updating draft product with chapter content:', updateErr);
+        }
+      }
+      
+      // Exit edit mode
+      setEditingChapter(null);
+      setEditContent('');
+      
+      // Show success message as a non-error notification
+      setError('✓ Chapter content updated successfully');
+      setTimeout(() => setError(null), 3000);
+      
+    } catch (err) {
+      setError(err.message || 'Failed to save chapter');
+      console.error('Error saving chapter:', err);
+    } finally {
+      setSavingChapter(null);
+    }
   };
 
   /**
@@ -244,7 +364,9 @@ const EbookWritingStep = () => {
    * Handles proceeding to the next step
    */
   const handleProceed = () => {
-    if (allChaptersGenerated) {
+    // Check if all chapters are generated based on local state
+    const allDone = localChapters.every(c => c.status === 'generated');
+    if (allDone) {
       setCurrentStep('ebook-preview');
     }
   };
@@ -288,7 +410,7 @@ const EbookWritingStep = () => {
         </h2>
         <p className="text-ink-light font-serif max-w-3xl">
           Our AI is generating high-quality content for each chapter of your eBook. 
-          You can preview each chapter as it's completed or regenerate if needed.
+          You can preview each chapter as it's completed, manually edit the content, or regenerate if needed.
         </p>
       </div>
 
@@ -337,7 +459,7 @@ const EbookWritingStep = () => {
 
       {/* Chapter list */}
       <div className="space-y-4">
-        {ebookChapters.map((chapter, index) => (
+        {localChapters.map((chapter, index) => (
           <motion.div
             key={chapter.id}
             initial={{ opacity: 0, y: 10 }}
@@ -418,33 +540,52 @@ const EbookWritingStep = () => {
                       Generate
                     </Button>
                   )}
-                  {chapter.status === 'generated' && (
+                  {chapter.status === 'generated' && !editingChapter && (
                     <Button
                       size="sm"
                       variant="workflowOutline"
                       className="gap-1.5 px-3 h-8"
                       onClick={(e) => {
                         e.stopPropagation();
+                        handleStartEditing(chapter);
+                        setExpandedChapter(chapter.id); // Ensure chapter is expanded when editing
+                      }}
+                      disabled={!!generatingChapter || !!editingChapter}
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                  )}
+                  {chapter.status === 'generated' && !editingChapter && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 px-3 h-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleGenerateChapter(chapter.id);
                       }}
-                      disabled={!!generatingChapter}
+                      disabled={!!generatingChapter || !!editingChapter}
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                       Regenerate
                     </Button>
                   )}
-                  {expandedChapter === chapter.id ? (
+                  {expandedChapter === chapter.id && !editingChapter ? (
                     <ChevronUp className="h-5 w-5 text-ink-faded" />
-                  ) : (
+                  ) : !editingChapter ? (
                     <ChevronDown className="h-5 w-5 text-ink-faded" />
-                  )}
+                  ) : null}
                 </div>
               </div>
               
               {/* Expanded chapter content */}
               {expandedChapter === chapter.id && (
-                <div className="p-4 bg-cream border-t border-accent-tertiary/10">
-                  {chapter.status === 'generated' && chapter.content ? (
+                <div className={cn(
+                  "p-4 bg-cream border-t border-accent-tertiary/10",
+                  editingChapter === chapter.id && "bg-paper"
+                )}>
+                  {chapter.status === 'generated' && chapter.content && !editingChapter ? (
                     <div 
                       className="prose prose-sm max-w-none font-serif text-ink-dark"
                       dangerouslySetInnerHTML={{ __html: formatContent(chapter.content) }}
@@ -454,6 +595,51 @@ const EbookWritingStep = () => {
                       <Loader2 className="h-8 w-8 text-accent-primary animate-spin mb-3" />
                       <p className="font-serif text-ink-light">Generating content with AI...</p>
                       <p className="text-xs text-ink-faded mt-1 font-serif">This may take a minute or two</p>
+                    </div>
+                  ) : editingChapter === chapter.id ? (
+                    <div className="space-y-4">
+                      <div className="bg-accent-primary/5 p-3 rounded-lg border border-accent-primary/10">
+                        <p className="text-accent-primary text-sm font-serif">
+                          Edit the chapter content below. Use markdown formatting for headings (#, ##), lists (-, 1.), and emphasis (**bold**, *italic*).
+                        </p>
+                      </div>
+                      <Textarea 
+                        value={editContent}
+                        onChange={e => setEditContent(e.target.value)}
+                        className="w-full min-h-[400px] font-mono text-sm text-ink-dark border-accent-tertiary/30 focus:border-accent-primary/50"
+                        placeholder="Write or paste your chapter content here. Use markdown for formatting..."
+                      />
+                      <div className="flex justify-end gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={handleCancelEditing}
+                          disabled={savingChapter === chapter.id}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="workflow"
+                          size="sm"
+                          className="gap-1.5 text-white"
+                          onClick={() => handleSaveEdits(chapter.id)}
+                          disabled={savingChapter === chapter.id}
+                        >
+                          {savingChapter === chapter.id ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-3.5 w-3.5" />
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="py-6 text-center">
@@ -470,18 +656,18 @@ const EbookWritingStep = () => {
       </div>
 
       {/* Generation control buttons */}
-      {ebookChapters.some(c => c.status === 'pending') && (
+      {localChapters.some(c => c.status === 'pending') && !editingChapter && (
         <div className="space-y-4">
           <Button
             className="gap-2 w-full text-white"
             variant="workflowOutline"
             onClick={() => {
-              const nextPendingChapter = ebookChapters.find(c => c.status === 'pending');
+              const nextPendingChapter = localChapters.find(c => c.status === 'pending');
               if (nextPendingChapter) {
                 handleGenerateChapter(nextPendingChapter.id);
               }
             }}
-            disabled={!!generatingChapter}
+            disabled={!!generatingChapter || !!editingChapter}
           >
             <Sparkles className="h-4 w-4" />
             Generate Next Chapter
@@ -492,7 +678,7 @@ const EbookWritingStep = () => {
             variant="workflow"
             onClick={async () => {
               // Get all pending chapters
-              const pendingChapters = ebookChapters
+              const pendingChapters = localChapters
                 .filter(c => c.status === 'pending')
                 .sort((a, b) => a.order_index - b.order_index);
               
@@ -543,7 +729,7 @@ const EbookWritingStep = () => {
                 }
               }
             }}
-            disabled={!!generatingChapter}
+            disabled={!!generatingChapter || !!editingChapter}
           >
             <Sparkles className="h-4 w-4" />
             Auto-Generate All Chapters
@@ -560,6 +746,7 @@ const EbookWritingStep = () => {
           variant="workflowOutline"
           onClick={() => setCurrentStep('idea-selection')}
           className="gap-2"
+          disabled={!!editingChapter}
         >
           Back
         </Button>
@@ -567,7 +754,7 @@ const EbookWritingStep = () => {
           className="gap-2 text-white"
           variant={allChaptersGenerated ? "workflowGold" : "workflow"}
           onClick={handleProceed}
-          disabled={!allChaptersGenerated}
+          disabled={!allChaptersGenerated || !!editingChapter}
         >
           {allChaptersGenerated ? (
             <>
