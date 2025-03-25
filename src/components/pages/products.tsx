@@ -120,8 +120,40 @@ export default function ProductsPage() {
     // Skip if product is already complete or published
     if (product.status === 'complete' || product.status === 'published') return;
     
-    // Simplify routing logic to ensure all products go to creator
-    // This avoids redirecting to non-existent workflows
+    // For ebooks in progress, check for workflow metadata
+    if (product.type === 'ebook') {
+      // Determine the correct step to resume from
+      // First check metadata.workflow_step, fallback to status if needed
+      const resumeStep = product.metadata?.workflow_step ||
+        (product.status === 'in_progress' ? 'ebook-writing' : 
+         product.status === 'draft' ? 'brain-dump' : null);
+      
+      if (resumeStep) {
+        console.log('Continuing ebook workflow at step:', resumeStep);
+        
+        // Store resumption data in session storage for the workflow to pick up
+        // Clean up any existing data first
+        sessionStorage.removeItem('resumeWorkflow');
+        
+        // Store the new resumption data
+        sessionStorage.setItem('resumeWorkflow', JSON.stringify({
+          productId: product.id,
+          projectId: product.project_id,
+          step: resumeStep,
+          type: 'ebook',
+          timestamp: Date.now() // Add timestamp for potential expiry checking
+        }));
+        
+        // Navigate directly to the workflow with project ID
+        if (product.project_id) {
+          console.log(`Navigating to workflow/${product.project_id} to resume at ${resumeStep}`);
+          navigate(`/workflow/${product.project_id}`);
+          return;
+        }
+      }
+    }
+    
+    // Default fallback - go to creator
     navigate(`/creator?id=${id}`);
   };
 

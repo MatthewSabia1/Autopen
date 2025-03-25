@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useProducts } from '@/hooks/useProducts';
 
 /**
  * The eBook preview step in the workflow.
@@ -24,13 +25,106 @@ const EbookPreviewStep = () => {
     ebook, 
     ebookChapters, 
     finalizeEbook,
-    setCurrentStep
+    setCurrentStep,
+    project
   } = useWorkflow();
+  const { createProduct, updateProduct } = useProducts();
 
   const [activeTab, setActiveTab] = useState('preview');
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isFinalized, setIsFinalized] = useState(false);
+  const [productSaved, setProductSaved] = useState(false);
+  
+  // Save the ebook as a product when the preview step loads
+  useEffect(() => {
+    const saveEbookAsProduct = async () => {
+      if (!ebook || !project) return;
+      
+      try {
+        console.log('Saving ebook as product...');
+        
+        // Sort chapters for consistent display
+        const sortedChapters = [...ebookChapters].sort((a, b) => a.order_index - b.order_index);
+        
+        // Calculate word count
+        const wordCount = sortedChapters.reduce((count, chapter) => {
+          if (!chapter.content) return count;
+          return count + chapter.content.split(/\s+/).length;
+        }, 0);
+        
+        // Create optimized metadata object with ebook content
+        // Balance between storage size and completeness
+        const metadata = {
+          ebookData: {
+            id: ebook.id,
+            title: ebook.title,
+            description: ebook.description || '',
+            wordCount,
+            // Optimized chapter storage
+            chapters: sortedChapters.map(chapter => {
+              const baseChapter = {
+                id: chapter.id,
+                title: chapter.title,
+                order_index: chapter.order_index,
+                status: chapter.status
+              };
+              
+              // Only include content if it exists and isn't too large
+              if (chapter.content) {
+                if (chapter.content.length > 30000) {
+                  // For very large chapters, store a truncated version
+                  return {
+                    ...baseChapter,
+                    contentPreview: chapter.content.substring(0, 1000) + '... (truncated)',
+                    contentLength: chapter.content.length,
+                    // Store a hash or identifier for retrieval from DB if needed
+                    contentId: `${chapter.id}_${chapter.content.length}`
+                  };
+                } else {
+                  // For manageable sized chapters, store the full content
+                  return { ...baseChapter, content: chapter.content };
+                }
+              }
+              
+              return baseChapter;
+            })
+          },
+          coverImage: ebook.cover_image_url || '',
+          wordCount,
+          generationInfo: {
+            model: "claude-3-opus-20240229",
+            generatedAt: new Date().toISOString()
+          },
+          // Add progress data to maintain consistency with writing step
+          progress: 100, // At preview stage, content is 100% generated
+          completedChapters: sortedChapters.length,
+          totalChapters: sortedChapters.length
+        };
+        
+        // Create the product entry
+        const result = await createProduct({
+          title: ebook.title,
+          description: ebook.description || '',
+          type: 'ebook',
+          status: 'draft',
+          project_id: project.id,
+          metadata,
+          workflow_step: 'ebook-preview' as WorkflowStep
+        });
+        
+        if (result) {
+          console.log('Ebook saved as product:', result);
+          setProductSaved(true);
+        }
+      } catch (err) {
+        console.error('Error saving ebook as product:', err);
+        // Don't show error to user, as this is a background operation
+      }
+    };
+    
+    saveEbookAsProduct();
+  }, [ebook, project, ebookChapters]);
 
   // Check if all chapters are generated
   const allChaptersGenerated = ebookChapters.every(c => c.status === 'generated');
@@ -113,9 +207,33 @@ const EbookPreviewStep = () => {
         if (i === finalizingSteps.length - 1) {
           // Don't await here - let it run in parallel with the timeout
           finalizeEbook()
-            .then(() => {
+            .then(async () => {
               setIsFinalized(true);
               setError("✅ eBook successfully finalized! Redirecting to completed page...");
+              
+              // Update the product status to 'complete' when finalizing
+              if (project) {
+                try {
+                  console.log('Updating product status to complete...');
+                  // Try to find any products with this project_id
+                  const result = await updateProduct(project.id, {
+                    status: 'complete',
+                    workflow_step: 'completed' as WorkflowStep,
+                    metadata: {
+                      // Preserve existing metadata and add completion details
+                      completed: true,
+                      completedAt: new Date().toISOString(),
+                      // Always include workflow step in metadata for consistency
+                      workflow_step: 'completed' as WorkflowStep
+                    }
+                  });
+                  
+                  console.log('Product status updated:', result);
+                } catch (updateErr) {
+                  console.error('Error updating product status:', updateErr);
+                  // Don't block the completion flow if product update fails
+                }
+              }
               
               // Transition to completed step
               setTimeout(() => {
@@ -335,6 +453,15 @@ const EbookPreviewStep = () => {
           <p className="text-red-700 text-sm font-serif">{error}</p>
         </div>
       )}
+      
+      {productSaved && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-3 flex items-start">
+          <Check className="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+          <p className="text-green-700 text-sm font-serif">
+            Your eBook has been saved to your products library and can be accessed from your dashboard.
+          </p>
+        </div>
+      )}
 
       {/* Book information */}
       <Card className="border border-accent-tertiary/20 bg-paper shadow-textera">
@@ -448,7 +575,7 @@ const EbookPreviewStep = () => {
                   </p>
                   <Button
                     onClick={handleDownloadPdf}
-                    className="gap-2 w-full bg-accent-primary hover:bg-accent-primary/90"
+                    className="gap-2 w-full bg-[#738996] hover:bg-[#647989] text-white"
                     disabled={isGenerating !== null}
                   >
                     {isGenerating === 'pdf' ? (
@@ -514,10 +641,10 @@ const EbookPreviewStep = () => {
           className={`
             gap-2 font-serif transition-all duration-300 relative overflow-hidden
             ${isGenerating === 'finalizing' 
-              ? "bg-accent-primary text-white opacity-90 pointer-events-none" 
+              ? "bg-[#738996] text-white opacity-90 pointer-events-none" 
               : isFinalized
                 ? "bg-green-500 hover:bg-green-600 text-white"
-                : "bg-accent-primary hover:bg-accent-primary/90 text-white"
+                : "bg-[#738996] hover:bg-[#647989] text-white"
             }
           `}
           onClick={handleFinalize}

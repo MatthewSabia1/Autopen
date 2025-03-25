@@ -6,6 +6,23 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Define workflow step types
+export type BaseWorkflowStep =
+  | 'creator'       // Initial product creator form
+  | 'brain-dump'    // Brain dump input
+  | 'idea-selection'// Select an idea from the brain dump analysis
+  | 'completed';    // Workflow completed
+
+// Define eBook specific workflow steps
+export type EbookWorkflowStep =
+  | BaseWorkflowStep
+  | 'ebook-structure' // Define ebook structure/outline
+  | 'ebook-writing'   // Generate ebook content
+  | 'ebook-preview';  // Preview and download options
+
+// Combined type for all possible workflow steps
+export type WorkflowStep = EbookWorkflowStep; // | CourseWorkflowStep | VideoWorkflowStep;
+
 export interface Database {
   public: {
     Tables: {

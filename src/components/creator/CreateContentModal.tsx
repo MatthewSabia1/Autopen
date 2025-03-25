@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Wand2, FileText } from "lucide-react";
+import { Wand2, FileText, BookOpen, GraduationCap, FileEdit, Video, Mail, MessageSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface CreateContentModalProps {
   isOpen: boolean;
@@ -65,32 +66,36 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="sm:max-w-[550px] md:max-w-[580px] bg-white border-accent-tertiary/20 p-0 shadow-sm rounded-lg flex flex-col"
+        className="sm:max-w-[550px] md:max-w-[580px] bg-white border-gray-200 p-0 shadow-md rounded-xl flex flex-col overflow-hidden"
         style={{ 
           maxHeight: "calc(100vh - 40px)",
           width: "calc(100vw - 32px)"
         }}
       >
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-3 mb-1 font-display text-xl text-ink-dark">
-            <Wand2 className="h-5 w-5 text-accent-primary" />
-            Create AI Content
-          </DialogTitle>
-          <DialogDescription className="text-ink-light font-serif text-[14px]">
-            Start a new AI-assisted content creation project.
-          </DialogDescription>
-        </DialogHeader>
+        <div className="bg-gradient-to-r from-[#738996]/10 to-white border-b border-gray-100">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle className="flex items-center gap-3 mb-2 font-georgia text-2xl text-gray-800">
+              <div className="bg-[#738996]/10 p-1.5 rounded-md">
+                <Wand2 className="h-5 w-5 text-[#738996]" />
+              </div>
+              Create AI Content
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-[15px]">
+              Start a new AI-assisted content creation project.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
         
-        <div className="overflow-y-auto px-6 pt-2 pb-4 flex-grow" style={{ maxHeight: "calc(100vh - 250px)" }}>
-          <form id="createContentForm" onSubmit={handleSubmit} className="space-y-5 py-4">
+        <div className="overflow-y-auto px-6 pt-4 pb-4 flex-grow" style={{ maxHeight: "calc(100vh - 250px)" }}>
+          <form id="createContentForm" onSubmit={handleSubmit} className="space-y-6 py-2">
             <div className="space-y-2">
-              <label htmlFor="content-title" className="block font-serif text-[14px] text-accent-primary font-medium">
+              <label htmlFor="content-title" className="block font-medium text-[15px] text-gray-700">
                 Content Title <span className="text-red-500">*</span>
               </label>
               <Input
                 id="content-title"
                 placeholder="Enter a title for your content"
-                className="bg-cream/50 border-accent-primary/30 font-serif focus:border-accent-primary focus:ring-accent-primary/20 shadow-inner transition-all duration-200 text-[14px]"
+                className="bg-white border-gray-300 focus:border-[#738996] focus:ring-[#738996]/20 shadow-sm transition-all duration-200 text-[15px] rounded-md"
                 value={contentData.title}
                 onChange={(e) => setContentData({ ...contentData, title: e.target.value })}
                 required
@@ -98,31 +103,32 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="description" className="block font-serif text-[14px] text-accent-primary font-medium">
+              <label htmlFor="description" className="block font-medium text-[15px] text-gray-700">
                 Description
               </label>
               <Textarea
                 id="description"
                 placeholder="Briefly describe your content (optional)"
-                className="bg-cream/50 border-accent-primary/30 font-serif min-h-[80px] focus:border-accent-primary focus:ring-accent-primary/20 shadow-inner transition-all duration-200 text-[14px]"
+                className="bg-white border-gray-300 min-h-[80px] focus:border-[#738996] focus:ring-[#738996]/20 shadow-sm transition-all duration-200 text-[15px] rounded-md"
                 value={contentData.description}
                 onChange={(e) => setContentData({ ...contentData, description: e.target.value })}
               />
             </div>
             
             <div className="space-y-3">
-              <label className="block font-serif text-[14px] text-accent-primary font-medium">
+              <label className="block font-medium text-[15px] text-gray-700">
                 Content Type <span className="text-red-500">*</span>
               </label>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* E-Book Option */}
                 <label 
-                  className={`relative border rounded-md p-3 cursor-pointer transition-all duration-200
-                    ${contentData.contentType === 'e-book' 
-                      ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-sm' 
-                      : 'border-accent-tertiary/30 hover:border-accent-yellow/40 hover:shadow-sm bg-cream/50'
-                    }`}
+                  className={cn(
+                    "relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    contentData.contentType === 'e-book' 
+                      ? 'border-[#ccb595] bg-[#ccb595]/5 shadow-sm ring-1 ring-[#ccb595]/20' 
+                      : 'border-gray-200 hover:border-[#ccb595]/30 bg-white'
+                  )}
                 >
                   <input
                     type="radio"
@@ -132,20 +138,18 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                     checked={contentData.contentType === 'e-book'}
                     onChange={() => setContentData({ ...contentData, contentType: 'e-book' })}
                   />
-                  <div className="flex items-start gap-2">
-                    <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
-                      ${contentData.contentType === 'e-book'
-                        ? 'border-accent-yellow bg-accent-yellow/10'
-                        : 'border-accent-tertiary/50'
-                      }`}
-                    >
-                      {contentData.contentType === 'e-book' && (
-                        <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", 
+                      contentData.contentType === 'e-book'
+                        ? 'bg-[#ccb595]/10 text-[#ccb595]' 
+                        : 'bg-gray-100 text-gray-400'
+                    )}>
+                      <BookOpen className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="font-serif font-medium text-ink-dark text-[14px]">E-Book</div>
-                      <div className="text-[12px] font-serif text-ink-light mt-1">
+                      <div className="font-georgia font-medium text-gray-800 text-[15px]">E-Book</div>
+                      <div className="text-[13px] text-gray-500 mt-1">
                         Create a complete digital book with chapters and sections
                       </div>
                     </div>
@@ -154,11 +158,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 
                 {/* Online Course Option */}
                 <label 
-                  className={`relative border rounded-md p-3 cursor-pointer transition-all duration-200
-                    ${contentData.contentType === 'online-course' 
-                      ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-sm' 
-                      : 'border-accent-tertiary/30 hover:border-accent-yellow/40 hover:shadow-sm bg-cream/50'
-                    }`}
+                  className={cn(
+                    "relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    contentData.contentType === 'online-course' 
+                      ? 'border-[#ccb595] bg-[#ccb595]/5 shadow-sm ring-1 ring-[#ccb595]/20' 
+                      : 'border-gray-200 hover:border-[#ccb595]/30 bg-white'
+                  )}
                 >
                   <input
                     type="radio"
@@ -168,20 +173,18 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                     checked={contentData.contentType === 'online-course'}
                     onChange={() => setContentData({ ...contentData, contentType: 'online-course' })}
                   />
-                  <div className="flex items-start gap-2">
-                    <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
-                      ${contentData.contentType === 'online-course'
-                        ? 'border-accent-yellow bg-accent-yellow/10'
-                        : 'border-accent-tertiary/50'
-                      }`}
-                    >
-                      {contentData.contentType === 'online-course' && (
-                        <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", 
+                      contentData.contentType === 'online-course'
+                        ? 'bg-[#ccb595]/10 text-[#ccb595]' 
+                        : 'bg-gray-100 text-gray-400'
+                    )}>
+                      <GraduationCap className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="font-serif font-medium text-ink-dark text-[14px]">Online Course</div>
-                      <div className="text-[12px] font-serif text-ink-light mt-1">
+                      <div className="font-georgia font-medium text-gray-800 text-[15px]">Online Course</div>
+                      <div className="text-[13px] text-gray-500 mt-1">
                         Educational content organized into modules and lessons
                       </div>
                     </div>
@@ -190,11 +193,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 
                 {/* Blog Post Option */}
                 <label 
-                  className={`relative border rounded-md p-3 cursor-pointer transition-all duration-200
-                    ${contentData.contentType === 'blog-post' 
-                      ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-sm' 
-                      : 'border-accent-tertiary/30 hover:border-accent-yellow/40 hover:shadow-sm bg-cream/50'
-                    }`}
+                  className={cn(
+                    "relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    contentData.contentType === 'blog-post' 
+                      ? 'border-[#ccb595] bg-[#ccb595]/5 shadow-sm ring-1 ring-[#ccb595]/20' 
+                      : 'border-gray-200 hover:border-[#ccb595]/30 bg-white'
+                  )}
                 >
                   <input
                     type="radio"
@@ -204,20 +208,18 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                     checked={contentData.contentType === 'blog-post'}
                     onChange={() => setContentData({ ...contentData, contentType: 'blog-post' })}
                   />
-                  <div className="flex items-start gap-2">
-                    <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
-                      ${contentData.contentType === 'blog-post'
-                        ? 'border-accent-yellow bg-accent-yellow/10'
-                        : 'border-accent-tertiary/50'
-                      }`}
-                    >
-                      {contentData.contentType === 'blog-post' && (
-                        <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", 
+                      contentData.contentType === 'blog-post'
+                        ? 'bg-[#ccb595]/10 text-[#ccb595]' 
+                        : 'bg-gray-100 text-gray-400'
+                    )}>
+                      <FileEdit className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="font-serif font-medium text-ink-dark text-[14px]">Blog Post</div>
-                      <div className="text-[12px] font-serif text-ink-light mt-1">
+                      <div className="font-georgia font-medium text-gray-800 text-[15px]">Blog Post</div>
+                      <div className="text-[13px] text-gray-500 mt-1">
                         Article format with introduction, body, and conclusion
                       </div>
                     </div>
@@ -226,11 +228,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 
                 {/* Video Script Option */}
                 <label 
-                  className={`relative border rounded-md p-3 cursor-pointer transition-all duration-200
-                    ${contentData.contentType === 'video-script' 
-                      ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-sm' 
-                      : 'border-accent-tertiary/30 hover:border-accent-yellow/40 hover:shadow-sm bg-cream/50'
-                    }`}
+                  className={cn(
+                    "relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    contentData.contentType === 'video-script' 
+                      ? 'border-[#ccb595] bg-[#ccb595]/5 shadow-sm ring-1 ring-[#ccb595]/20' 
+                      : 'border-gray-200 hover:border-[#ccb595]/30 bg-white'
+                  )}
                 >
                   <input
                     type="radio"
@@ -240,20 +243,18 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                     checked={contentData.contentType === 'video-script'}
                     onChange={() => setContentData({ ...contentData, contentType: 'video-script' })}
                   />
-                  <div className="flex items-start gap-2">
-                    <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
-                      ${contentData.contentType === 'video-script'
-                        ? 'border-accent-yellow bg-accent-yellow/10'
-                        : 'border-accent-tertiary/50'
-                      }`}
-                    >
-                      {contentData.contentType === 'video-script' && (
-                        <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", 
+                      contentData.contentType === 'video-script'
+                        ? 'bg-[#ccb595]/10 text-[#ccb595]' 
+                        : 'bg-gray-100 text-gray-400'
+                    )}>
+                      <Video className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="font-serif font-medium text-ink-dark text-[14px]">Video Script</div>
-                      <div className="text-[12px] font-serif text-ink-light mt-1">
+                      <div className="font-georgia font-medium text-gray-800 text-[15px]">Video Script</div>
+                      <div className="text-[13px] text-gray-500 mt-1">
                         Script for video production with sections and talking points
                       </div>
                     </div>
@@ -262,11 +263,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 
                 {/* Newsletter Option */}
                 <label 
-                  className={`relative border rounded-md p-3 cursor-pointer transition-all duration-200
-                    ${contentData.contentType === 'newsletter' 
-                      ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-sm' 
-                      : 'border-accent-tertiary/30 hover:border-accent-yellow/40 hover:shadow-sm bg-cream/50'
-                    }`}
+                  className={cn(
+                    "relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    contentData.contentType === 'newsletter' 
+                      ? 'border-[#ccb595] bg-[#ccb595]/5 shadow-sm ring-1 ring-[#ccb595]/20' 
+                      : 'border-gray-200 hover:border-[#ccb595]/30 bg-white'
+                  )}
                 >
                   <input
                     type="radio"
@@ -276,20 +278,18 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                     checked={contentData.contentType === 'newsletter'}
                     onChange={() => setContentData({ ...contentData, contentType: 'newsletter' })}
                   />
-                  <div className="flex items-start gap-2">
-                    <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
-                      ${contentData.contentType === 'newsletter'
-                        ? 'border-accent-yellow bg-accent-yellow/10'
-                        : 'border-accent-tertiary/50'
-                      }`}
-                    >
-                      {contentData.contentType === 'newsletter' && (
-                        <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", 
+                      contentData.contentType === 'newsletter'
+                        ? 'bg-[#ccb595]/10 text-[#ccb595]' 
+                        : 'bg-gray-100 text-gray-400'
+                    )}>
+                      <Mail className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="font-serif font-medium text-ink-dark text-[14px]">Newsletter</div>
-                      <div className="text-[12px] font-serif text-ink-light mt-1">
+                      <div className="font-georgia font-medium text-gray-800 text-[15px]">Newsletter</div>
+                      <div className="text-[13px] text-gray-500 mt-1">
                         Email newsletter format with sections and call-to-actions
                       </div>
                     </div>
@@ -298,11 +298,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                 
                 {/* Social Media Option */}
                 <label 
-                  className={`relative border rounded-md p-3 cursor-pointer transition-all duration-200
-                    ${contentData.contentType === 'social-media' 
-                      ? 'border-accent-yellow/60 bg-accent-yellow/5 shadow-sm' 
-                      : 'border-accent-tertiary/30 hover:border-accent-yellow/40 hover:shadow-sm bg-cream/50'
-                    }`}
+                  className={cn(
+                    "relative border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    contentData.contentType === 'social-media' 
+                      ? 'border-[#ccb595] bg-[#ccb595]/5 shadow-sm ring-1 ring-[#ccb595]/20' 
+                      : 'border-gray-200 hover:border-[#ccb595]/30 bg-white'
+                  )}
                 >
                   <input
                     type="radio"
@@ -312,20 +313,18 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
                     checked={contentData.contentType === 'social-media'}
                     onChange={() => setContentData({ ...contentData, contentType: 'social-media' })}
                   />
-                  <div className="flex items-start gap-2">
-                    <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5
-                      ${contentData.contentType === 'social-media'
-                        ? 'border-accent-yellow bg-accent-yellow/10'
-                        : 'border-accent-tertiary/50'
-                      }`}
-                    >
-                      {contentData.contentType === 'social-media' && (
-                        <div className="w-2 h-2 bg-accent-yellow rounded-full m-auto" />
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", 
+                      contentData.contentType === 'social-media'
+                        ? 'bg-[#ccb595]/10 text-[#ccb595]' 
+                        : 'bg-gray-100 text-gray-400'
+                    )}>
+                      <MessageSquare className="h-5 w-5" />
                     </div>
                     <div>
-                      <div className="font-serif font-medium text-ink-dark text-[14px]">Social Media</div>
-                      <div className="text-[12px] font-serif text-ink-light mt-1">
+                      <div className="font-georgia font-medium text-gray-800 text-[15px]">Social Media</div>
+                      <div className="text-[13px] text-gray-500 mt-1">
                         Content for social media platforms in various formats
                       </div>
                     </div>
@@ -334,12 +333,14 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
               </div>
             </div>
             
-            <div className="bg-cream/70 border border-accent-primary/20 p-4 rounded-md">
-              <div className="flex items-start gap-3">
-                <FileText className="h-5 w-5 text-accent-primary flex-shrink-0 mt-0.5" />
+            <div className="bg-gradient-to-r from-[#738996]/5 to-white border border-gray-200 p-5 rounded-lg shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="bg-[#738996]/10 p-2 rounded-md flex-shrink-0 mt-0.5">
+                  <FileText className="h-5 w-5 text-[#738996]" />
+                </div>
                 <div>
-                  <h3 className="text-[14px] font-serif font-medium text-ink-dark">Next: Brain Dump Tool</h3>
-                  <p className="text-[12px] font-serif text-ink-light mt-1">
+                  <h3 className="text-[15px] font-georgia font-medium text-gray-800 mb-1">Next: Brain Dump Tool</h3>
+                  <p className="text-[13px] text-gray-600">
                     After creating your content, you'll be directed to the Brain Dump tool
                     to gather and analyze your raw content. This helps our AI understand
                     your ideas and generate better results.
@@ -350,13 +351,12 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
           </form>
         </div>
         
-        <DialogFooter className="border-t border-accent-tertiary/30 p-4 bg-accent-yellow/10 mt-auto flex-shrink-0 sticky bottom-0 rounded-b-lg" style={{ boxShadow: "0 -2px 10px rgba(0,0,0,0.05)" }}>
+        <DialogFooter className="border-t border-gray-200 p-5 bg-gradient-to-r from-[#738996]/5 to-white mt-auto flex-shrink-0 sticky bottom-0 rounded-b-xl" style={{ boxShadow: "0 -2px 10px rgba(0,0,0,0.03)" }}>
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={onClose}
-            className="font-serif border-accent-primary/30 text-ink-light hover:bg-accent-tertiary/10 transition-all duration-200 text-[14px]"
+            className="border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200 text-[14px]"
           >
             Cancel
           </Button>
@@ -364,9 +364,8 @@ const CreateContentModal: React.FC<CreateContentModalProps> = ({
             type="submit"
             form="createContentForm"
             variant="default"
-            size="sm"
             disabled={isSubmitting}
-            className="gap-2 font-serif bg-accent-primary hover:bg-accent-secondary text-white border border-accent-primary/30 shadow-blue-sm text-[14px]"
+            className="gap-2 bg-[#738996] hover:bg-[#647989] text-white border-none shadow-sm text-[14px] min-w-24"
           >
             {isSubmitting ? (
               <>

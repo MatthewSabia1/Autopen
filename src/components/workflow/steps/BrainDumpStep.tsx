@@ -626,8 +626,10 @@ const BrainDumpStep = () => {
             err.message.includes("API authentication") ||
             err.message.includes("No auth credentials found")
         )) {
-          // Show the OpenRouter API error to the user
-          setError(`OpenRouter API error: ${err.message}. Please configure a valid API key.`);
+          // Show a more helpful OpenRouter API error to the user
+          setError(`OpenRouter API key error: You need to add a valid API key to use AI features. 
+            Please add your OpenRouter API key to the .env file: VITE_OPENROUTER_API_KEY=your-key-here
+            Get a free API key from https://openrouter.ai`);
           setIsAnalyzing(false);
           return; // Don't proceed to the next step
         }

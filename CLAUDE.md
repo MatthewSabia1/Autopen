@@ -1,13 +1,15 @@
 # CLAUDE.md - AutopenV3 Project Guide
 
 ## Commands
-- Build: `npm run build` (TypeScript + Vite)
+- Build: `npm run build` (Vite build without TypeScript check)
+- Build with TypeCheck: `npm run build-with-type-check` (TypeScript check + Vite build)
 - Dev server: `npm run dev` (Vite dev server)
 - Lint: `npm run lint` (ESLint)
 - Preview: `npm run preview` (Preview built app locally)
-- TypeCheck: `tsc` (TypeScript check)
+- TypeCheck: `npm run typecheck` (TypeScript check without emit)
 - Update Supabase Types: `npm run types:supabase`
 - Apply Schema: `npm run apply:creator-contents`
+- Fix Metadata Column: `npm run fix:metadata-column`
 
 ## Project Architecture
 
@@ -67,21 +69,26 @@ flowchart TD
     B -->|Blog Post| D[Blog Workflow]
     B -->|Course| E[Course Workflow]
     
-    C --> F[Brain Dump]
-    F --> G[AI Analysis]
-    G --> H[Content Structure]
-    H --> I[Content Generation]
-    I --> J[Export]
+    C --> F[Brain Dump Step]
+    F --> G[Idea Selection Step]
+    G --> H[eBook Writing Step]
+    H --> I[eBook Preview Step]
+    I --> J[Completed Step]
+    
+    %% Enhanced OpenRouter Integration
+    H <-->|Streamlined API| K[OpenRouter]
+    I <-->|Content Processing| K
 ```
 
 ### eBook Workflow
 
-1. **Input Step**: Title, description, target audience
-2. **Brain Dump**: Content ideas, references, research
-3. **Chapters Definition**: Structure and outline
-4. **Content Generation**: AI-assisted chapter writing
-5. **Introduction/Conclusion**: Final elements
-6. **PDF Generation**: Export to downloadable format
+1. **Brain Dump Step**: Content ideas, references, research collection
+2. **Idea Selection Step**: Choose and refine ideas from brain dumps
+3. **eBook Writing Step**: AI-assisted chapter-by-chapter content generation via enhanced OpenRouter integration
+4. **eBook Preview Step**: Review complete content with editing capabilities
+5. **Completed Step**: Export to downloadable PDF format with enhanced formatting
+
+All steps are managed through the centralized WorkflowContext provider that maintains state across steps and provides navigation controls.
 
 ## Code Style Guidelines
 - **TypeScript**: Use explicit types even though strict mode is off
@@ -267,13 +274,13 @@ USING (auth.uid() = user_id);
 
 ## AI Integration Guidelines
 
-- OpenRouter API is used for primary content generation
-- Proper prompt engineering is critical for quality results
-- Always implement retry logic and error handling
-- Cache results when possible to reduce API costs
-- Respect token limits and implement chunking for large content
-- Use streaming responses for better UX during generation
-- Apply post-processing to ensure consistent formatting
+- OpenRouter API is used for primary content generation with enhanced reliability
+- Direct API integration without fallback mechanisms for more consistent results
+- Improved prompt engineering with optimized templates for higher quality content
+- Streaming responses implemented throughout for better UX during generation
+- Enhanced type safety and error handling for API requests and responses
+- Respect token limits with improved chunking for large content generation
+- Format content consistently with proper markdown-to-HTML conversion for display
 
 ## Common Issues & Solutions
 

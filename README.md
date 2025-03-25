@@ -207,6 +207,24 @@ If you encounter a database error like "relation 'creator_contents' does not exi
 3. **Manual SQL execution**:
    You can manually execute the SQL in the migration files through the Supabase dashboard SQL editor.
 
+#### Fixing Database Schema Issues
+
+If you encounter errors related to missing columns like `column projects.metadata does not exist` or an infinite loop of database requests when viewing products, you need to apply a schema fix:
+
+1. **Using the provided script**:
+   ```bash
+   npm run fix:metadata-column
+   ```
+   This requires `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` environment variables in your `.env` file.
+
+2. **Manual fix**:
+   You can manually execute this SQL in the Supabase dashboard SQL editor:
+   ```sql
+   ALTER TABLE projects ADD COLUMN IF NOT EXISTS metadata JSONB;
+   ```
+
+For complete documentation on fixing database issues, see the [Database Fix Guide](./docs/DATABASE_FIX.md).
+
 ### Installation & Development
 
 1. Install dependencies:
@@ -244,6 +262,7 @@ flowchart LR
 - TypeCheck: `tsc` (TypeScript check)
 - Update Supabase Types: `npm run types:supabase`
 - Apply Schema: `npm run apply:creator-contents`
+- Fix Database: `npm run fix:metadata-column` (Fix missing metadata column issue)
 
 ## Application Flow
 

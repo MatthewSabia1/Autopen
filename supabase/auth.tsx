@@ -81,14 +81,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    console.log("=== AUTH CONTEXT DEBUG ===");
+    console.log("1. Initializing auth context, checking session...");
+    
     // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("2. Error getting session:", error.message);
+      } else {
+        console.log("2. Session check result:", session ? "Active session found" : "No active session");
+      }
+      
       const currentUser = session?.user ?? null;
+      console.log("3. Current user from session:", currentUser?.email || "none", currentUser?.id || "none");
       setUser(currentUser);
       
       if (currentUser?.id && currentUser?.email) {
+        console.log("4. User authenticated, fetching profile...");
         fetchProfile(currentUser.id, currentUser.email);
       } else {
+        console.log("4. No authenticated user, skipping profile fetch");
         setProfileLoading(false);
       }
       
@@ -98,13 +110,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for changes on auth state (signed in, signed out, etc.)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("5. Auth state change detected:", event);
+      console.log("6. New session state:", session ? "Session exists" : "No session");
+      
       const currentUser = session?.user ?? null;
+      console.log("7. Current user after state change:", currentUser?.email || "none", currentUser?.id || "none");
       setUser(currentUser);
       
       if (currentUser?.id && currentUser?.email) {
+        console.log("8. User authenticated after state change, fetching profile...");
         fetchProfile(currentUser.id, currentUser.email);
       } else {
+        console.log("8. No authenticated user after state change");
         setProfile(null);
         setProfileLoading(false);
       }
@@ -129,11 +147,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log("=== SIGN IN DEBUG ===");
+    console.log("1. Attempting to sign in user:", email);
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) throw error;
+    
+    if (error) {
+      console.error("2. Sign in error:", error.message);
+      throw error;
+    }
+    
+    console.log("2. Sign in successful:", data.user?.email);
+    console.log("3. User ID:", data.user?.id);
+    console.log("4. Session expiry:", new Date(data.session?.expires_at || 0).toLocaleString());
+    
+    // Verify we can access user data immediately after login
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    console.log("5. getUser check after login:", userData?.user?.id || "No user");
+    
+    if (userError) {
+      console.error("6. Get user error after login:", userError.message);
+    }
+    
+    return;
   };
 
   const signOut = async () => {

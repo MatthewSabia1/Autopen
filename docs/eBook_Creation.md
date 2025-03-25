@@ -1,6 +1,6 @@
 # Creating eBooks with AutopenV3
 
-AutopenV3 makes it easy to create professional eBooks using AI assistance. This guide walks you through the entire process from initial ideas to a finished, downloadable eBook.
+AutopenV3 makes it easy to create professional eBooks using AI assistance. This guide walks you through the streamlined workflow from initial ideas to a finished, downloadable eBook with our enhanced OpenRouter integration.
 
 ## The eBook Creation Workflow
 
@@ -8,13 +8,15 @@ AutopenV3 makes it easy to create professional eBooks using AI assistance. This 
 graph TD
     A[Start] --> B[Brain Dump]
     B --> C[Idea Selection]
-    C --> D[Chapter Structure]
-    D --> E[Content Generation]
-    E --> F[Preview & Export]
-    F --> G[Finished eBook]
+    C --> D[Writing]
+    D --> E[Preview]
+    E --> F[Finished eBook]
+    
+    D <-->|Enhanced OpenRouter API| Z[AI Content Generation]
     
     style A fill:#738996,color:white
-    style G fill:#ccb595,color:white
+    style F fill:#ccb595,color:white
+    style Z fill:#f0f0f0,stroke:#738996,stroke-width:2px
 ```
 
 ## Step 1: Brain Dump
@@ -58,60 +60,51 @@ Review AI-generated ideas based on your brain dump.
 - Add specific points you want to cover
 - Remove elements that don't fit your vision
 
-## Step 3: eBook Structure
+## Step 3: eBook Writing
 
-Organize your eBook into chapters and sections.
+Watch as AutopenV3 generates high-quality content for your entire eBook with our enhanced OpenRouter integration.
 
-### Chapter Organization
+### Streamlined Generation Process
 
-- Arrange chapters in logical order
-- Create balanced chapter lengths
-- Add descriptions for each chapter
-- Include key points to cover
+- Content is created chapter by chapter with intelligent context awareness
+- View progress in real-time with streaming content updates
+- Generate individual chapters or trigger automatic generation of all content
+- AI maintains consistent tone and style throughout the document
+- Enhanced reliability with improved OpenRouter integration
 
-### Structure Tips
+### Writing Controls
 
-- Start with an engaging introduction
-- Group related topics into coherent chapters
-- Build complexity gradually
-- Plan for a strong conclusion
-- Consider adding appendices for supplemental information
-
-## Step 4: Content Generation
-
-Watch as AutopenV3 generates high-quality content for your eBook.
-
-### Generation Process
-
-- Content is created chapter by chapter
-- You can view progress in real-time
-- Content follows your specified structure
-- AI maintains consistent tone and style
+- Generate each chapter individually for more control
+- Use the "Auto-Generate All Chapters" feature for faster completion
+- See real-time progress indicators as content is created
+- Expanded content flexibility with larger token context windows
 
 ### Customization Options
 
-- Edit generated content as needed
-- Request regeneration of specific sections
-- Add your own insights and examples
-- Adjust tone, style, and complexity
+- Expand any chapter to view its content as it's being generated
+- Request regeneration of specific chapters if needed
+- Chapters build on previous content for greater continuity
+- Each chapter intelligently incorporates your brain dump content
 
-## Step 5: Preview & Export
+## Step 4: Preview & Export
 
-Review your complete eBook and prepare it for distribution.
+Review your complete eBook and prepare it for distribution with our enhanced preview and export functionality.
 
 ### Preview Features
 
-- Complete document review
-- Formatting and layout check
-- Table of contents verification
-- Styling and readability assessment
+- Complete document review with expandable chapters
+- Improved formatting with proper markdown-to-HTML conversion
+- Dynamic table of contents generation
+- Content navigation with collapsible sections
+- Real-time word count calculation
 
 ### Export Options
 
-- Professional PDF format
-- Markdown export for further editing
-- Options for different page sizes
-- Customizable cover page
+- Professional PDF format with enhanced styling
+- Direct download capability
+- Table of contents with proper linking
+- Document metadata embedding
+- Consistent font and layout formatting
 
 ## Best Practices for Quality eBooks
 

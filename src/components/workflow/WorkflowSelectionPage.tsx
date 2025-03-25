@@ -21,7 +21,7 @@ const WorkflowSelectionPage = () => {
       id: 'ebook',
       title: 'E-Book Creation',
       description: 'Create a professional eBook with AI-powered chapter generation and export to PDF, EPUB, and Markdown.',
-      icon: <BookOpen className="h-12 w-12 text-accent-yellow" />,
+      icon: <BookOpen className="h-12 w-12 text-[#ccb595]" />,
       active: true,
       comingSoon: false
     },
@@ -29,7 +29,7 @@ const WorkflowSelectionPage = () => {
       id: 'course',
       title: 'Online Course',
       description: 'Generate a structured online course with lessons, modules, and assessments.',
-      icon: <GraduationCap className="h-12 w-12 text-accent-tertiary/60" />,
+      icon: <GraduationCap className="h-12 w-12 text-[#738996] opacity-70" />,
       active: false,
       comingSoon: true
     },
@@ -37,7 +37,7 @@ const WorkflowSelectionPage = () => {
       id: 'video',
       title: 'Video Content',
       description: 'Create video scripts, storyboards, and production plans.',
-      icon: <Video className="h-12 w-12 text-accent-tertiary/60" />,
+      icon: <Video className="h-12 w-12 text-[#738996] opacity-70" />,
       active: false,
       comingSoon: true
     },
@@ -45,7 +45,7 @@ const WorkflowSelectionPage = () => {
       id: 'blog',
       title: 'Blog Series',
       description: 'Generate a series of connected blog posts for content marketing.',
-      icon: <FileText className="h-12 w-12 text-accent-tertiary/60" />,
+      icon: <FileText className="h-12 w-12 text-[#738996] opacity-70" />,
       active: false,
       comingSoon: true
     },
@@ -53,7 +53,7 @@ const WorkflowSelectionPage = () => {
       id: 'social',
       title: 'Social Media Campaign',
       description: 'Create a coordinated set of posts across multiple platforms.',
-      icon: <MessageSquare className="h-12 w-12 text-accent-tertiary/60" />,
+      icon: <MessageSquare className="h-12 w-12 text-[#738996] opacity-70" />,
       active: false,
       comingSoon: true
     }
@@ -61,22 +61,22 @@ const WorkflowSelectionPage = () => {
 
   return (
     <DashboardLayout activeTab="AI Workflows">
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-10 animate-fade-in">
         {/* Hero section */}
-        <div className="bg-gradient-to-br from-accent-primary/10 to-accent-tertiary/5 rounded-xl p-6 md:p-8 shadow-blue-sm mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="bg-gradient-to-br from-[#738996]/10 to-[#738996]/5 rounded-xl p-8 shadow-sm border border-[#738996]/10 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
             <div className="max-w-lg">
-              <h1 className="text-3xl font-display text-ink-dark mb-3">Content Creation Workflows</h1>
-              <p className="text-ink-light font-serif text-lg mb-4">
+              <h1 className="text-3xl font-georgia text-gray-800 mb-4">Content Creation Workflows</h1>
+              <p className="text-gray-600 font-georgia text-lg mb-4">
                 Choose a workflow to begin creating AI-powered content. Each workflow provides a structured process 
                 tailored to specific content types.
               </p>
             </div>
             <div className="hidden md:flex justify-center">
               <div className="relative w-48 h-48 flex-shrink-0">
-                <div className="absolute w-full h-full bg-accent-primary/20 rounded-full animate-pulse-slow"></div>
+                <div className="absolute w-full h-full bg-[#738996]/20 rounded-full animate-pulse-slow"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Sparkles className="h-16 w-16 text-accent-primary" />
+                  <Sparkles className="h-16 w-16 text-[#738996]" />
                 </div>
               </div>
             </div>
@@ -84,14 +84,14 @@ const WorkflowSelectionPage = () => {
         </div>
 
         {/* Workflow Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {workflowTypes.map((workflow) => (
             <div
               key={workflow.id}
-              className={`p-6 rounded-xl border shadow-blue-sm transition-all duration-200 ${
+              className={`p-8 rounded-xl border shadow-sm transition-all duration-300 ${
                 workflow.active
-                  ? 'bg-paper border-accent-yellow/20 hover:shadow-yellow-sm cursor-pointer'
-                  : 'bg-paper/70 border-accent-tertiary/10'
+                  ? 'bg-white border-[#ccb595]/30 hover:shadow-md hover:border-[#ccb595]/50 cursor-pointer'
+                  : 'bg-white/90 border-gray-100'
               }`}
               onClick={() => {
                 if (workflow.active) {
@@ -103,28 +103,28 @@ const WorkflowSelectionPage = () => {
               }}
             >
               <div className="flex flex-col h-full">
-                <div className={`p-4 rounded-lg mb-4 inline-flex ${
-                  workflow.active ? 'bg-accent-yellow/10' : 'bg-accent-tertiary/10'
+                <div className={`p-4 rounded-lg mb-5 inline-flex ${
+                  workflow.active ? 'bg-[#ccb595]/10' : 'bg-gray-100'
                 }`}>
                   {workflow.icon}
                 </div>
                 
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xl font-display text-ink-dark">{workflow.title}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-xl font-georgia text-gray-800">{workflow.title}</h3>
                   {workflow.comingSoon && (
-                    <span className="text-xs bg-accent-tertiary/20 text-accent-tertiary px-2 py-1 rounded-full font-serif">
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full border border-gray-200">
                       Coming Soon
                     </span>
                   )}
                 </div>
                 
-                <p className="font-serif text-sm text-ink-light mb-6 flex-grow">
+                <p className="text-sm text-gray-600 mb-6 flex-grow">
                   {workflow.description}
                 </p>
                 
                 {workflow.active ? (
                   <Button
-                    className="gap-2 bg-accent-yellow hover:bg-accent-yellow/90 text-white font-serif w-full shadow-yellow-sm"
+                    className="gap-2 bg-[#738996] hover:bg-[#637885] text-white w-full shadow-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       console.log(`Starting workflow from button: ${workflow.id}`);
@@ -137,7 +137,7 @@ const WorkflowSelectionPage = () => {
                 ) : (
                   <Button
                     disabled
-                    className="gap-2 bg-accent-tertiary/30 text-ink-faded font-serif w-full cursor-not-allowed"
+                    className="gap-2 bg-gray-100 text-gray-400 w-full cursor-not-allowed"
                   >
                     Coming Soon
                   </Button>
@@ -148,33 +148,33 @@ const WorkflowSelectionPage = () => {
         </div>
 
         {/* Workflow Process Overview */}
-        <div className="bg-accent-primary/5 p-6 rounded-lg border border-accent-primary/20 shadow-blue-sm">
-          <h3 className="text-xl font-display text-ink-dark mb-4">How Workflows Work</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-[#738996]/5 p-8 rounded-lg border border-[#738996]/20 shadow-sm">
+          <h3 className="text-xl font-georgia text-gray-800 mb-6">How Workflows Work</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-accent-yellow/10 flex items-center justify-center mb-4">
-                <span className="font-display text-xl text-accent-yellow">1</span>
+              <div className="w-14 h-14 rounded-full bg-[#ccb595]/20 flex items-center justify-center mb-4 shadow-sm">
+                <span className="font-georgia text-xl text-[#ccb595]">1</span>
               </div>
-              <h4 className="font-serif font-medium text-ink-dark mb-2">Input & Brainstorm</h4>
-              <p className="font-serif text-sm text-ink-light">
+              <h4 className="font-georgia font-medium text-gray-800 mb-2">Input & Brainstorm</h4>
+              <p className="text-sm text-gray-600">
                 Start by providing your raw ideas and content. Our AI helps organize and structure them.
               </p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-accent-primary/20 flex items-center justify-center mb-4">
-                <span className="font-display text-xl text-accent-primary">2</span>
+              <div className="w-14 h-14 rounded-full bg-[#738996]/20 flex items-center justify-center mb-4 shadow-sm">
+                <span className="font-georgia text-xl text-[#738996]">2</span>
               </div>
-              <h4 className="font-serif font-medium text-ink-dark mb-2">Generate & Refine</h4>
-              <p className="font-serif text-sm text-ink-light">
+              <h4 className="font-georgia font-medium text-gray-800 mb-2">Generate & Refine</h4>
+              <p className="text-sm text-gray-600">
                 The system generates professional content with your guidance, maintaining consistency throughout.
               </p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-accent-primary/20 flex items-center justify-center mb-4">
-                <span className="font-display text-xl text-accent-primary">3</span>
+              <div className="w-14 h-14 rounded-full bg-[#738996]/20 flex items-center justify-center mb-4 shadow-sm">
+                <span className="font-georgia text-xl text-[#738996]">3</span>
               </div>
-              <h4 className="font-serif font-medium text-ink-dark mb-2">Export & Share</h4>
-              <p className="font-serif text-sm text-ink-light">
+              <h4 className="font-georgia font-medium text-gray-800 mb-2">Export & Share</h4>
+              <p className="text-sm text-gray-600">
                 When complete, export your content in multiple formats ready for distribution or publication.
               </p>
             </div>

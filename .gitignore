@@ -44,6 +44,7 @@ coverage
 **/tempobook/dynamic/
 **/tempobook/storyboards/
 core
+.history/
 
 # GitHub
 .github/

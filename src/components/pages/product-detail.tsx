@@ -251,6 +251,39 @@ export default function ProductDetail() {
   // Handle continue button click
   const handleContinue = () => {
     if (!product) return;
+    
+    // Skip if product is already complete or published
+    if (product.status === 'complete' || product.status === 'published') return;
+    
+    // For ebooks in progress, check for workflow metadata and project_id
+    if (product.type === 'ebook' && product.project_id) {
+      // Determine the correct step to resume from
+      const resumeStep = product.metadata?.workflow_step ||
+                       (product.status === 'in_progress' ? 'ebook-writing' : 
+                        product.status === 'draft' ? 'brain-dump' : null);
+      
+      if (resumeStep) {
+        console.log('Continuing ebook workflow at step:', resumeStep);
+        
+        // Store resumption data in session storage for the workflow to pick up
+        sessionStorage.removeItem('resumeWorkflow');
+        
+        sessionStorage.setItem('resumeWorkflow', JSON.stringify({
+          productId: product.id,
+          projectId: product.project_id,
+          step: resumeStep,
+          type: 'ebook',
+          timestamp: Date.now()
+        }));
+        
+        // Navigate directly to the workflow with project ID
+        console.log(`Navigating to workflow/${product.project_id} to resume at ${resumeStep}`);
+        navigate(`/workflow/${product.project_id}`);
+        return;
+      }
+    }
+    
+    // Default fallback - go to creator
     navigate(`/creator?id=${product.id}`);
   };
   

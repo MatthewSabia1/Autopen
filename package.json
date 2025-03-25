@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc ; vite build",
+    "build": "vite build",
+    "build-with-type-check": "tsc && vite build",
     "build-no-errors": "tsc ; vite build",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
     "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts",
-    "apply:creator-contents": "node scripts/apply-creator-contents-schema.js"
+    "apply:creator-contents": "node scripts/apply-creator-contents-schema.js",
+    "fix:metadata-column": "node scripts/apply-metadata-column.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.6.0",

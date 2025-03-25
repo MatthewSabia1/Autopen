@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useWorkflow } from '@/lib/contexts/WorkflowContext';
+import { useWorkflow, WorkflowStep } from '@/lib/contexts/WorkflowContext';
 import DashboardLayout from '../layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -123,6 +123,48 @@ export default function EbookCreationWorkflow() {
     // Mark that we've checked
     hasCheckedStorageRef.current = true;
     
+    // First check for workflow resumption data (this takes priority)
+    const resumeWorkflowData = sessionStorage.getItem('resumeWorkflow');
+    
+    if (resumeWorkflowData) {
+      try {
+        const resumeData = JSON.parse(resumeWorkflowData);
+        console.log('Found workflow resumption data:', resumeData);
+        
+        if (resumeData.type === 'ebook' && resumeData.projectId) {
+          // If we have a project ID, we can load the project directly
+          console.log('Resuming workflow at step:', resumeData.step);
+          
+          // Validate that the step is a valid workflow step
+          const validSteps: WorkflowStep[] = [
+            'creator', 'brain-dump', 'idea-selection', 'ebook-structure', 
+            'ebook-writing', 'ebook-preview', 'completed'
+          ];
+          
+          if (resumeData.step && validSteps.includes(resumeData.step as WorkflowStep)) {
+            // Set the step to ensure we resume at the right place
+            // We'll need to delay this until after project load to avoid race conditions
+            setTimeout(() => {
+              setCurrentStep(resumeData.step as WorkflowStep);
+            }, 500); // Short delay to let project load
+          }
+          
+          // Note: We don't need to redirect since we should already be at the right URL
+          // (/workflow/{projectId})
+          
+          // Clean up session storage
+          sessionStorage.removeItem('resumeWorkflow');
+          
+          // Exit early - we've handled the resumption
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing workflow resumption data:', e);
+        sessionStorage.removeItem('resumeWorkflow');
+      }
+    }
+    
+    // Check for new project data (for creating new projects)
     const storedProjectData = sessionStorage.getItem('newProjectData');
     
     if (storedProjectData) {
@@ -355,7 +397,7 @@ export default function EbookCreationWorkflow() {
         </div>
 
         {/* Progress indicator */}
-        <div className="hidden md:flex items-center mb-8 bg-paper p-1 rounded-lg border border-accent-tertiary/20 shadow-soft">
+        <div className="hidden md:flex items-center mb-8 bg-paper rounded-lg border border-gray-100 shadow-textera-md overflow-hidden">
           {steps.map((step, i) => {
             const isActive = currentStep === step.id;
             const isCompleted = i < currentStepIndex;
@@ -365,34 +407,39 @@ export default function EbookCreationWorkflow() {
               <div 
                 key={step.id} 
                 className={cn(
-                  "flex items-center justify-center py-3 px-4 rounded-md transition-all duration-300 flex-1 relative group",
-                  isActive ? "bg-accent-primary/10 text-ink-dark font-medium" : 
-                  isCompleted ? "text-accent-primary" : 
-                  "text-ink-light hover:text-ink-dark hover:bg-accent-tertiary/5"
+                  "flex items-center justify-center py-3.5 px-4 rounded-md transition-all duration-300 flex-1 relative group",
+                  isActive ? "bg-gradient-to-br from-accent-primary to-accent-secondary text-white font-medium" : 
+                  isCompleted ? "text-accent-primary hover:bg-accent-tertiary/10" : 
+                  "text-ink-light hover:text-ink-dark hover:bg-gray-50"
                 )}
               >
                 <div className="flex flex-col items-start">
                   <div className="flex items-center">
                     <div className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center mr-2 flex-shrink-0",
-                      isActive ? "bg-accent-primary text-white shadow-blue-sm" :
-                      isCompleted ? "bg-accent-primary/80 text-white" :
-                      "bg-accent-tertiary/30 text-ink-light"
+                      "h-6 w-6 rounded-full flex items-center justify-center mr-2 flex-shrink-0 transition-all duration-300",
+                      isActive ? "bg-white text-accent-primary shadow-sm" :
+                      isCompleted ? "bg-accent-yellow text-white" :
+                      "bg-slate-100 text-slate-500"
                     )}>
                       {isCompleted ? (
-                        <CheckCircle className="h-4 w-4" />
+                        <CheckCircle className="h-3.5 w-3.5" />
                       ) : (
                         <span className="text-xs font-medium">{i + 1}</span>
                       )}
                     </div>
-                    <span className="font-serif text-small font-medium">{step.title}</span>
+                    <span className={cn(
+                      "font-serif text-small font-medium",
+                      isActive && "text-white"
+                    )}>
+                      {step.title}
+                    </span>
                   </div>
                   
                   {/* Only show description for active step or on hover */}
                   <div className={cn(
-                    "hidden md:block ml-8 text-xs text-ink-light font-serif max-w-[140px] mt-1",
-                    isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-                    "transition-opacity duration-200"
+                    "hidden md:block ml-8 text-xs font-serif max-w-[140px] mt-1 transition-opacity duration-200",
+                    isActive ? "text-white text-opacity-90 opacity-100" : 
+                    "text-ink-light opacity-0 group-hover:opacity-100"
                   )}>
                     {step.description}
                   </div>
@@ -400,7 +447,10 @@ export default function EbookCreationWorkflow() {
                 
                 {i < steps.length - 1 && (
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 z-10">
-                    <ChevronRight className="h-4 w-4 text-slate-300" />
+                    <ChevronRight className={cn(
+                      "h-4 w-4", 
+                      isActive || isCompleted ? "text-white" : "text-slate-300"
+                    )} />
                   </div>
                 )}
               </div>
@@ -409,19 +459,20 @@ export default function EbookCreationWorkflow() {
         </div>
 
         {/* Mobile progress indicator */}
-        <div className="md:hidden mb-4">
+        <div className="md:hidden mb-6">
           <div className="flex justify-between text-xs text-ink-light font-serif mb-2">
             <span>Progress</span>
             <span>{progress}%</span>
           </div>
-          <Progress value={progress} className="h-2 bg-accent-tertiary/30">
+          <Progress value={progress} className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-accent-primary rounded-full transition-all duration-1000"
+              className="h-full bg-gradient-to-r from-accent-primary to-accent-yellow rounded-full transition-all duration-1000"
               style={{ width: `${progress}%` }}
             />
           </Progress>
-          <div className="mt-2 text-small font-medium text-ink-dark font-serif">
-            {steps.find(s => s.id === currentStep)?.title || 'Unknown Step'}
+          <div className="mt-3 flex items-center text-small font-medium text-ink-dark font-serif">
+            {steps.find(s => s.id === currentStep)?.icon}
+            <span className="ml-2">{steps.find(s => s.id === currentStep)?.title || 'Unknown Step'}</span>
           </div>
         </div>
 

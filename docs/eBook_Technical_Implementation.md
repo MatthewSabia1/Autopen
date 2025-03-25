@@ -159,38 +159,130 @@ CREATE TABLE creator_contents (
 
 ## API Integration
 
-### OpenRouter API
-The workflow uses OpenRouter for content generation:
+### Enhanced OpenRouter API
+The workflow uses an improved OpenRouter integration for content generation:
 
 ```typescript
-// Example implementation from /src/lib/openRouter.ts
-export async function generateEbookContent(
-  chapter: ChapterStructure, 
-  context: string
+// Enhanced implementation from /src/lib/openRouter.ts
+export async function generateChapterContent(
+  bookTitle: string,
+  bookDescription: string,
+  chapterTitle: string, 
+  chapterDescription: string,
+  chapterIndex: number,
+  totalChapters: number,
+  brainDumpContent: string,
+  previousChapters: { title: string; content?: string }[]
 ): Promise<string> {
-  const prompt = `Write a comprehensive chapter for an eBook with the following details:
-    Title: ${chapter.title}
-    Description: ${chapter.description}
-    Context: ${context}
-    
-    The chapter should be well-structured, informative, and engaging.
-    Use markdown formatting for headings, lists, and emphasis.`;
-    
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'anthropic/claude-3-opus-20240229',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 4000
-    })
-  });
+  // Determine chapter type for specialized prompting
+  const isIntroduction = chapterIndex === 0;
+  const isConclusion = chapterIndex === totalChapters - 1;
   
-  const data = await response.json();
-  return data.choices[0].message.content;
+  let chapterType = "main chapter";
+  if (isIntroduction) chapterType = "introduction";
+  if (isConclusion) chapterType = "conclusion";
+
+  // Dynamic system prompt based on chapter type
+  const systemPrompt = `You are an award-winning professional author with expertise in the subject matter.
+Write a ${chapterType} for an eBook titled "${bookTitle}" with the quality and depth expected from a bestselling author.
+Your writing should be engaging, informative, and substantial. Use clear language, relevant examples, and insightful analysis.
+Each chapter should be approximately 2,500-3,000 words in length to ensure the complete book reaches 30,000+ words total.`;
+
+  // Build context from previous chapters for continuity
+  let previousChapterContexts = '';
+  if (previousChapters?.length > 0) {
+    const validPreviousChapters = previousChapters.filter(ch => ch && ch.title && ch.content);
+    
+    if (validPreviousChapters.length > 0) {
+      previousChapterContexts = validPreviousChapters
+        .map((ch, idx) => {
+          const content = ch.content || "";
+          // Extract first paragraph and any headings for a summary
+          const firstParagraph = content.split('\n\n')[0] || "";
+          const headings = content.match(/##\s.+/g) || [];
+          return `Chapter ${idx + 1}: "${ch.title}"\n${firstParagraph}\nKey sections: ${headings.join(', ')}`;
+        })
+        .join('\n\n');
+    }
+  }
+
+  // Comprehensive prompt with specific chapter guidance
+  const prompt = `
+WRITE ${chapterType.toUpperCase()} FOR EBOOK: "${bookTitle}"
+
+BOOK DESCRIPTION: "${bookDescription}"
+
+CHAPTER TITLE: "${chapterTitle}"
+CHAPTER DESCRIPTION: "${chapterDescription || ''}"
+CHAPTER NUMBER: ${chapterIndex + 1} of ${totalChapters}
+
+${previousChapterContexts ? `PREVIOUS CHAPTERS SUMMARY:\n${previousChapterContexts}\n\n` : ''}
+
+BRAIN DUMP CONTENT (USE AS REFERENCE MATERIAL):
+${brainDumpContent.substring(0, 8000)}
+
+${isIntroduction ? 
+  `For the introduction:
+  - Start with a compelling hook that grabs the reader's attention
+  - Clearly state the purpose and value of the book
+  - Provide context for why this topic matters now
+  - Outline what readers will learn and how it will benefit them
+  - Briefly summarize the key themes or concepts that will be covered
+  - End with a roadmap of what's to come in the following chapters` : 
+  isConclusion ? 
+  `For the conclusion:
+  - Summarize the key points covered throughout the book
+  - Synthesize the main lessons and insights
+  - Connect back to the introduction's promises and show how they've been fulfilled
+  - Provide final thoughts, recommendations, and forward-looking perspectives
+  - Include practical next steps or a call to action for the reader
+  - End on an inspiring note that leaves the reader satisfied and motivated` : 
+  `For this main chapter:
+  - Begin with an engaging introduction to the chapter's specific topic
+  - Divide the content into 4-6 distinct sections with clear subheadings
+  - Include practical examples, case studies, or stories to illustrate key points
+  - Provide actionable insights, frameworks, or step-by-step guidance where appropriate
+  - Include expert perspectives and evidence-based information
+  - Anticipate and address common questions or challenges related to the topic
+  - End with a summary of key takeaways and a smooth transition to the next chapter`}
+
+Important guidelines:
+- Write approximately 2,500-3,000 words of substantial content
+- Use markdown formatting (## for main headings, ### for subheadings)
+- Include bullet points, numbered lists, and other formatting to enhance readability
+- Maintain consistent tone and style with previous chapters (if any)
+- Ensure the content flows logically and builds on previous information
+- Write with authority and expertise on the subject matter
+
+Make this chapter substantial and valuable. It should stand on its own while contributing to the complete narrative of the book.`;
+
+  // Call OpenRouter with enhanced error handling and timeout control
+  try {
+    const response = await fetchWithTimeout(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_KEY}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'AutoPen App',
+        'Origin': window.location.origin
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 1.0
+      })
+    }, 20000); // 20-second timeout
+    
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    logError('generateChapterContent', error);
+    throw new Error(`Failed to generate chapter content: ${error.message}`);
+  }
 }
 ```
 
@@ -292,25 +384,93 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
 ## Error Handling
 
-The workflow implements comprehensive error handling:
+The workflow implements enhanced error handling with improved OpenRouter API integration:
 
 ```typescript
-// Example error handling pattern
-try {
-  const result = await generateChapterContent(chapter);
-  dispatch({ type: 'ADD_GENERATED_CONTENT', payload: { id: chapter.id, content: result } });
-} catch (error) {
-  // Log error
-  console.error('Error generating chapter content:', error);
+// Enhanced error handling pattern with fetchWithTimeout
+const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
+  const controller = new AbortController();
+  const { signal } = controller;
   
-  // Set error state
-  setError(`Failed to generate content for chapter "${chapter.title}". Please try again.`);
+  // Create a timeout that will abort the fetch
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeout);
   
-  // Retry logic
-  if (retryCount < 3) {
-    setRetryCount(prev => prev + 1);
-    setTimeout(() => generateContent(), 2000 * retryCount);
+  try {
+    console.log(`DEBUG: Sending request to ${url} with options:`, {
+      method: options.method,
+      headers: options.headers,
+      bodyLength: options.body ? JSON.stringify(options.body).length : 0
+    });
+    
+    // Combine the provided signal (if any) with our timeout signal
+    const mergedOptions = {
+      ...options,
+      signal,
+      mode: 'cors' as RequestMode // Explicitly set CORS mode
+    };
+    
+    const response = await fetch(url, mergedOptions);
+    clearTimeout(timeoutId);
+    console.log(`DEBUG: Received response with status: ${response.status}`);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    console.error(`DEBUG: Fetch error:`, error);
+    
+    // Enhanced error handling for timeouts
+    if (error.name === 'AbortError') {
+      throw new Error(`API request timed out after ${timeout/1000} seconds. The server did not respond in time.`);
+    }
+    
+    throw error;
   }
+};
+
+// Workflow component error handling
+try {
+  // Show a user-friendly status during generation
+  setGeneratingChapter(chapter.id);
+  
+  // Auto-expand the chapter being generated for better UX
+  setExpandedChapter(chapter.id);
+  
+  // Scroll to the chapter element to keep it in view
+  const chapterElement = document.getElementById(`chapter-${chapter.id}`);
+  if (chapterElement) {
+    chapterElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Call the content generation function with enhanced error handling
+  await generateEbookChapter(chapter.id);
+  
+  // Check if we should auto-advance to preview step
+  const allGenerated = ebookChapters.every(c => 
+    (c.id === chapter.id) ? true : c.status === 'generated'
+  );
+  
+  if (allGenerated) {
+    // Provide a small delay to allow UI updates to complete
+    setTimeout(() => {
+      setCurrentStep('ebook-preview');
+    }, 500);
+  }
+} catch (err: any) {
+  // Create user-friendly error messages based on error type
+  let errorMessage = 'Failed to generate chapter';
+  
+  if (err.message?.includes('timed out')) {
+    errorMessage = 'The API request timed out. Please try again.';
+  } else if (err.message?.includes('rate limit')) {
+    errorMessage = 'API rate limit reached. Please try again in a few minutes.';
+  } else if (err.message?.includes('token')) {
+    errorMessage = 'Content is too large. The system will try with a smaller chunk.';
+  }
+  
+  setError(errorMessage);
+  setGeneratingChapter(null);
 }
 ```
 

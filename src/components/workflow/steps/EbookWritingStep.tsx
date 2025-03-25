@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWorkflow } from '@/lib/contexts/WorkflowContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import {
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useProducts } from '@/hooks/useProducts';
 
 /**
  * The eBook writing step in the workflow.
@@ -27,12 +28,107 @@ const EbookWritingStep = () => {
     ebook, 
     ebookChapters, 
     generateEbookChapter,
-    setCurrentStep
+    setCurrentStep,
+    project
   } = useWorkflow();
+  const { createProduct, updateProduct } = useProducts();
 
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generatingChapter, setGeneratingChapter] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  
+  // Create or update draft product when chapters are generated
+  useEffect(() => {
+    const saveDraftProduct = async () => {
+      if (!ebook || !project || !ebookChapters.length) return;
+      
+      try {
+        // Count completed chapters
+        const completedChapters = ebookChapters.filter(c => c.status === 'generated').length;
+        const totalChapters = ebookChapters.length;
+        const progress = Math.round((completedChapters / totalChapters) * 100);
+        
+        // Sort chapters for metadata
+        const sortedChapters = [...ebookChapters].sort((a, b) => a.order_index - b.order_index);
+        
+        // Create metadata with current progress, optimizing storage
+        // Only store full content for completed chapters, store summary for others
+        const metadata = {
+          ebookData: {
+            id: ebook.id,
+            title: ebook.title,
+            description: ebook.description || '',
+            // Optimized chapter storage - only keep full content for generated chapters
+            chapters: sortedChapters.map(chapter => {
+              const baseChapter = {
+                id: chapter.id,
+                title: chapter.title,
+                order_index: chapter.order_index,
+                status: chapter.status
+              };
+              
+              // Only include content for generated chapters
+              if (chapter.status === 'generated' && chapter.content) {
+                // For very large chapters, we might want to truncate
+                if (chapter.content.length > 30000) {
+                  return {
+                    ...baseChapter,
+                    content: `${chapter.content.substring(0, 30000)}... (truncated)`,
+                    contentTruncated: true,
+                    contentLength: chapter.content.length
+                  };
+                }
+                return { ...baseChapter, content: chapter.content };
+              }
+              
+              // For pending chapters, just store the base info without content
+              return baseChapter;
+            })
+          },
+          progress,
+          completedChapters,
+          totalChapters,
+          updatedAt: new Date().toISOString(),
+          workflow_step: 'ebook-writing' as WorkflowStep
+        };
+        
+        if (draftId) {
+          // Update existing draft
+          await updateProduct(draftId, {
+            metadata,
+            workflow_step: 'ebook-writing' as WorkflowStep,
+            status: 'in_progress'
+          });
+          console.log('Updated draft product');
+        } else {
+          // Create new draft
+          const result = await createProduct({
+            title: ebook.title,
+            description: ebook.description || '',
+            type: 'ebook',
+            status: 'in_progress',
+            project_id: project.id,
+            metadata,
+            workflow_step: 'ebook-writing' as WorkflowStep
+          });
+          
+          if (result?.id) {
+            setDraftId(result.id);
+            console.log('Created draft product:', result.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error saving draft product:', err);
+        // Don't show error to user
+      }
+    };
+    
+    // Only save draft if we have at least one generated chapter
+    if (ebookChapters.some(c => c.status === 'generated')) {
+      saveDraftProduct();
+    }
+  }, [ebookChapters, ebook, project, draftId]);
 
   // Calculate progress percentage
   const completedChapters = ebookChapters.filter(c => c.status === 'generated').length;
@@ -73,6 +169,61 @@ const EbookWritingStep = () => {
       
       // Start generation with optimistic UI update
       await generateEbookChapter(chapterId);
+      
+      // Update the draft product with the new chapter content
+      if (draftId) {
+        try {
+          // Get the updated chapter content after generation
+          const updatedChapter = ebookChapters.find(c => c.id === chapterId);
+          
+          if (updatedChapter && updatedChapter.status === 'generated') {
+            // Count completed chapters after this generation
+            const updatedCompletedChapters = ebookChapters.filter(c => 
+              c.status === 'generated' || c.id === chapterId
+            ).length;
+            
+            // Calculate updated progress
+            const updatedProgress = Math.round((updatedCompletedChapters / totalChapters) * 100);
+            
+            // Only store essential information about the updated chapter
+            // This is a more efficient approach than storing all chapter data
+            const chapterUpdate = {
+              id: chapterId,
+              title: updatedChapter.title,
+              status: 'generated',
+              updatedAt: new Date().toISOString()
+            };
+            
+            // For very large content, truncate to avoid DB limitations
+            if (updatedChapter.content) {
+              if (updatedChapter.content.length > 30000) {
+                // Store a truncated version to avoid DB issues
+                (chapterUpdate as any).contentPreview = updatedChapter.content.substring(0, 500) + '... (truncated)';
+                (chapterUpdate as any).contentLength = updatedChapter.content.length;
+              } else {
+                // Store full content since it's a reasonable size
+                (chapterUpdate as any).content = updatedChapter.content;
+              }
+            }
+            
+            // Update the product with new progress and minimal chapter info
+            await updateProduct(draftId, {
+              metadata: {
+                lastUpdatedChapter: chapterUpdate,
+                progress: updatedProgress,
+                completedChapters: updatedCompletedChapters,
+                totalChapters,
+                updatedAt: new Date().toISOString()
+              }
+            });
+            
+            console.log(`Updated draft product with new chapter content for: ${updatedChapter.title}`);
+          }
+        } catch (updateErr) {
+          // Don't block the UI flow if updating the product fails
+          console.error('Error updating draft product with chapter content:', updateErr);
+        }
+      }
       
       // Show success feedback
       // Check if all chapters are now generated
@@ -151,6 +302,21 @@ const EbookWritingStep = () => {
           <p className="text-red-700 text-sm font-serif">{error}</p>
         </div>
       )}
+      
+      {/* Workflow Steps Display */}
+      <div className="hidden md:block">
+        <EbookHorizontalWorkflow 
+          steps={[
+            { title: "Brain Dump", description: "Collect your ideas", isCompleted: true },
+            { title: "Select Content", description: "Choose the best ideas", isCompleted: true },
+            { title: "Write Content", description: "Generate chapters", isCompleted: false },
+            { title: "Preview", description: "Review and finalize", isCompleted: false },
+            { title: "Export", description: "Download your eBook", isCompleted: false }
+          ]}
+          currentStep={3}
+          showNavButtons={false}
+        />
+      </div>
 
       {/* Book information */}
       <Card className="border border-accent-tertiary/20 bg-paper shadow-textera">
@@ -325,7 +491,7 @@ const EbookWritingStep = () => {
       {ebookChapters.some(c => c.status === 'pending') && (
         <div className="space-y-4">
           <Button
-            className="gap-2 w-full bg-accent-primary/10 hover:bg-accent-primary/20 text-accent-primary font-serif"
+            className="gap-2 w-full bg-[#738996]/10 hover:bg-[#738996]/20 text-[#738996] font-serif"
             onClick={() => {
               const nextPendingChapter = ebookChapters.find(c => c.status === 'pending');
               if (nextPendingChapter) {
@@ -339,7 +505,7 @@ const EbookWritingStep = () => {
           </Button>
           
           <Button
-            className="gap-2 w-full bg-gradient-to-r from-accent-primary to-accent-secondary hover:from-accent-secondary hover:to-accent-primary text-white font-serif shadow-lg transition-all duration-300"
+            className="gap-2 w-full bg-[#738996] hover:bg-[#647989] text-white font-serif shadow-sm transition-all duration-300"
             onClick={async () => {
               // Get all pending chapters
               const pendingChapters = ebookChapters
