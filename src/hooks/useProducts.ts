@@ -271,13 +271,15 @@ export function useProducts() {
       allProducts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       
       // Update state and cache the results
-      setProducts(allProducts);
+      console.log('Products fetch complete - updating state with:', allProducts.length, 'products');
+      setProducts([...allProducts]);
       
       try {
         localStorage.setItem('cached_products', JSON.stringify({
           data: allProducts,
           timestamp: Date.now()
         }));
+        console.log('Products cached in localStorage successfully');
       } catch (cacheError) {
         console.log("Cache write error (non-critical):", cacheError);
       }
@@ -688,7 +690,7 @@ export function useProducts() {
   };
 
   return {
-    products,
+    products: products || [], // Ensure we never return undefined
     isLoading,
     error,
     fetchProducts,

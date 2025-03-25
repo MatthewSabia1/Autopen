@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useWorkflow } from '@/lib/contexts/WorkflowContext';
+import { useWorkflow, WorkflowStep } from '@/lib/contexts/WorkflowContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,10 +11,17 @@ import {
   FileDown,
   Loader2,
   Check,
-  FileText
+  FileText,
+  ArrowLeft,
+  Clock,
+  BookOpen,
+  FileType,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useProducts } from '@/hooks/useProducts';
+import { cn } from '@/lib/utils';
 
 /**
  * The eBook preview step in the workflow.
@@ -163,21 +170,54 @@ const EbookPreviewStep = () => {
   };
 
   /**
-   * Converts markdown to HTML for preview
+   * Converts eBook markdown content to HTML for preview
    */
   const getHtmlContent = (): string => {
-    const markdown = getFullEbookContent();
-    
-    // Simple markdown to HTML conversion
-    return markdown
-      .replace(/# (.*)/g, '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>')
-      .replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-5 mb-3">$1</h2>')
-      .replace(/### (.*)/g, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/- (.*)/g, '<li class="ml-6">$1</li>')
-      .replace(/\n\n/g, '<p class="mb-4"></p>')
-      .replace(/\n/g, '<br />');
+    try {
+      const content = getFullEbookContent();
+      
+      // Convert markdown to HTML using a more robust method
+      const html = content
+        // Headers - do these first to avoid conflicts with bold/italic markdown
+        .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4 mt-6">$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mb-3 mt-5">$1</h2>')
+        .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mb-2 mt-4">$1</h3>')
+        
+        // Bold and italic
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        
+        // Lists - multi-step to handle nested lists properly
+        .replace(/^\s*\n\* (.*)/gm, '<ul>\n<li>$1</li>')
+        .replace(/^\* (.*)/gm, '<li>$1</li>')
+        .replace(/^\s*\n(\d+\. .*)/gm, '<ol>\n<li>$1</li>')
+        .replace(/^(\d+\. .*)/gm, '<li>$1</li>')
+        .replace(/<\/ul>\s*\n<ul>/g, '')
+        .replace(/<\/ol>\s*\n<ol>/g, '')
+        
+        // Paragraphs - careful to maintain appropriate spacing
+        .replace(/^\s*\n(?!\<)/gm, '</p>\n<p>')
+        
+        // Fix any leftover trailing line breaks
+        .replace(/\n+$/g, '');
+      
+      // Ensure the content is properly wrapped in paragraphs
+      let htmlContent = html;
+      if (!htmlContent.startsWith('<')) {
+        htmlContent = '<p>' + htmlContent;
+      }
+      if (!htmlContent.endsWith('>')) {
+        htmlContent += '</p>';
+      }
+      
+      // Remove any empty paragraphs
+      htmlContent = htmlContent.replace(/<p>\s*<\/p>/g, '');
+      
+      return htmlContent;
+    } catch (error) {
+      console.error('Error converting markdown to HTML:', error);
+      return '<p>Error converting content to HTML for preview.</p>';
+    }
   };
 
   /**
@@ -199,7 +239,7 @@ const EbookPreviewStep = () => {
       // Create a little animation for the steps
       for (let i = 0; i < finalizingSteps.length; i++) {
         // Use a visual indicator that this is a status, not an error
-        setError(`⏳ ${finalizingSteps[i]}`);
+        setError(`✨ ${finalizingSteps[i]}`);
         // Log to console as well
         console.log(`Finalization step ${i+1}/${finalizingSteps.length}: ${finalizingSteps[i]}`);
         
@@ -241,8 +281,25 @@ const EbookPreviewStep = () => {
               }, 1500);
             })
             .catch((err) => {
-              setError(err.message || 'Failed to finalize eBook');
-              setIsGenerating(null);
+              console.error("Finalization error:", err);
+              
+              // Handle specific errors
+              if (err.message?.includes('Bucket not found') || err.message?.includes('storage')) {
+                // Storage-related error
+                setError(`⚠️ Your eBook was finalized, but couldn't be saved to cloud storage. You can still download it using the options above.`);
+                
+                // Show the successful state even with storage error
+                setIsFinalized(true);
+                
+                // Move to completed step after a delay
+                setTimeout(() => {
+                  setCurrentStep('completed');
+                }, 3000);
+              } else {
+                // Other errors
+                setError(`Error: ${err.message || 'Failed to finalize eBook'}`);
+                setIsGenerating(null);
+              }
             });
         }
         
@@ -253,7 +310,8 @@ const EbookPreviewStep = () => {
       // Return early since we're handling the finalization and state updates in the callback above
       return;
     } catch (err: any) {
-      setError(err.message || 'Failed to finalize eBook');
+      console.error("Error in handleFinalize:", err);
+      setError(`Error: ${err.message || 'Failed to finalize eBook'}`);
       setIsGenerating(null);
     }
   };
@@ -266,13 +324,20 @@ const EbookPreviewStep = () => {
       setIsGenerating('markdown');
       setError(null);
       
+      if (!ebook) {
+        throw new Error('No ebook data available');
+      }
+      
+      // Create a properly formatted filename preserving the eBook title case
+      const safeFilename = `${ebook.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.md`;
+      
       // Import the markdown generator
       const { generateMarkdown } = await import('@/lib/pdfGenerator');
       
       // Generate the markdown file
       const markdownBlob = generateMarkdown(
-        ebook?.title || 'Untitled eBook',
-        ebook?.description || '',
+        ebook.title,
+        ebook.description || '',
         ebookChapters
       );
       
@@ -280,11 +345,13 @@ const EbookPreviewStep = () => {
       const url = URL.createObjectURL(markdownBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${ebook?.title || 'ebook'}.md`;
+      a.download = safeFilename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      setError('✅ Markdown successfully generated and downloaded');
     } catch (err: any) {
       setError(`Failed to generate markdown: ${err.message}`);
       console.error('Markdown generation error:', err);
@@ -310,29 +377,47 @@ const EbookPreviewStep = () => {
         throw new Error('No chapters available for PDF generation');
       }
       
+      // Validate chapters have content
+      const emptyChapters = ebookChapters.filter(chapter => !chapter.content || chapter.content.trim().length === 0);
+      if (emptyChapters.length > 0) {
+        throw new Error(`${emptyChapters.length} chapter(s) have no content. Please generate content for all chapters before exporting.`);
+      }
+      
       // Import the PDF generator
       const { generatePdf } = await import('@/lib/pdfGenerator');
       
       try {
+        // Create a properly formatted filename preserving the eBook title case
+        const safeFilename = `${ebook.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.pdf`;
+        
         // Generate the PDF
         const pdfBlob = await generatePdf(
           ebook.title,
           ebook.description || '',
           ebookChapters,
-          { withCover: true, includeTableOfContents: true }
+          { 
+            withCover: true, 
+            includeTableOfContents: true,
+            filename: safeFilename
+          }
         );
         
         // Download the PDF
         const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${ebook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+        a.download = safeFilename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        setError('✅ PDF successfully generated and downloaded');
+        
       } catch (pdfError: any) {
-        // If PDF fails (likely due to missing html2pdf.js), offer markdown download
+        console.error('PDF generation error details:', pdfError);
+        
+        // If PDF fails due to missing html2pdf.js
         if (pdfError.message.includes('html2pdf') || pdfError.message.includes('not installed')) {
           setError('PDF generation requires html2pdf.js. Please run: npm install --save html2pdf.js');
           
@@ -350,7 +435,8 @@ const EbookPreviewStep = () => {
           const url = URL.createObjectURL(markdownBlob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${ebook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+          // Use the same filename format for consistency
+          a.download = `${ebook.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.md`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -360,8 +446,8 @@ const EbookPreviewStep = () => {
         }
       }
     } catch (err: any) {
-      setError(`${err.message}`);
       console.error('Export error:', err);
+      setError(`Error generating PDF: ${err.message}`);
     } finally {
       setIsGenerating(null);
     }
@@ -375,13 +461,20 @@ const EbookPreviewStep = () => {
       setIsGenerating('epub');
       setError(null);
       
+      if (!ebook) {
+        throw new Error('No ebook data available');
+      }
+      
+      // Create a properly formatted filename preserving the eBook title case
+      const safeFilename = `${ebook.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.epub`;
+      
       // Import the EPUB generator
       const { generateEpub } = await import('@/lib/pdfGenerator');
       
       // Generate the EPUB
       const epubBlob = await generateEpub(
-        ebook?.title || 'Untitled eBook',
-        ebook?.description || '',
+        ebook.title,
+        ebook.description || '',
         ebookChapters
       );
       
@@ -389,11 +482,13 @@ const EbookPreviewStep = () => {
       const url = URL.createObjectURL(epubBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${ebook?.title || 'ebook'}.epub`;
+      a.download = safeFilename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      setError('✅ EPUB successfully generated and downloaded');
     } catch (err: any) {
       setError(`Failed to generate EPUB: ${err.message}`);
       console.error('EPUB generation error:', err);
@@ -420,235 +515,415 @@ const EbookPreviewStep = () => {
   
   const { totalWords, readingTimeDisplay, pageCount } = calculateBookStats();
 
+  // Animation variants for staggered animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.4, ease: "easeOut" }
+    }
+  };
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-display text-ink-dark mb-4">
+    <motion.div 
+      className="space-y-8"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <motion.div variants={itemVariants} className="animate-fade-in">
+        <h2 className="text-2xl font-display text-ink-dark mb-4 tracking-tight">
           Preview & Download
         </h2>
-        <p className="text-ink-light font-serif max-w-3xl">
+        <p className="text-ink-light font-serif max-w-3xl leading-relaxed">
           Your eBook is now ready! Preview the content and download it in your preferred format.
         </p>
         
         {/* Book statistics */}
-        <div className="flex flex-wrap gap-x-8 gap-y-2 mt-4">
-          <div className="flex items-center gap-2 text-accent-primary text-sm">
-            <span className="font-bold">{totalWords.toLocaleString()}</span> words
-          </div>
-          <div className="flex items-center gap-2 text-accent-primary text-sm">
-            <span className="font-bold">{pageCount}</span> pages
-          </div>
-          <div className="flex items-center gap-2 text-accent-primary text-sm">
-            <span className="font-bold">{readingTimeDisplay}</span> reading time
-          </div>
-          <div className="flex items-center gap-2 text-accent-primary text-sm">
-            <span className="font-bold">{ebookChapters.length}</span> chapters
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start">
-          <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
-          <p className="text-red-700 text-sm font-serif">{error}</p>
-        </div>
-      )}
-      
-      {productSaved && (
-        <div className="bg-green-50 border border-green-200 rounded-md p-3 flex items-start">
-          <Check className="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-          <p className="text-green-700 text-sm font-serif">
-            Your eBook has been saved to your products library and can be accessed from your dashboard.
-          </p>
-        </div>
-      )}
-
-      {/* Book information */}
-      <Card className="border border-accent-tertiary/20 bg-paper shadow-textera">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="bg-accent-primary/10 p-3 rounded-lg">
-              <BookText className="h-10 w-10 text-accent-primary" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <motion.div 
+            className="bg-[#F9F7F4] px-4 py-3 rounded-lg border border-[#E8E8E8] flex items-center"
+            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="w-10 h-10 bg-[#738996]/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <FileText className="h-5 w-5 text-[#738996]" />
             </div>
             <div>
-              <h3 className="font-display text-lg text-ink-dark mb-1">
-                {ebook?.title}
-              </h3>
-              {ebook?.description && (
-                <p className="text-ink-light font-serif text-sm mb-4">
-                  {ebook.description}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap gap-2 mt-3">
-                <div className="bg-green-50 px-3 py-1 rounded-full text-xs font-serif text-green-700 flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  {ebookChapters.length} chapters
-                </div>
-                <div className="bg-accent-primary/10 px-3 py-1 rounded-full text-xs font-serif text-accent-primary">
-                  {getFullEbookContent().split(' ').length.toLocaleString()} words
-                </div>
-                <div className="bg-accent-tertiary/10 px-3 py-1 rounded-full text-xs font-serif text-ink-dark">
-                  {getFullEbookContent().split('\n').length.toLocaleString()} paragraphs
+              <p className="text-xs text-ink-light font-serif">Words</p>
+              <p className="text-ink-dark font-display font-medium">{totalWords.toLocaleString()}</p>
+            </div>
+          </motion.div>
+          
+          <motion.div 
+            className="bg-[#F9F7F4] px-4 py-3 rounded-lg border border-[#E8E8E8] flex items-center"
+            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="w-10 h-10 bg-[#738996]/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <BookOpen className="h-5 w-5 text-[#738996]" />
+            </div>
+            <div>
+              <p className="text-xs text-ink-light font-serif">Pages</p>
+              <p className="text-ink-dark font-display font-medium">{pageCount}</p>
+            </div>
+          </motion.div>
+          
+          <motion.div 
+            className="bg-[#F9F7F4] px-4 py-3 rounded-lg border border-[#E8E8E8] flex items-center"
+            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="w-10 h-10 bg-[#738996]/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <Clock className="h-5 w-5 text-[#738996]" />
+            </div>
+            <div>
+              <p className="text-xs text-ink-light font-serif">Reading Time</p>
+              <p className="text-ink-dark font-display font-medium">{readingTimeDisplay}</p>
+            </div>
+          </motion.div>
+          
+          <motion.div 
+            className="bg-[#F9F7F4] px-4 py-3 rounded-lg border border-[#E8E8E8] flex items-center"
+            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="w-10 h-10 bg-[#738996]/10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <FileType className="h-5 w-5 text-[#738996]" />
+            </div>
+            <div>
+              <p className="text-xs text-ink-light font-serif">Chapters</p>
+              <p className="text-ink-dark font-display font-medium">{ebookChapters.length}</p>
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className={cn(
+              "border rounded-md p-4 flex items-start",
+              error.startsWith('✅') || error.startsWith('✨')
+                ? "bg-accent-primary/5 border-accent-primary/20 text-accent-primary"
+                : "bg-red-50 border-red-200 text-red-700"
+            )}
+          >
+            {error.startsWith('✅') ? (
+              <div className="bg-accent-primary/10 p-1 rounded-full mr-3 flex-shrink-0">
+                <Check className="h-4 w-4 text-accent-primary" />
+              </div>
+            ) : error.startsWith('✨') ? (
+              <div className="bg-[#ccb595]/10 p-1 rounded-full mr-3 flex-shrink-0">
+                <Sparkles className="h-4 w-4 text-[#ccb595]" />
+              </div>
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
+            )}
+            <p className="text-sm font-serif">{error}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {productSaved && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="bg-green-50 border border-green-200 rounded-md p-4 flex items-start"
+          >
+            <div className="bg-green-100 p-1 rounded-full mr-3 flex-shrink-0">
+              <Check className="h-4 w-4 text-green-600" />
+            </div>
+            <p className="text-green-700 text-sm font-serif">
+              Your eBook has been saved to your products library and can be accessed from your dashboard.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Book information */}
+      <motion.div variants={itemVariants}>
+        <Card className="border border-[#E8E8E8] bg-gradient-to-br from-white to-[#F9F7F4]/30 shadow-sm rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-5">
+              <div className="w-16 h-16 bg-[#738996]/10 rounded-full flex items-center justify-center flex-shrink-0 group transition-all duration-300 hover:scale-105 hover:bg-[#738996]/20">
+                <BookText className="h-8 w-8 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display text-xl text-ink-dark mb-1 tracking-tight">
+                  {ebook?.title}
+                </h3>
+                {ebook?.description && (
+                  <p className="text-ink-light font-serif text-sm leading-relaxed">
+                    {ebook.description}
+                  </p>
+                )}
+                
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="bg-green-50 px-3 py-1 rounded-full text-xs font-serif text-green-700 border border-green-100 shadow-sm flex items-center">
+                    <Check className="h-3 w-3 mr-1.5" />
+                    {ebookChapters.length} chapters
+                  </div>
+                  <div className="bg-[#738996]/10 px-3 py-1 rounded-full text-xs font-serif text-[#738996] border border-[#738996]/10 shadow-sm">
+                    {totalWords.toLocaleString()} words
+                  </div>
+                  <div className="bg-[#F9F7F4] px-3 py-1 rounded-full text-xs font-serif text-ink-dark border border-[#E8E8E8] shadow-sm">
+                    {getFullEbookContent().split('\n').length.toLocaleString()} paragraphs
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Tabs for Preview and Download */}
-      <Tabs 
-        defaultValue="preview" 
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
-        <TabsList className="grid grid-cols-2 w-full md:w-80">
-          <TabsTrigger 
-            value="preview"
-            className="data-[state=active]:bg-accent-primary data-[state=active]:text-white font-serif"
-          >
-            Preview
-          </TabsTrigger>
-          <TabsTrigger 
-            value="download"
-            className="data-[state=active]:bg-accent-primary data-[state=active]:text-white font-serif"
-          >
-            Download
-          </TabsTrigger>
-        </TabsList>
-        
-        {/* Preview Tab */}
-        <TabsContent value="preview" className="space-y-4">
-          <Card className="border border-accent-tertiary/20">
-            <CardContent className="p-6">
-              <div 
-                className="prose prose-sm max-w-none font-serif text-ink-dark"
-                dangerouslySetInnerHTML={{ __html: getHtmlContent() }}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Download Tab */}
-        <TabsContent value="download" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Markdown Download */}
-            <Card className="border border-accent-tertiary/20 bg-paper shadow-textera hover:shadow-textera-md transition-all duration-200">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <FileText className="h-12 w-12 text-accent-primary mb-4" />
-                  <h3 className="font-display text-lg text-ink-dark mb-2">Markdown</h3>
-                  <p className="text-sm text-ink-light font-serif mb-4">
-                    Download as a Markdown file, perfect for further editing in text editors.
-                  </p>
-                  <Button
-                    onClick={handleDownloadMarkdown}
-                    className="gap-2 w-full"
-                    variant="workflowOutline"
-                    disabled={isGenerating !== null}
+      <motion.div variants={itemVariants}>
+        <Tabs 
+          defaultValue="preview" 
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList className="grid grid-cols-2 w-full md:w-80 p-1 gap-1 bg-[#F9F7F4] border border-[#E8E8E8] rounded-lg">
+            <TabsTrigger 
+              value="preview"
+              className="rounded-md data-[state=active]:bg-[#738996] data-[state=active]:text-white data-[state=active]:shadow-sm font-serif transition-all duration-200"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Preview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="download"
+              className="rounded-md data-[state=active]:bg-[#738996] data-[state=active]:text-white data-[state=active]:shadow-sm font-serif transition-all duration-200"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Preview Tab */}
+          <TabsContent value="preview" className="space-y-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="preview-content"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Card className="border border-[#E8E8E8] rounded-lg shadow-sm overflow-hidden">
+                  <div className="border-b border-[#E8E8E8] bg-[#F9F7F4] py-2 px-4 flex items-center">
+                    <BookText className="h-5 w-5 text-[#738996] mr-2" />
+                    <span className="text-sm font-medium text-ink-dark font-serif">eBook Preview</span>
+                  </div>
+                  <CardContent className="p-6 max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <div 
+                      className="prose prose-sm max-w-none font-serif text-ink-dark prose-headings:font-display prose-headings:text-ink-dark prose-p:text-ink-light prose-p:leading-relaxed prose-headings:mb-3 prose-li:text-ink-light"
+                      dangerouslySetInnerHTML={{ __html: getHtmlContent() }}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </AnimatePresence>
+          </TabsContent>
+          
+          {/* Download Tab */}
+          <TabsContent value="download" className="space-y-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="download-options"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {/* Markdown Download */}
+                  <motion.div 
+                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
+                    transition={{ duration: 0.2 }}
                   >
-                    {isGenerating === 'markdown' ? (
-                      <>
-                        <Check className="h-4 w-4" />
-                        Downloaded
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4" />
-                        Markdown (.md)
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* PDF Download */}
-            <Card className="border border-accent-tertiary/20 bg-paper shadow-textera hover:shadow-textera-md transition-all duration-200">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <FileDown className="h-12 w-12 text-accent-primary mb-4" />
-                  <h3 className="font-display text-lg text-ink-dark mb-2">PDF</h3>
-                  <p className="text-sm text-ink-light font-serif mb-4">
-                    Download as a PDF file, ideal for reading on any device or printing.
-                  </p>
-                  <Button
-                    onClick={handleDownloadPdf}
-                    className="gap-2 w-full text-white"
-                    variant="workflow"
-                    disabled={isGenerating !== null}
+                    <Card className="border border-[#E8E8E8] bg-white rounded-lg overflow-hidden h-full transition-all duration-300 hover:border-[#738996]/30">
+                      <CardContent className="p-6 flex flex-col h-full">
+                        <div className="flex-1 flex flex-col items-center text-center">
+                          <div className="w-16 h-16 bg-[#F9F7F4] rounded-full flex items-center justify-center mb-4 group transition-all duration-300 hover:bg-[#738996]/10">
+                            <FileText className="h-7 w-7 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+                          </div>
+                          <h3 className="font-display text-lg text-ink-dark mb-2">Markdown</h3>
+                          <p className="text-sm text-ink-light font-serif mb-5 leading-relaxed">
+                            Download as a Markdown file, perfect for further editing in text editors.
+                          </p>
+                          <Button
+                            onClick={handleDownloadMarkdown}
+                            className={cn(
+                              "gap-2 w-full mt-auto border border-[#738996]/30 transition-all duration-300",
+                              isGenerating === 'markdown'
+                                ? "bg-[#738996]/10 text-[#738996]"
+                                : "text-[#738996] hover:bg-[#738996]/5 hover:border-[#738996]/40"
+                            )}
+                            variant="outline"
+                            disabled={isGenerating !== null}
+                          >
+                            {isGenerating === 'markdown' ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4" />
+                                Download .md
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  
+                  {/* PDF Download */}
+                  <motion.div 
+                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
+                    transition={{ duration: 0.2 }}
                   >
-                    {isGenerating === 'pdf' ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4" />
-                        PDF Document
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* ePub Download */}
-            <Card className="border border-accent-tertiary/20 bg-paper shadow-textera hover:shadow-textera-md transition-all duration-200">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <BookText className="h-12 w-12 text-accent-primary mb-4" />
-                  <h3 className="font-display text-lg text-ink-dark mb-2">ePub</h3>
-                  <p className="text-sm text-ink-light font-serif mb-4">
-                    Download as an ePub file, perfect for e-readers like Kindle and Kobo.
-                  </p>
-                  <Button
-                    onClick={handleDownloadEpub}
-                    className="gap-2 w-full"
-                    variant="workflowOutline"
-                    disabled={isGenerating !== null}
+                    <Card className="border border-[#ccb595]/30 bg-white rounded-lg overflow-hidden h-full transition-all duration-300 hover:border-[#ccb595]/50">
+                      <div className="h-1.5 bg-[#ccb595]"></div>
+                      <CardContent className="p-6 flex flex-col h-full">
+                        <div className="flex-1 flex flex-col items-center text-center">
+                          <div className="w-16 h-16 bg-[#ccb595]/10 rounded-full flex items-center justify-center mb-4 group transition-all duration-300 hover:bg-[#ccb595]/20">
+                            <FileDown className="h-7 w-7 text-[#ccb595] group-hover:scale-110 transition-transform duration-300" />
+                          </div>
+                          <div className="bg-[#ccb595]/10 text-[#ccb595] text-xs font-medium px-2.5 py-0.5 rounded-full mb-2">
+                            Recommended
+                          </div>
+                          <h3 className="font-display text-lg text-ink-dark mb-2">PDF</h3>
+                          <p className="text-sm text-ink-light font-serif mb-5 leading-relaxed">
+                            Download as a PDF file, ideal for reading on any device or printing.
+                          </p>
+                          <Button
+                            onClick={handleDownloadPdf}
+                            className="gap-2 w-full mt-auto bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 text-white hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 transition-all duration-300 shadow-sm hover:shadow"
+                            disabled={isGenerating !== null}
+                          >
+                            {isGenerating === 'pdf' ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4" />
+                                Download PDF
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  
+                  {/* ePub Download */}
+                  <motion.div 
+                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
+                    transition={{ duration: 0.2 }}
                   >
-                    {isGenerating === 'epub' ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4" />
-                        ePub eBook
-                      </>
-                    )}
-                  </Button>
+                    <Card className="border border-[#E8E8E8] bg-white rounded-lg overflow-hidden h-full transition-all duration-300 hover:border-[#738996]/30">
+                      <CardContent className="p-6 flex flex-col h-full">
+                        <div className="flex-1 flex flex-col items-center text-center">
+                          <div className="w-16 h-16 bg-[#F9F7F4] rounded-full flex items-center justify-center mb-4 group transition-all duration-300 hover:bg-[#738996]/10">
+                            <BookText className="h-7 w-7 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+                          </div>
+                          <h3 className="font-display text-lg text-ink-dark mb-2">ePub</h3>
+                          <p className="text-sm text-ink-light font-serif mb-5 leading-relaxed">
+                            Download as an ePub file, perfect for e-readers like Kindle and Kobo.
+                          </p>
+                          <Button
+                            onClick={handleDownloadEpub}
+                            className={cn(
+                              "gap-2 w-full mt-auto border border-[#738996]/30 transition-all duration-300",
+                              isGenerating === 'epub'
+                                ? "bg-[#738996]/10 text-[#738996]"
+                                : "text-[#738996] hover:bg-[#738996]/5 hover:border-[#738996]/40"
+                            )}
+                            variant="outline"
+                            disabled={isGenerating !== null}
+                          >
+                            {isGenerating === 'epub' ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4" />
+                                Download ePub
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+
+                <p className="text-xs text-ink-faded text-center mt-4 font-serif">
+                  All downloads include a complete, formatted copy of your eBook with table of contents.
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
 
       {/* Actions */}
-      <div className="flex justify-between mt-8">
+      <motion.div 
+        variants={itemVariants}
+        className="flex justify-between mt-10"
+      >
         <Button
-          variant="workflowOutline"
+          variant="outline"
           onClick={() => setCurrentStep('ebook-writing')}
-          className="gap-2"
+          className="gap-2 border-[#E8E8E8] hover:bg-[#F5F5F5] hover:border-[#E8E8E8] transition-all duration-200"
+          disabled={isGenerating !== null || isFinalized}
         >
+          <ArrowLeft className="h-4 w-4" />
           Back to Editor
         </Button>
         
         <Button
-          className="gap-2 relative overflow-hidden text-white"
-          variant={isFinalized ? "workflowGold" : "workflow"}
+          className={cn(
+            "gap-2 relative overflow-hidden shadow-sm hover:shadow transition-all duration-300",
+            isFinalized 
+              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 text-white" 
+              : "bg-[#738996] hover:bg-[#738996]/90 text-white"
+          )}
           onClick={handleFinalize}
           disabled={!allChaptersGenerated || isFinalized || isGenerating === 'finalizing'}
         >
           {isGenerating === 'finalizing' ? (
             <>
-              <div className="absolute inset-0 bg-accent-primary animate-pulse"></div>
+              <div className="absolute inset-0 bg-[#738996] opacity-90">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shine"></div>
+              </div>
               <div className="relative flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Finalizing...
@@ -661,13 +936,43 @@ const EbookPreviewStep = () => {
             </>
           ) : (
             <>
-              <ArrowRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" />
               Complete eBook
             </>
           )}
         </Button>
-      </div>
-    </div>
+      </motion.div>
+      
+      {/* Add custom style for scrollbar in the preview section */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f9f7f4;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #738996;
+        }
+        
+        @keyframes shine {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 100%;
+          }
+        }
+        .animate-shine {
+          animation: shine 1.5s infinite linear;
+        }
+      `}</style>
+    </motion.div>
   );
 };
 

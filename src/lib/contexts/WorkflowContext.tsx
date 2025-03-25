@@ -158,6 +158,7 @@ interface WorkflowContextFunctions {
   createEbook: (title: string, description: string) => Promise<string>;
   generateEbookChapter: (chapterId: string) => Promise<void>;
   finalizeEbook: () => Promise<void>;
+  updateEbookChapters: (chapters: EbookChapter[]) => void;
   
   // Future workflow-specific functions will be added here
   // createCourse?: (title: string, description: string) => Promise<string>;
@@ -1356,52 +1357,80 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   /**
-   * Finalizes the e-book
+   * Finalizes the eBook, marking it as complete and generating a download link
    */
   const finalizeEbook = async (): Promise<void> => {
-    if (!state.ebook?.id) throw new Error('No active e-book');
+    if (!state.ebook || !state.project?.id) {
+      throw new Error('Ebook or project not found');
+    }
     
     setState(prevState => ({ ...prevState, loading: true, error: null }));
     
     try {
-      // Check if all chapters are generated
-      const allGenerated = state.ebookChapters.every(chapter => chapter.status === 'generated');
-      
-      if (!allGenerated) {
-        throw new Error('All chapters must be generated before finalizing the e-book');
-      }
-      
-      // Import formatEbookForExport function
+      // Get markdown content
       const { formatEbookForExport } = await import('../openRouter');
-      
-      // Format ebook content for export
       const markdownContent = formatEbookForExport(
         state.ebook.title,
         state.ebook.description || '',
         state.ebookChapters
       );
       
-      // Store formatted content in a storage bucket for later download
+      // Create a file blob for the content
+      const contentBlob = new Blob([markdownContent], { type: 'text/markdown' });
+      
+      // Generate a file path for storage
       const filePath = `${state.project!.id}/${state.ebook.id}/${Date.now()}-ebook.md`;
       
-      const { error: storageError } = await supabase.storage
-        .from('ebooks')
-        .upload(filePath, new Blob([markdownContent], { type: 'text/markdown' }));
+      // Try to store the file in Supabase storage
+      let publicUrl = '';
       
-      if (storageError) throw storageError;
+      try {
+        // Check if the bucket exists
+        const { data: buckets, error: bucketsError } = await supabase.storage
+          .listBuckets();
+        
+        const bucketExists = buckets?.some(bucket => bucket.name === 'ebooks');
+        
+        // If bucket doesn't exist, try to create it
+        if (!bucketExists) {
+          console.log('Ebooks bucket not found, attempting to create it...');
+          const { error: createBucketError } = await supabase.storage
+            .createBucket('ebooks', { public: true });
+          
+          if (createBucketError) {
+            console.error('Failed to create ebooks bucket:', createBucketError);
+            throw new Error(`Unable to create storage bucket: ${createBucketError.message}`);
+          }
+        }
+        
+        // Upload file to bucket
+        const { error: storageError } = await supabase.storage
+          .from('ebooks')
+          .upload(filePath, contentBlob);
+        
+        if (storageError) throw storageError;
+        
+        // Get public URL for the file
+        const { data: publicUrlData } = supabase.storage
+          .from('ebooks')
+          .getPublicUrl(filePath);
+        
+        publicUrl = publicUrlData.publicUrl;
+      } catch (storageError) {
+        console.error('Storage error:', storageError);
+        // Continue with finalization even if storage fails
+        // We'll just not have a public URL for the ebook
+      }
       
-      // Get public URL for the file
-      const { data: publicUrlData } = supabase.storage
-        .from('ebooks')
-        .getPublicUrl(filePath);
+      // Update e-book status and add download URL if available
+      const updateData: any = { status: 'finalized' };
+      if (publicUrl) {
+        updateData.cover_image_url = publicUrl; // Use this field to store markdown URL
+      }
       
-      // Update e-book status and add download URL
       const { error: ebookError } = await supabase
         .from('ebooks')
-        .update({ 
-          status: 'finalized',
-          cover_image_url: publicUrlData.publicUrl // Temporarily use this field to store markdown URL
-        })
+        .update(updateData)
         .eq('id', state.ebook.id);
       
       if (ebookError) throw ebookError;
@@ -1414,7 +1443,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         ebook: { 
           ...prevState.ebook!, 
           status: 'finalized',
-          cover_image_url: publicUrlData.publicUrl
+          ...(publicUrl && { cover_image_url: publicUrl })
         },
         project: { ...prevState.project!, status: 'completed' },
         loading: false
@@ -1428,6 +1457,17 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
       }));
       throw error;
     }
+  };
+
+  /**
+   * Updates the ebook chapters state in the context
+   * This ensures that changes to chapters made in child components are properly synced
+   */
+  const updateEbookChapters = (chapters: EbookChapter[]): void => {
+    setState(prevState => ({
+      ...prevState,
+      ebookChapters: chapters
+    }));
   };
 
   /**
@@ -1495,6 +1535,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
     createEbook,
     generateEbookChapter,
     finalizeEbook,
+    updateEbookChapters,
     resetWorkflow
   };
 

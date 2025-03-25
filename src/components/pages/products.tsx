@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { 
@@ -42,29 +42,37 @@ import { useProducts, Product } from "../../hooks/useProducts";
 
 export default function ProductsPage() {
   const { products, isLoading, error, deleteProduct, refreshProducts } = useProducts();
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
-  // Initialize filtered products when products are loaded
+  // Log when component mounts and when products update
   useEffect(() => {
-    setFilteredProducts(products);
+    console.log('Products updated or component mounted, count:', products.length);
   }, [products]);
 
-  // Filter products when search query changes
+  // Refresh products when component mounts
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredProducts(products);
-    } else {
-      const lowercaseQuery = searchQuery.toLowerCase();
-      const filtered = products.filter(
-        product => 
-          product.title.toLowerCase().includes(lowercaseQuery) || 
-          product.type.toLowerCase().includes(lowercaseQuery)
-      );
-      setFilteredProducts(filtered);
+    console.log('ProductsPage mounted, refreshing products...');
+    refreshProducts().then(freshProducts => {
+      console.log('Products refreshed, count:', freshProducts?.length || 0);
+    });
+  }, []);
+
+  // Calculate filtered products directly from the products prop and search query
+  // This ensures we're always in sync with the latest products data
+  const filteredProducts = useMemo(() => {
+    console.log('Recalculating filtered products from', products.length, 'products');
+    if (!searchQuery.trim()) {
+      return products;
     }
-  }, [searchQuery, products]);
+    
+    const lowercaseQuery = searchQuery.toLowerCase();
+    return products.filter(
+      product => 
+        product.title.toLowerCase().includes(lowercaseQuery) || 
+        product.type.toLowerCase().includes(lowercaseQuery)
+    );
+  }, [products, searchQuery]);
 
   const handleDelete = async (id: string) => {
     const product = products.find(p => p.id === id);
@@ -352,7 +360,8 @@ export default function ProductsPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {filteredProducts.length === 0 ? (
+            {console.log('Rendering with filteredProducts:', filteredProducts ? `Array(${filteredProducts.length})` : 'undefined/null')}
+            {!products || products.length === 0 ? (
               <div className="p-16 text-center">
                 <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-accent-tertiary/5 flex items-center justify-center">
                   <BookOpen className="w-10 h-10 text-accent-tertiary/60" />
@@ -382,6 +391,23 @@ export default function ProductsPage() {
                 <p className="text-ink-light/60 font-serif text-xs mt-6">
                   Need help getting started? <a href="/help" className="text-accent-primary underline">Check our guide</a>
                 </p>
+              </div>
+            ) : searchQuery && filteredProducts.length === 0 ? (
+              <div className="p-16 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent-tertiary/5 flex items-center justify-center">
+                  <SearchIcon className="w-7 h-7 text-accent-tertiary/60" />
+                </div>
+                <h3 className="text-xl font-display text-ink-dark mb-2">No matching products</h3>
+                <p className="text-ink-light font-serif mb-6 max-w-md mx-auto">
+                  No products match your search query: "{searchQuery}"
+                </p>
+                <Button 
+                  onClick={() => setSearchQuery("")}
+                  variant="outline"
+                  className="border-accent-tertiary/20 hover:border-accent-tertiary/40 font-serif"
+                >
+                  Clear Search
+                </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">

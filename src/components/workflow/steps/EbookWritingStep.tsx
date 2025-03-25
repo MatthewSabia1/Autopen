@@ -41,7 +41,8 @@ const EbookWritingStep = () => {
     ebookChapters, 
     generateEbookChapter,
     setCurrentStep,
-    project
+    project,
+    updateEbookChapters
   } = useWorkflow();
   const { createProduct, updateProduct } = useProducts();
 
@@ -228,10 +229,17 @@ const EbookWritingStep = () => {
       };
       
       // Update the local state directly with React useState setter pattern
-      // This is a workaround since we don't have a direct setter in the context
-      setLocalChapters(prevChapters => prevChapters.map(c => 
+      const updatedChapters = localChapters.map(c => 
         c.id === chapterId ? updatedChapter : c
-      ));
+      );
+      
+      // Update local state
+      setLocalChapters(updatedChapters);
+      
+      // CRITICAL FIX: Update the global context state
+      if (updateEbookChapters) {
+        updateEbookChapters(updatedChapters);
+      }
       
       // Update the draft product with the new chapter content
       if (draftId) {
@@ -291,7 +299,7 @@ const EbookWritingStep = () => {
       setGeneratingChapter(chapterId);
       
       // Find the chapter to generate
-      const chapterToGenerate = ebookChapters.find(c => c.id === chapterId);
+      const chapterToGenerate = localChapters.find(c => c.id === chapterId);
       if (!chapterToGenerate) throw new Error('Chapter not found');
       
       // Auto-expand the chapter being generated
@@ -308,15 +316,16 @@ const EbookWritingStep = () => {
       if (draftId) {
         try {
           // Get the updated chapter content after generation
-          const updatedChapter = ebookChapters.find(c => c.id === chapterId);
+          const updatedChapter = localChapters.find(c => c.id === chapterId);
           
           if (updatedChapter && updatedChapter.status === 'generated') {
             // Count completed chapters after this generation
-            const updatedCompletedChapters = ebookChapters.filter(c => 
+            const updatedCompletedChapters = localChapters.filter(c => 
               c.status === 'generated' || c.id === chapterId
             ).length;
             
             // Calculate updated progress
+            const totalChapters = localChapters.length;
             const updatedProgress = Math.round((updatedCompletedChapters / totalChapters) * 100);
             
             // Only store essential information about the updated chapter
@@ -361,7 +370,7 @@ const EbookWritingStep = () => {
       
       // Show success feedback
       // Check if all chapters are now generated
-      const allGenerated = ebookChapters.every(c => 
+      const allGenerated = localChapters.every(c => 
         (c.id === chapterId) ? true : c.status === 'generated'
       );
       
@@ -427,6 +436,12 @@ const EbookWritingStep = () => {
       
       // Update the local state to remove the deleted chapter
       setLocalChapters(updatedChapters);
+      
+      // CRITICAL FIX: Update the global context state to reflect the deletion
+      // This ensures that auto-generate and other operations use the correct chapter list
+      if (updateEbookChapters) {
+        updateEbookChapters(updatedChapters);
+      }
       
       // Close any expanded chapter if it was the deleted one
       if (expandedChapter === deletingChapter) {
@@ -558,6 +573,11 @@ const EbookWritingStep = () => {
       // Add the new chapter to the local state
       setLocalChapters(updatedChapters);
       
+      // CRITICAL FIX: Update the global context state
+      if (updateEbookChapters) {
+        updateEbookChapters(updatedChapters);
+      }
+      
       // If it's a manual chapter, immediately open it for editing
       if (newChapterCreationType === 'manual') {
         setExpandedChapter(newChapter.id);
@@ -606,6 +626,64 @@ const EbookWritingStep = () => {
       console.error('Error adding new chapter:', err);
     } finally {
       setAddingChapter(false);
+    }
+  };
+
+  // Add this inside the component, before the return statement
+  // This section has the "Auto-Generate All Chapters" button functionality
+  // We need to update it to use localChapters instead of the original ebookChapters
+
+  const handleAutoGenerateAllChapters = async () => {
+    // Get all pending chapters from the LOCAL state (not global context)
+    const pendingChapters = localChapters
+      .filter(c => c.status === 'pending')
+      .sort((a, b) => a.order_index - b.order_index);
+    
+    // Calculate total work to do  
+    const totalChapters = pendingChapters.length;
+    
+    // Start with the first chapter
+    if (pendingChapters.length > 0) {
+      setError(null);
+      
+      try {
+        // Show a message notifying about batch generation
+        console.log(`Starting batch generation of ${totalChapters} chapters. This may take a few minutes.`);
+        
+        // Process one at a time to ensure proper context flow
+        for (let i = 0; i < pendingChapters.length; i++) {
+          const chapter = pendingChapters[i];
+          setGeneratingChapter(chapter.id);
+          
+          // Update progress message - use non-error status messaging
+          const statusMessage = `Generating chapter ${i+1} of ${totalChapters}: "${chapter.title}"...`;
+          console.log(statusMessage);
+          // We shouldn't use error state for status messages, but since we don't have
+          // a separate status state, we'll use a visually different style
+          setError(`✨ ${statusMessage}`);
+          
+          // Expand the current chapter
+          setExpandedChapter(chapter.id);
+          
+          // Remove auto-scrolling functionality
+          await generateEbookChapter(chapter.id);
+          
+          // Short pause between chapters
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        // When all done, clear error message (which was being used as a status)
+        setError(null);
+        
+        // When all done, proceed to preview
+        setTimeout(() => {
+          setCurrentStep('ebook-preview');
+        }, 1000);
+      } catch (err: any) {
+        setError(err.message || 'Failed to generate chapters');
+      } finally {
+        setGeneratingChapter(null);
+      }
     }
   };
 
@@ -1084,59 +1162,7 @@ const EbookWritingStep = () => {
           
           <Button
             className="gap-2 w-full bg-gradient-to-r from-[#738996] to-[#738996]/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 transition-all duration-300 shadow-sm hover:shadow h-12"
-            onClick={async () => {
-              // Get all pending chapters
-              const pendingChapters = localChapters
-                .filter(c => c.status === 'pending')
-                .sort((a, b) => a.order_index - b.order_index);
-              
-              // Calculate total work to do  
-              const totalChapters = pendingChapters.length;
-              
-              // Start with the first chapter
-              if (pendingChapters.length > 0) {
-                setError(null);
-                
-                try {
-                  // Show a message notifying about batch generation
-                  console.log(`Starting batch generation of ${totalChapters} chapters. This may take a few minutes.`);
-                  
-                  // Process one at a time to ensure proper context flow
-                  for (let i = 0; i < pendingChapters.length; i++) {
-                    const chapter = pendingChapters[i];
-                    setGeneratingChapter(chapter.id);
-                    
-                    // Update progress message - use non-error status messaging
-                    const statusMessage = `Generating chapter ${i+1} of ${totalChapters}: "${chapter.title}"...`;
-                    console.log(statusMessage);
-                    // We shouldn't use error state for status messages, but since we don't have
-                    // a separate status state, we'll use a visually different style
-                    setError(`✨ ${statusMessage}`);
-                    
-                    // Expand the current chapter
-                    setExpandedChapter(chapter.id);
-                    
-                    // Remove auto-scrolling functionality
-                    await generateEbookChapter(chapter.id);
-                    
-                    // Short pause between chapters
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                  }
-                  
-                  // When all done, clear error message (which was being used as a status)
-                  setError(null);
-                  
-                  // When all done, proceed to preview
-                  setTimeout(() => {
-                    setCurrentStep('ebook-preview');
-                  }, 1000);
-                } catch (err: any) {
-                  setError(err.message || 'Failed to generate chapters');
-                } finally {
-                  setGeneratingChapter(null);
-                }
-              }
-            }}
+            onClick={handleAutoGenerateAllChapters}
             disabled={!!generatingChapter || !!editingChapter}
           >
             <Sparkles className="h-4 w-4" />

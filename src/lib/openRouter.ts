@@ -812,12 +812,27 @@ export function formatEbookForExport(
   const toc = generateTableOfContents(title, sortedChapters);
   
   // Compile full ebook content
-  let ebookContent = `${toc}\n\n`;
+  let ebookContent = `# ${title}\n\n`;
+  
+  // Add description if available
+  if (description && description.trim()) {
+    ebookContent += `${description}\n\n`;
+  }
+  
+  // Add table of contents
+  ebookContent += `${toc}\n\n`;
   
   // Add each chapter
   sortedChapters.forEach((chapter, index) => {
     if (chapter.content) {
-      ebookContent += `\n\n# Chapter ${index + 1}: ${chapter.title}\n\n${chapter.content}\n\n`;
+      // Clean up potential issues in chapter content
+      let chapterContent = chapter.content.trim();
+      
+      // Ensure chapter title is formatted as a heading if not already
+      ebookContent += `\n\n# Chapter ${index + 1}: ${chapter.title}\n\n`;
+      
+      // Add chapter content, ensuring there's proper spacing
+      ebookContent += `${chapterContent}\n\n`;
     }
   });
   

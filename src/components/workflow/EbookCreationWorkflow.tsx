@@ -371,29 +371,32 @@ export default function EbookCreationWorkflow() {
           </div>
         )}
         
-        {/* Hero section */}
-        <div className="bg-gradient-to-br from-accent-primary/15 to-accent-primary/5 rounded-xl p-8 md:p-10 shadow-blue-sm mb-8 border border-accent-tertiary/10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        {/* Hero section - UPDATED TO BE MORE COMPACT */}
+        <div className="bg-gradient-to-br from-accent-primary/15 to-accent-primary/5 rounded-lg p-4 shadow-sm mb-4 border border-accent-tertiary/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#F9F7F4] rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+              <BookText className="h-5 w-5 text-[#738996]" />
+            </div>
             <div>
-              <h1 className="text-page-title font-display text-ink-dark mb-2 flex items-center gap-2 tracking-tight">
-                <BookText className="h-7 w-7 text-accent-yellow" />
+              <h1 className="text-lg font-display text-ink-dark leading-tight tracking-tight flex items-center gap-1">
                 {project ? project.title : 'Create New eBook'}
               </h1>
-              <p className="text-body text-ink-light font-serif max-w-xl">
+              <p className="text-sm text-ink-light font-serif line-clamp-1">
                 {project?.description || 'Transform your ideas into a polished eBook with our guided AI-powered workflow.'}
               </p>
             </div>
-            
-            {/* Back to dashboard button */}
-            <Button
-              variant="workflowOutline"
-              className="flex-shrink-0 gap-2"
-              onClick={() => navigate('/dashboard')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Dashboard
-            </Button>
           </div>
+          
+          {/* Back to dashboard button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-8 border-[#E8E8E8] hover:bg-[#F5F5F5] hover:border-[#E8E8E8] transition-all duration-200"
+            onClick={() => navigate('/dashboard')}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Dashboard
+          </Button>
         </div>
 
         {/* Progress indicator - enhanced design */}

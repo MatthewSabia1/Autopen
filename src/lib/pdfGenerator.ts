@@ -15,6 +15,7 @@ export async function generatePdf(
     paperSize?: 'a4' | 'letter';
     withCover?: boolean;
     includeTableOfContents?: boolean;
+    filename?: string;
   } = {}
 ): Promise<Blob> {
   try {
@@ -23,9 +24,21 @@ export async function generatePdf(
       throw new Error('PDF generation is only available in browser environment');
     }
     
+    // Import html2pdf dynamically with better error handling
+    const importHtml2pdf = async () => {
+      try {
+        const html2pdfModule = await import('html2pdf.js');
+        return html2pdfModule.default;
+      } catch (error) {
+        console.error('Failed to load html2pdf.js library:', error);
+        throw new Error(
+          'The html2pdf.js library is not available. Please ensure it is installed by running: npm install --save html2pdf.js'
+        );
+      }
+    };
+    
     // Import html2pdf dynamically
-    const html2pdfModule = await import('html2pdf.js');
-    const html2pdf = html2pdfModule.default;
+    const html2pdf = await importHtml2pdf();
     
     // Use OpenRouter formatting function to get markdown content
     const markdownContent = formatEbookForExport(title, description, chapters);
@@ -33,13 +46,22 @@ export async function generatePdf(
     // Convert markdown to HTML
     const htmlContent = convertMarkdownToHtml(markdownContent);
     
+    // Prepare filename - use the provided filename or format the title
+    const safeFilename = options.filename || 
+      `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    
     // Configure pdf options
     const paperSize = options.paperSize || 'a4';
     const pdfOptions = {
       margin: [15, 15, 15, 15], // [top, right, bottom, left] in mm
-      filename: `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+      filename: safeFilename,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        logging: false,
+        letterRendering: true
+      },
       jsPDF: { 
         unit: 'mm', 
         format: paperSize,
@@ -49,8 +71,47 @@ export async function generatePdf(
     
     // Create a container element for the HTML content
     const element = document.createElement('div');
+    element.className = 'pdf-container';
     element.innerHTML = htmlContent;
     document.body.appendChild(element);
+    
+    // Add styling to ensure content is visible in the PDF
+    const style = document.createElement('style');
+    style.textContent = `
+      .pdf-container {
+        font-family: 'Merriweather', Georgia, serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+        font-size: 11pt;
+        width: 100%;
+        max-width: 210mm;
+        background-color: white;
+      }
+      .pdf-container h1 {
+        page-break-before: always;
+        font-size: 24pt;
+        margin-top: 40px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        text-align: center;
+      }
+      .pdf-container h1:first-of-type {
+        page-break-before: avoid;
+      }
+      .pdf-container h2 {
+        font-size: 18pt;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        font-weight: bold;
+      }
+      .pdf-container p {
+        margin-bottom: 15px;
+        text-align: justify;
+      }
+    `;
+    document.head.appendChild(style);
     
     // Generate PDF using html2pdf library
     const pdfBlob = await new Promise<Blob>((resolve, reject) => {
@@ -59,13 +120,15 @@ export async function generatePdf(
         .set(pdfOptions)
         .outputPdf('blob')
         .then((blob: Blob) => {
-          // Remove the element from the DOM after PDF creation
+          // Clean up by removing added elements
           document.body.removeChild(element);
+          document.head.removeChild(style);
           resolve(blob);
         })
         .catch((err: any) => {
           // Make sure to clean up the DOM in case of error
-          document.body.removeChild(element);
+          if (element.parentNode) document.body.removeChild(element);
+          if (style.parentNode) document.head.removeChild(style);
           reject(err);
         });
     });
@@ -87,136 +150,107 @@ function convertMarkdownToHtml(markdown: string): string {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <style>
-        body {
-          font-family: 'Merriweather', Georgia, serif;
-          line-height: 1.6;
-          color: #333;
-          margin: 0;
-          padding: 20px;
-          font-size: 11pt;
-        }
-        h1 {
-          font-size: 24pt;
-          margin-top: 40px;
-          margin-bottom: 20px;
-          page-break-before: always;
-          font-weight: bold;
-          text-align: center;
-        }
-        h1:first-of-type {
-          page-break-before: avoid;
-        }
-        h2 {
-          font-size: 18pt;
-          margin-top: 30px;
-          margin-bottom: 15px;
-          font-weight: bold;
-        }
-        h3 {
-          font-size: 14pt;
-          margin-top: 25px;
-          margin-bottom: 10px;
-          font-weight: bold;
-        }
-        p {
-          margin-bottom: 15px;
-          text-align: justify;
-        }
-        ul, ol {
-          margin-bottom: 15px;
-          padding-left: 30px;
-        }
-        li {
-          margin-bottom: 5px;
-        }
-        .cover {
-          height: 100vh;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          text-align: center;
-          page-break-after: always;
-        }
-        .cover h1 {
-          font-size: 32pt;
-          margin-bottom: 20px;
-        }
-        .cover p {
-          font-size: 14pt;
-          max-width: 80%;
-          text-align: center;
-        }
-        .toc {
-          margin-bottom: 40px;
-          page-break-after: always;
-        }
-        .toc h2 {
-          text-align: center;
-        }
-        .toc ul {
-          list-style-type: none;
-        }
-        .toc li {
-          margin-bottom: 8px;
-        }
-        .page-break {
-          page-break-before: always;
-        }
-        .chapter {
-          page-break-before: always;
-        }
-        .chapter:first-of-type {
-          page-break-before: avoid;
-        }
-      </style>
+      <title>eBook</title>
     </head>
     <body>
   `;
 
-  // Add cover page if requested
-  html += `<div class="cover">
-    <h1>${markdown.split('\n')[0].replace(/^# /, '')}</h1>
-  </div>`;
-
-  // Process markdown content
-  let content = markdown
-    // Headers
-    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-    
-    // Bold and italic
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    
-    // Lists
-    .replace(/^\s*\n\* (.*)/gm, '<ul>\n<li>$1</li>')
-    .replace(/^\* (.*)/gm, '<li>$1</li>')
-    .replace(/^\s*\n(\d+\. .*)/gm, '<ol>\n<li>$1</li>')
-    .replace(/^(\d+\. .*)/gm, '<li>$1</li>')
-    .replace(/<\/ul>\s*\n<ul>/g, '')
-    .replace(/<\/ol>\s*\n<ol>/g, '')
-    
-    // Paragraphs
-    .replace(/^\s*\n(?!\<)/gm, '</p>\n<p>')
-    
-    // Fix beginning and ending paragraph tags
-    .replace(/^<\/p>/g, '')
-    .replace(/<p>$/g, '');
-
-  // Wrap in paragraph tags if it doesn't start with a tag
-  if (!content.startsWith('<')) {
-    content = '<p>' + content;
+  // Add cover page if the title is present
+  if (markdown.split('\n')[0]) {
+    const bookTitle = markdown.split('\n')[0].replace(/^# /, '').trim();
+    html += `<div class="cover">
+      <h1>${bookTitle}</h1>
+    </div>`;
   }
-  // Add closing paragraph tag if needed
-  if (!content.endsWith('>')) {
-    content += '</p>';
+
+  // Process markdown content section by section
+  const sections = markdown.split('\n\n');
+  
+  for (const section of sections) {
+    const trimmedSection = section.trim();
+    if (!trimmedSection) continue;
+    
+    // Handle chapter headings
+    if (trimmedSection.startsWith('# ')) {
+      const chapterTitle = trimmedSection.replace(/^# /, '').trim();
+      html += `<h1 class="chapter-title">${chapterTitle}</h1>`;
+      continue;
+    }
+    
+    // Handle headings
+    if (trimmedSection.startsWith('## ')) {
+      const headingText = trimmedSection.replace(/^## /, '').trim();
+      html += `<h2>${headingText}</h2>`;
+      continue;
+    }
+    
+    if (trimmedSection.startsWith('### ')) {
+      const headingText = trimmedSection.replace(/^### /, '').trim();
+      html += `<h3>${headingText}</h3>`;
+      continue;
+    }
+    
+    // Handle bulleted lists
+    if (trimmedSection.includes('\n* ')) {
+      html += '<ul>';
+      const listItems = trimmedSection.split('\n* ');
+      
+      for (let i = 0; i < listItems.length; i++) {
+        // Skip empty first item before the first bullet
+        if (i === 0 && !listItems[i].startsWith('* ')) {
+          if (listItems[i].trim()) {
+            html += `<p>${listItems[i].trim()}</p>`;
+          }
+          continue;
+        }
+        
+        const item = i === 0 ? listItems[i].replace(/^\* /, '') : listItems[i];
+        if (item.trim()) {
+          html += `<li>${item.trim()}</li>`;
+        }
+      }
+      
+      html += '</ul>';
+      continue;
+    }
+    
+    // Handle numbered lists
+    if (/\n\d+\.\s/.test(trimmedSection)) {
+      html += '<ol>';
+      const listItems = trimmedSection.split(/\n\d+\.\s/);
+      
+      for (let i = 0; i < listItems.length; i++) {
+        // Skip empty first item before the first number
+        if (i === 0 && !/^\d+\.\s/.test(listItems[i])) {
+          if (listItems[i].trim()) {
+            html += `<p>${listItems[i].trim()}</p>`;
+          }
+          continue;
+        }
+        
+        const item = i === 0 ? listItems[i].replace(/^\d+\.\s/, '') : listItems[i];
+        if (item.trim()) {
+          html += `<li>${item.trim()}</li>`;
+        }
+      }
+      
+      html += '</ol>';
+      continue;
+    }
+    
+    // Handle regular paragraphs
+    if (trimmedSection) {
+      // Handle bold and italic text
+      let paragraph = trimmedSection
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+      
+      html += `<p>${paragraph}</p>`;
+    }
   }
 
   // Close HTML
-  html += content + '</body></html>';
+  html += '</body></html>';
 
   return html;
 }
