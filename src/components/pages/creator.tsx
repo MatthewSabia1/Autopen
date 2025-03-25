@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import CreateContentModal, { ContentData } from "../creator/CreateContentModal";
 const Creator = () => {
   const [open, setOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const navigate = useNavigate();
 
   // Sample templates for the gallery
   const templates = [
@@ -42,9 +44,9 @@ const Creator = () => {
     },
     {
       id: "2",
-      title: "E-Book",
+      title: "E-Book (NEW!)",
       description:
-        "Generate a complete digital book with chapters and sections",
+        "Generate a complete digital book with our new AI-powered workflow",
       category: "ebook",
       icon: <BookOpen className="h-10 w-10 text-accent-primary" />,
       featured: true,
@@ -136,10 +138,23 @@ const Creator = () => {
       : templates.filter((template) => template.category === activeFilter);
 
   const handleCreateContent = (data: ContentData) => {
-    console.log("Creating content:", data);
-    // Here you would typically navigate to the Brain Dump tool
-    // or start the content creation process
-    setOpen(false);
+    // For e-book content type, navigate to the integrated workflow
+    if (data.contentType === 'e-book') {
+      // Store the content data in session storage for the workflow to use
+      sessionStorage.setItem('newProjectData', JSON.stringify({
+        title: data.title,
+        description: data.description
+      }));
+      
+      // Navigate to the workflow page
+      navigate('/workflow');
+    } else {
+      // For other content types, show placeholder for now
+      console.log("Creating content:", data);
+      // Here you would typically navigate to the Brain Dump tool
+      // or start the content creation process
+      setOpen(false);
+    }
   };
 
   return (
@@ -152,15 +167,24 @@ const Creator = () => {
               <h1 className="text-3xl font-display text-ink-dark mb-3">AI Creator Studio</h1>
               <p className="text-ink-light font-serif text-lg mb-4">
                 Transform your ideas into polished content with the power of AI assistance.
-                Choose from our templates or start from scratch.
+                Try our <b>NEW eBook Workflow</b> for creating professional eBooks!
               </p>
-              <Button
-                className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif px-6 py-5 text-base"
-                onClick={() => setOpen(true)}
-              >
-                <Wand2 className="h-5 w-5" />
-                Create New Content
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif px-6 py-5 text-base"
+                  onClick={() => setOpen(true)}
+                >
+                  <Wand2 className="h-5 w-5" />
+                  Create New Content
+                </Button>
+                <Button
+                  className="gap-2 bg-accent-tertiary hover:bg-accent-tertiary/90 text-white font-serif px-6 py-5 text-base"
+                  onClick={() => navigate('/workflow')}
+                >
+                  <BookOpen className="h-5 w-5" />
+                  Try eBook Workflow
+                </Button>
+              </div>
             </div>
             <div className="hidden md:flex justify-center">
               <div className="relative w-48 h-48 flex-shrink-0">
@@ -205,7 +229,13 @@ const Creator = () => {
                       </p>
                       <Button 
                         className="bg-accent-primary hover:bg-accent-primary/90 text-white font-serif w-full"
-                        onClick={() => setOpen(true)}
+                        onClick={() => {
+                          if (template.category === 'ebook') {
+                            navigate('/workflow');
+                          } else {
+                            setOpen(true);
+                          }
+                        }}
                       >
                         Use Template
                       </Button>
@@ -306,7 +336,13 @@ const Creator = () => {
                       </p>
                       <Button 
                         className="mt-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
-                        onClick={() => setOpen(true)}
+                        onClick={() => {
+                          if (template.category === 'ebook') {
+                            navigate('/workflow');
+                          } else {
+                            setOpen(true);
+                          }
+                        }}
                       >
                         Use Template
                       </Button>

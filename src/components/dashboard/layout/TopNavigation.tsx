@@ -1,5 +1,5 @@
 import React from "react";
-import { Book, Settings, User } from "lucide-react";
+import { PenTool, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,6 +30,7 @@ const TopNavigation = ({
     { label: "Dashboard", href: "/dashboard" },
     { label: "Brain Dump", href: "/brain-dump" },
     { label: "Creator", href: "/creator" },
+    { label: "eBook Workflow", href: "/workflow" },
     { label: "Products", href: "/products" },
   ];
 
@@ -37,8 +38,8 @@ const TopNavigation = ({
     <header className="w-full h-16 border-b border-accent-tertiary/20 bg-paper flex items-center justify-between px-6 fixed top-0 z-50 transition-colors duration-200">
       <div className="flex items-center gap-8">
         <Link to="/" className="navbar-logo">
-          <Book className="h-5 w-5 text-accent-primary" />
-          <span>Textera</span>
+          <PenTool className="h-5 w-5 text-accent-primary" />
+          <span>Autopen</span>
         </Link>
 
         <nav className="navbar-links">
