@@ -30,7 +30,7 @@ import { AnimatePresence, motion } from 'framer-motion';
  */
 export default function EbookCreationWorkflow() {
   const navigate = useNavigate();
-  const { id: projectId } = useParams();
+  const { id: projectId, type: urlType } = useParams<{ id?: string; type?: string }>();
   
   const {
     currentStep,
@@ -40,8 +40,23 @@ export default function EbookCreationWorkflow() {
     createProject,
     loading,
     error,
-    resetWorkflow
+    resetWorkflow,
+    workflowType
   } = useWorkflow();
+  
+  // Safety check - ensure we're in the ebook workflow
+  useEffect(() => {
+    // Check workflow type in context matches component
+    if (workflowType !== 'ebook') {
+      console.warn('EbookCreationWorkflow being used with incorrect workflow type:', workflowType);
+    }
+    
+    // Check URL param matches workflow type
+    if (urlType !== 'ebook' && urlType !== undefined) {
+      console.warn('URL workflow type does not match component:', urlType);
+      navigate('/workflow/ebook', { replace: true });
+    }
+  }, [workflowType, urlType, navigate]);
 
   // Use ref to avoid render loop with storage check
   const hasCheckedStorageRef = useRef(false);

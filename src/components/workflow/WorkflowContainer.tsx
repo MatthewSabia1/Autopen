@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useWorkflow } from '@/lib/contexts/WorkflowContext';
+import { useWorkflow, WorkflowType } from '@/lib/contexts/WorkflowContext';
 import EbookCreationWorkflow from './EbookCreationWorkflow';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -16,24 +16,29 @@ const WorkflowContainer: React.FC = () => {
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const { resetWorkflow } = useWorkflow();
+  const { resetWorkflow, setWorkflowType, workflowType } = useWorkflow();
 
-  // Verify that the workflow type is valid
+  // Define which workflow types are currently available
+  const availableWorkflows = ['ebook'];
+
+  // Verify that the workflow type is valid and set it in the context
   useEffect(() => {
     if (!type) {
       setError('No workflow type specified');
       return;
     }
-
-    // Define which workflow types are currently available
-    const availableWorkflows = ['ebook'];
     
     if (!availableWorkflows.includes(type)) {
       setError(`Workflow type "${type}" is not yet available`);
     } else {
       setError(null);
+      
+      // Set the workflow type in the context if it doesn't match
+      if (workflowType !== type) {
+        setWorkflowType(type as WorkflowType); // Cast to WorkflowType safely since we've validated it
+      }
     }
-  }, [type]);
+  }, [type, workflowType, setWorkflowType]);
 
   // Back to workflow selection
   const handleBack = () => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWorkflow, WorkflowType } from '@/lib/contexts/WorkflowContext';
 import DashboardLayout from '../layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Sparkles, BookOpen, Video, FileText, GraduationCap, MessageSquare } from 'lucide-react';
@@ -12,6 +13,7 @@ import { Sparkles, BookOpen, Video, FileText, GraduationCap, MessageSquare } fro
  */
 const WorkflowSelectionPage = () => {
   const navigate = useNavigate();
+  const { setWorkflowType, resetWorkflow } = useWorkflow();
 
   // Workflow type definitions - will expand as we add more types
   const workflowTypes = [
@@ -58,7 +60,7 @@ const WorkflowSelectionPage = () => {
   ];
 
   return (
-    <DashboardLayout activeTab="eBook Workflow">
+    <DashboardLayout activeTab="AI Workflows">
       <div className="space-y-8 animate-fade-in">
         {/* Hero section */}
         <div className="bg-gradient-to-br from-accent-primary/10 to-accent-tertiary/5 rounded-xl p-6 md:p-8 shadow-textera mb-8">
@@ -93,7 +95,8 @@ const WorkflowSelectionPage = () => {
               }`}
               onClick={() => {
                 if (workflow.active) {
-                  navigate(`/workflow/${workflow.id}`);
+                  // Set workflow type and navigate
+                  resetWorkflow(workflow.id as WorkflowType);
                 }
               }}
             >
@@ -122,7 +125,7 @@ const WorkflowSelectionPage = () => {
                     className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif w-full"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/workflow/${workflow.id}`);
+                      resetWorkflow(workflow.id as WorkflowType);
                     }}
                   >
                     Start Workflow
