@@ -12,7 +12,8 @@ import {
   FileEdit, 
   Loader2, 
   RotateCcw, 
-  Sparkles 
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -425,7 +426,8 @@ const EbookWritingStep = () => {
                   {chapter.status === 'pending' && (
                     <Button
                       size="sm"
-                      className="gap-1.5 px-3 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif h-8"
+                      variant="workflow"
+                      className="gap-1.5 px-3 h-8"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleGenerateChapter(chapter.id);
@@ -439,8 +441,8 @@ const EbookWritingStep = () => {
                   {chapter.status === 'generated' && (
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="gap-1.5 px-3 border-accent-tertiary/30 text-ink-light font-serif h-8"
+                      variant="workflowOutline"
+                      className="gap-1.5 px-3 h-8"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleGenerateChapter(chapter.id);
@@ -491,7 +493,8 @@ const EbookWritingStep = () => {
       {ebookChapters.some(c => c.status === 'pending') && (
         <div className="space-y-4">
           <Button
-            className="gap-2 w-full bg-[#738996]/10 hover:bg-[#738996]/20 text-[#738996] font-serif"
+            className="gap-2 w-full"
+            variant="workflowOutline"
             onClick={() => {
               const nextPendingChapter = ebookChapters.find(c => c.status === 'pending');
               if (nextPendingChapter) {
@@ -505,7 +508,8 @@ const EbookWritingStep = () => {
           </Button>
           
           <Button
-            className="gap-2 w-full bg-[#738996] hover:bg-[#647989] text-white font-serif shadow-sm transition-all duration-300"
+            className="gap-2 w-full"
+            variant="workflow"
             onClick={async () => {
               // Get all pending chapters
               const pendingChapters = ebookChapters
@@ -576,20 +580,26 @@ const EbookWritingStep = () => {
         </div>
       )}
 
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-between mt-8">
         <Button
-          variant="outline"
+          variant="workflowOutline"
           onClick={() => setCurrentStep('idea-selection')}
-          className="font-serif"
+          className="gap-2"
         >
           Back
         </Button>
         <Button
-          className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+          className="gap-2"
+          variant={allChaptersGenerated ? "workflowGold" : "workflow"}
           onClick={handleProceed}
           disabled={!allChaptersGenerated}
         >
-          {allChaptersGenerated ? 'Preview eBook' : 'Generate All Chapters First'}
+          {allChaptersGenerated ? (
+            <>
+              Preview eBook
+              <ArrowRight className="h-4 w-4" />
+            </>
+          ) : 'Generate All Chapters First'}
         </Button>
       </div>
     </div>

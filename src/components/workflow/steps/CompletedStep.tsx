@@ -56,6 +56,7 @@ const CompletedStep = () => {
               <Button
                 onClick={() => navigate('/dashboard')}
                 className="gap-2 mt-auto"
+                variant="workflow"
               >
                 Go to Dashboard
               </Button>
@@ -80,7 +81,7 @@ const CompletedStep = () => {
                 Preview your completed eBook directly in your browser and make any final adjustments if needed.
               </p>
               <Button
-                variant="outline"
+                variant="workflowOutline"
                 onClick={() => navigate('/dashboard')}
                 className="gap-2 mt-auto"
               >
@@ -108,7 +109,8 @@ const CompletedStep = () => {
               </p>
               <Button
                 onClick={() => resetWorkflow()}
-                className="gap-2 mt-auto bg-accent-primary hover:bg-accent-primary/90"
+                className="gap-2 mt-auto"
+                variant="workflowGold"
               >
                 <ArrowRight className="h-4 w-4" />
                 Create New
@@ -143,7 +145,8 @@ const CompletedStep = () => {
 
       <div className="flex justify-center mt-8">
         <Button
-          className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+          className="gap-2"
+          variant="workflow"
           onClick={() => navigate('/dashboard')}
         >
           Return to Dashboard

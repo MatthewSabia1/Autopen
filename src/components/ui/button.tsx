@@ -29,6 +29,14 @@ const buttonVariants = cva(
           "bg-transparent text-accent-yellow hover:bg-accent-yellow/10 hover:shadow-yellow-sm border border-accent-yellow/30 hover:border-accent-yellow/50 transition-all duration-200",
         cta:
           "bg-accent-yellow text-white hover:bg-accent-yellow/90 shadow-yellow-sm hover:shadow-yellow transition-all duration-200",
+        workflow:
+          "bg-accent-primary text-white hover:bg-accent-secondary hover:shadow-blue-sm active:bg-accent-primary/95 transition-all duration-200",
+        workflowSecondary:
+          "bg-accent-secondary text-white hover:bg-accent-primary hover:shadow-blue-sm active:bg-accent-secondary/95 transition-all duration-200",
+        workflowOutline:
+          "border border-accent-tertiary/30 bg-white text-accent-primary hover:border-accent-primary/40 hover:shadow-blue-sm hover:bg-accent-tertiary/5 active:bg-accent-primary/5 transition-all duration-200",
+        workflowGold:
+          "bg-accent-yellow text-white hover:bg-accent-yellow/90 shadow-yellow-sm hover:shadow-yellow transition-all duration-200",
       },
       size: {
         default: "h-11 px-5 py-2.5 text-button",

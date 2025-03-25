@@ -546,6 +546,7 @@ const EbookPreviewStep = () => {
                   <Button
                     onClick={handleDownloadMarkdown}
                     className="gap-2 w-full"
+                    variant="workflowOutline"
                     disabled={isGenerating !== null}
                   >
                     {isGenerating === 'markdown' ? (
@@ -575,7 +576,8 @@ const EbookPreviewStep = () => {
                   </p>
                   <Button
                     onClick={handleDownloadPdf}
-                    className="gap-2 w-full bg-[#738996] hover:bg-[#647989] text-white"
+                    className="gap-2 w-full"
+                    variant="workflow"
                     disabled={isGenerating !== null}
                   >
                     {isGenerating === 'pdf' ? (
@@ -606,6 +608,7 @@ const EbookPreviewStep = () => {
                   <Button
                     onClick={handleDownloadEpub}
                     className="gap-2 w-full"
+                    variant="workflowOutline"
                     disabled={isGenerating !== null}
                   >
                     {isGenerating === 'epub' ? (
@@ -628,25 +631,18 @@ const EbookPreviewStep = () => {
       </Tabs>
 
       {/* Actions */}
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-between mt-8">
         <Button
-          variant="outline"
+          variant="workflowOutline"
           onClick={() => setCurrentStep('ebook-writing')}
-          className="font-serif"
+          className="gap-2"
         >
           Back to Editor
         </Button>
         
         <Button
-          className={`
-            gap-2 font-serif transition-all duration-300 relative overflow-hidden
-            ${isGenerating === 'finalizing' 
-              ? "bg-[#738996] text-white opacity-90 pointer-events-none" 
-              : isFinalized
-                ? "bg-green-500 hover:bg-green-600 text-white"
-                : "bg-[#738996] hover:bg-[#647989] text-white"
-            }
-          `}
+          className="gap-2 relative overflow-hidden"
+          variant={isFinalized ? "workflowGold" : "workflow"}
           onClick={handleFinalize}
           disabled={!allChaptersGenerated || isFinalized || isGenerating === 'finalizing'}
         >

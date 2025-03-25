@@ -372,11 +372,11 @@ export default function EbookCreationWorkflow() {
         )}
         
         {/* Hero section */}
-        <div className="bg-gradient-to-br from-accent-primary/20 to-accent-primary/5 rounded-xl p-8 md:p-10 shadow-blue-sm mb-8">
+        <div className="bg-gradient-to-br from-accent-primary/15 to-accent-primary/5 rounded-xl p-8 md:p-10 shadow-blue-sm mb-8 border border-accent-tertiary/10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h1 className="text-page-title font-display text-ink-dark mb-2 flex items-center gap-2 tracking-tight">
-                <BookText className="h-7 w-7 text-accent-primary" />
+                <BookText className="h-7 w-7 text-accent-yellow" />
                 {project ? project.title : 'Create New eBook'}
               </h1>
               <p className="text-body text-ink-light font-serif max-w-xl">
@@ -386,11 +386,11 @@ export default function EbookCreationWorkflow() {
             
             {/* Back to dashboard button */}
             <Button
-              variant="outline"
-              className="flex-shrink-0 border-accent-tertiary/30 hover:border-accent-primary/30"
+              variant="workflowOutline"
+              className="flex-shrink-0 gap-2"
               onClick={() => navigate('/dashboard')}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
               Dashboard
             </Button>
           </div>

@@ -271,6 +271,21 @@ const BrainDumpStep = () => {
     }
   }, [brainDump]);
   
+  // Check if URL is YouTube when linkUrl changes
+  useEffect(() => {
+    // Only update isYouTube if linkUrl has a value and avoid unnecessary state updates
+    if (linkUrl) {
+      const youtubeUrl = isYoutubeUrl(linkUrl);
+      // Only set state if it's different from current value
+      if (isYouTube !== youtubeUrl) {
+        setIsYouTube(youtubeUrl);
+      }
+    } else if (isYouTube) {
+      // Only update state if isYouTube is currently true
+      setIsYouTube(false);
+    }
+  }, [linkUrl, isYouTube]);
+  
   // Track brain dump analyze status
   useEffect(() => {
     if (brainDump?.status === 'analyzing') {
@@ -425,11 +440,8 @@ const BrainDumpStep = () => {
     
     setError(null);
     
-    // Check if the link is a YouTube URL
-    const isYouTubeLink = isYoutubeUrl(linkUrl);
-    
     // Create title based on URL type
-    const title = isYouTubeLink 
+    const title = isYouTube 
       ? `YouTube Video: ${extractYoutubeVideoId(linkUrl) || 'Unknown'}`
       : `Web Page: ${new URL(linkUrl).hostname}`;
     
@@ -437,7 +449,7 @@ const BrainDumpStep = () => {
       await addBrainDumpLink(
         linkUrl, 
         title, 
-        isYouTubeLink ? 'youtube' : 'webpage'
+        isYouTube ? 'youtube' : 'webpage'
       );
       
       // Reset form
@@ -492,7 +504,25 @@ const BrainDumpStep = () => {
   };
 
   /**
-   * Validates if there is enough content to analyze
+   * Validates if there is enough content to analyze without setting error state
+   */
+  const isContentValid = (): boolean => {
+    // Check if we have enough content to analyze
+    const wordCount = content.trim().split(/\s+/).length;
+    
+    if (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
+      return false;
+    }
+    
+    if (content.trim() && wordCount < 50 && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
+      return false;
+    }
+    
+    return true;
+  };
+  
+  /**
+   * Sets appropriate error message based on content validation
    */
   const validateContent = (): boolean => {
     // Check if we have enough content to analyze
@@ -777,22 +807,23 @@ const BrainDumpStep = () => {
               <p className="text-sm text-ink-light mb-4 font-serif">
                 Support for .docx, .pdf, .txt, .md, and more
               </p>
-              <div className="flex justify-center space-x-3">
-                <Button 
-                  variant="outline" 
-                  className="text-sm"
+              <div className="flex flex-col gap-2 md:flex-row mt-6">
+                <Button
+                  variant="workflowGold"
+                  className="gap-2"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <File className="w-4 h-4 mr-1.5" />
-                  Documents
+                  <Upload className="h-4 w-4" />
+                  Upload File
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="text-sm"
+                
+                <Button
+                  variant="workflowOutline"
+                  className="gap-2"
                   onClick={() => imageInputRef.current?.click()}
                 >
-                  <Image className="w-4 h-4 mr-1.5" />
-                  Images
+                  <Image className="h-4 w-4" />
+                  Add Image
                 </Button>
               </div>
               <input 
@@ -820,67 +851,25 @@ const BrainDumpStep = () => {
           <TabsContent value="link" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="content-url" className="form-label">URL</Label>
-              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0">
-                <div className="flex flex-1">
-                  <div 
-                    className={`flex-shrink-0 bg-cream border border-accent-tertiary/30 rounded-l-md p-3 flex items-center cursor-pointer ${isYouTube ? 'text-red-500' : 'text-accent-primary'}`}
-                    onClick={() => setIsYouTube(!isYouTube)}
-                  >
-                    {isYouTube ? (
-                      <Youtube className="w-5 h-5" />
-                    ) : (
-                      <LinkIcon className="w-5 h-5" />
-                    )}
-                  </div>
-                  <Input
-                    type="url" 
-                    id="content-url"
-                    placeholder={isYouTube ? "https://www.youtube.com/watch?v=..." : "https://example.com"}
-                    value={linkUrl}
-                    onChange={(e) => {
-                      setLinkUrl(e.target.value);
-                      // Auto-detect if it's a YouTube link
-                      if (isYoutubeUrl(e.target.value) && !isYouTube) {
-                        setIsYouTube(true);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && linkUrl) {
-                        handleLinkAdd();
-                      }
-                    }}
-                    className="w-full border-l-0 rounded-r-md focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                  />
-                </div>
+              <div className="flex gap-3 items-center">
+                <Input
+                  value={linkUrl}
+                  onChange={(e) => {
+                    setLinkUrl(e.target.value);
+                  }}
+                  placeholder={isYouTube ? "YouTube URL" : "Link to website or article"}
+                  className="flex-1"
+                />
                 <Button
                   onClick={handleLinkAdd}
                   disabled={!linkUrl}
-                  className="sm:ml-3"
+                  variant="workflow"
+                  className="gap-2"
                 >
-                  Add Link
+                  <span>{isYouTube ? 'Add Video' : 'Add Link'}</span>
+                  {isYouTube ? <Youtube className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
                 </Button>
               </div>
-              <div className="flex mt-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setIsYouTube(false)}
-                  className={`mr-4 py-1 font-serif ${!isYouTube ? 'text-accent-primary border-b border-accent-primary' : 'text-ink-light'}`}
-                >
-                  Webpage
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsYouTube(true)}
-                  className={`py-1 font-serif ${isYouTube ? 'text-red-500 border-b border-red-500' : 'text-ink-light'}`}
-                >
-                  YouTube Video
-                </button>
-              </div>
-              {isYouTube && (
-                <p className="mt-2 text-xs text-ink-faded font-serif">
-                  YouTube videos will be processed to extract the transcript for analysis if available.
-                </p>
-              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -1004,28 +993,21 @@ const BrainDumpStep = () => {
         </div>
       )}
 
-      <div className="flex justify-end space-x-4">
+      <div className="flex items-center justify-between mt-8">
         <Button
-          variant="outline"
+          variant="workflowOutline"
+          className="gap-2"
           onClick={() => setCurrentStep('creator')}
-          className="font-serif"
-          disabled={isSaving || isAnalyzing}
         >
-          Back
+          Back to Project Info
         </Button>
+        
+        {/* Show analyze button if we have content */}
         <Button
-          className={cn(
-            "gap-2 font-serif transition-all duration-300",
-            isAnalyzing 
-              ? "bg-accent-secondary text-ink-dark shadow-yellow-sm" 
-              : "bg-accent-primary hover:bg-accent-secondary hover:shadow-yellow-sm text-ink-dark"
-          )}
           onClick={handleAnalyze}
-          disabled={
-            (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) || 
-            isSaving || 
-            isAnalyzing
-          }
+          disabled={isAnalyzing || !isContentValid()}
+          variant="workflow"
+          className="gap-2"
         >
           {isAnalyzing ? (
             <>

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, Wand2, LogIn } from 'lucide-react';
+import { BookOpen, Wand2, LogIn, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 /**
@@ -143,12 +143,13 @@ const CreatorStep = () => {
           
           <Button 
             type="submit" 
-            className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+            className="gap-2"
+            variant="workflowGold"
             disabled={isSubmitting || !user}
           >
             {isSubmitting ? (
               <>
-                <span className="animate-spin mr-2">⌛</span>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Creating...
               </>
             ) : (

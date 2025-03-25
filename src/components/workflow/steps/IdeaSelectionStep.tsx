@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Check, Lightbulb, Loader2, PencilLine, Plus } from 'lucide-react';
+import { Check, Lightbulb, Loader2, PencilLine, Plus, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -305,9 +305,9 @@ const IdeaSelectionStep = () => {
                       />
                     </div>
                     <Button
-                      variant="outline"
+                      variant="workflowOutline"
                       size="sm"
-                      className="text-accent-primary border-accent-primary/20 hover:bg-accent-primary/5"
+                      className="text-accent-primary hover:bg-accent-primary/5"
                       onClick={() => setCustomMode(false)}
                     >
                       Cancel
@@ -323,7 +323,7 @@ const IdeaSelectionStep = () => {
                       Have a specific idea in mind? Define your own custom eBook concept.
                     </p>
                     <Button 
-                      variant="outline" 
+                      variant="workflowOutline" 
                       size="sm"
                       className="flex items-center gap-1.5"
                     >
@@ -338,16 +338,17 @@ const IdeaSelectionStep = () => {
         </AnimatePresence>
       </div>
 
-      <div className="flex justify-end space-x-4" data-proceed-buttons>
+      <div className="flex items-center justify-between mt-8" data-proceed-buttons>
         <Button
-          variant="outline"
+          variant="workflowOutline"
           onClick={() => setCurrentStep('brain-dump')}
-          className="font-serif"
+          className="gap-2"
         >
           Back
         </Button>
         <Button
-          className="gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-serif"
+          className="gap-2"
+          variant={(!selectedIdea && !customMode) ? "workflow" : "workflowGold"}
           onClick={handleProceed}
           disabled={(!selectedIdea && !customMode) || isCreating}
         >
@@ -357,7 +358,10 @@ const IdeaSelectionStep = () => {
               Creating eBook...
             </>
           ) : (
-            <>Proceed</>
+            <>
+              Continue
+              <ArrowRight className="h-4 w-4" />
+            </>
           )}
         </Button>
       </div>
