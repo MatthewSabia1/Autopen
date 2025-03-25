@@ -270,13 +270,14 @@ export function useProducts() {
       // Sort by updated_at (newest first)
       allProducts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       
-      // Update state and cache the results
+      // Create a new array reference and immediately update state
       console.log('Products fetch complete - updating state with:', allProducts.length, 'products');
-      setProducts([...allProducts]);
+      const productsToReturn = [...allProducts]; // Create a new reference to return
+      setProducts(productsToReturn);
       
       try {
         localStorage.setItem('cached_products', JSON.stringify({
-          data: allProducts,
+          data: productsToReturn,
           timestamp: Date.now()
         }));
         console.log('Products cached in localStorage successfully');
@@ -284,7 +285,10 @@ export function useProducts() {
         console.log("Cache write error (non-critical):", cacheError);
       }
       
-      return allProducts;
+      // Use a small delay to ensure state is updated before we continue
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      return productsToReturn;
     } catch (supaError: any) {
       // Special handling for relation-does-not-exist errors
       if (supaError.code === '42P01') {

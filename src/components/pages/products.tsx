@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { 
@@ -43,36 +43,48 @@ import { useProducts, Product } from "../../hooks/useProducts";
 export default function ProductsPage() {
   const { products, isLoading, error, deleteProduct, refreshProducts } = useProducts();
   const [searchQuery, setSearchQuery] = useState("");
+  const [forceUpdate, setForceUpdate] = useState(0);
+  const productsRef = useRef(products);
   const navigate = useNavigate();
 
-  // Log when component mounts and when products update
   useEffect(() => {
-    console.log('Products updated or component mounted, count:', products.length);
+    if (products && products.length > 0 && JSON.stringify(productsRef.current) !== JSON.stringify(products)) {
+      console.log('Products actually changed!', products.length);
+      productsRef.current = products;
+      setForceUpdate(prev => prev + 1);
+    }
   }, [products]);
 
-  // Refresh products when component mounts
+  useEffect(() => {
+    console.log('Products updated or component mounted, count:', products.length, 'forceUpdate:', forceUpdate);
+  }, [products, forceUpdate]);
+
   useEffect(() => {
     console.log('ProductsPage mounted, refreshing products...');
     refreshProducts().then(freshProducts => {
       console.log('Products refreshed, count:', freshProducts?.length || 0);
+      if (freshProducts && freshProducts.length > 0) {
+        productsRef.current = freshProducts;
+        setForceUpdate(prev => prev + 1);
+      }
     });
   }, []);
 
-  // Calculate filtered products directly from the products prop and search query
-  // This ensures we're always in sync with the latest products data
   const filteredProducts = useMemo(() => {
-    console.log('Recalculating filtered products from', products.length, 'products');
+    const currentProducts = productsRef.current || [];
+    console.log('Recalculating filtered products from', currentProducts.length, 'products');
+    
     if (!searchQuery.trim()) {
-      return products;
+      return currentProducts;
     }
     
     const lowercaseQuery = searchQuery.toLowerCase();
-    return products.filter(
+    return currentProducts.filter(
       product => 
         product.title.toLowerCase().includes(lowercaseQuery) || 
         product.type.toLowerCase().includes(lowercaseQuery)
     );
-  }, [products, searchQuery]);
+  }, [searchQuery, forceUpdate]);
 
   const handleDelete = async (id: string) => {
     const product = products.find(p => p.id === id);
@@ -81,7 +93,6 @@ export default function ProductsPage() {
     if (!confirm(`Are you sure you want to delete "${product.title}"?`)) return;
     
     try {
-      // If from projects table, warn user about potential data loss
       if (product.source === 'projects') {
         if (!confirm(`WARNING: This will delete the entire project and all associated data. This action cannot be undone. Continue?`)) {
           return;
@@ -100,8 +111,6 @@ export default function ProductsPage() {
     const product = products.find(p => p.id === id);
     if (!product) return;
     
-    // Direct all products to the creator tool
-    // This simplifies the routing logic and ensures consistent editing experience
     navigate(`/creator?id=${id}&mode=edit`);
   };
 
@@ -111,12 +120,10 @@ export default function ProductsPage() {
     
     if (!product) {
       console.warn("Product not found in state:", id);
-      // Still try to navigate even if not in state
       navigate(`/products/${id}`);
       return;
     }
     
-    // Navigate to the dedicated product detail page
     console.log("Navigating to product detail:", product.title);
     navigate(`/products/${id}`);
   };
@@ -125,13 +132,9 @@ export default function ProductsPage() {
     const product = products.find(p => p.id === id);
     if (!product) return;
     
-    // Skip if product is already complete or published
     if (product.status === 'complete' || product.status === 'published') return;
     
-    // For ebooks in progress, check for workflow metadata
     if (product.type === 'ebook') {
-      // Determine the correct step to resume from
-      // First check metadata.workflow_step, fallback to status if needed
       const resumeStep = product.metadata?.workflow_step ||
         (product.status === 'in_progress' ? 'ebook-writing' : 
          product.status === 'draft' ? 'brain-dump' : null);
@@ -139,20 +142,16 @@ export default function ProductsPage() {
       if (resumeStep) {
         console.log('Continuing ebook workflow at step:', resumeStep);
         
-        // Store resumption data in session storage for the workflow to pick up
-        // Clean up any existing data first
         sessionStorage.removeItem('resumeWorkflow');
         
-        // Store the new resumption data
         sessionStorage.setItem('resumeWorkflow', JSON.stringify({
           productId: product.id,
           projectId: product.project_id,
           step: resumeStep,
           type: 'ebook',
-          timestamp: Date.now() // Add timestamp for potential expiry checking
+          timestamp: Date.now()
         }));
         
-        // Navigate directly to the workflow with project ID
         if (product.project_id) {
           console.log(`Navigating to workflow/${product.project_id} to resume at ${resumeStep}`);
           navigate(`/workflow/${product.project_id}`);
@@ -161,11 +160,9 @@ export default function ProductsPage() {
       }
     }
     
-    // Default fallback - go to creator
     navigate(`/creator?id=${id}`);
   };
 
-  // Format date safely
   const formatDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'MMM d, yyyy');
@@ -175,15 +172,12 @@ export default function ProductsPage() {
     }
   };
 
-  // Render status badge with appropriate color
   const renderStatusBadge = (status: string) => {
-    // Map the status to our normalized status names
     let normalizedStatus = status;
     if (status === "in_progress") normalizedStatus = "inProgress";
     if (status === "pending") normalizedStatus = "inProgress";
     if (status === "processing") normalizedStatus = "generating";
     
-    // Define status variants with consistent styling - using pastel colors to match app theme
     const variants = {
       draft: { 
         bg: "bg-amber-50", 
@@ -222,10 +216,8 @@ export default function ProductsPage() {
       }
     };
     
-    // Get the variant or default to draft
     const variant = variants[normalizedStatus as keyof typeof variants] || variants.draft;
     
-    // For processing/pending states, use the appropriate label
     let statusLabel = variant.label;
     if (status === "pending") statusLabel = "Pending";
     if (status === "processing") statusLabel = "Processing";
@@ -298,7 +290,6 @@ export default function ProductsPage() {
   return (
     <DashboardLayout activeTab="Products">
       <div className="space-y-6 animate-fade-in">
-        {/* Header section */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
           <div>
             <h2 className="font-display text-2xl text-ink-dark/90 mb-1 font-medium">
@@ -360,8 +351,13 @@ export default function ProductsPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {console.log('Rendering with filteredProducts:', filteredProducts ? `Array(${filteredProducts.length})` : 'undefined/null')}
-            {!products || products.length === 0 ? (
+            {console.log('RENDER:', {
+              products: products?.length || 0,
+              productsRef: productsRef.current?.length || 0,
+              filteredProducts: filteredProducts?.length || 0,
+              forceUpdate
+            })}
+            {!productsRef.current || productsRef.current.length === 0 ? (
               <div className="p-16 text-center">
                 <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-accent-tertiary/5 flex items-center justify-center">
                   <BookOpen className="w-10 h-10 text-accent-tertiary/60" />
@@ -509,7 +505,6 @@ export default function ProductsPage() {
           </CardContent>
         </Card>
 
-        {/* Quick actions */}
         {filteredProducts.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
             <Card className="bg-paper dark:bg-gray-800 p-4 border border-accent-tertiary/10 dark:border-gray-700/80 shadow-sm">
