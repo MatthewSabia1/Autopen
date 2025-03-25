@@ -810,7 +810,7 @@ const BrainDumpStep = () => {
               <div className="flex flex-col gap-2 md:flex-row mt-6">
                 <Button
                   variant="workflowGold"
-                  className="gap-2"
+                  className="gap-2 text-white"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="h-4 w-4" />
@@ -864,7 +864,7 @@ const BrainDumpStep = () => {
                   onClick={handleLinkAdd}
                   disabled={!linkUrl}
                   variant="workflow"
-                  className="gap-2"
+                  className="gap-2 text-white"
                 >
                   <span>{isYouTube ? 'Add Video' : 'Add Link'}</span>
                   {isYouTube ? <Youtube className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
@@ -1007,7 +1007,7 @@ const BrainDumpStep = () => {
           onClick={handleAnalyze}
           disabled={isAnalyzing || !isContentValid()}
           variant="workflow"
-          className="gap-2"
+          className="gap-2 text-white"
         >
           {isAnalyzing ? (
             <>

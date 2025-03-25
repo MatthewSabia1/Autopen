@@ -211,6 +211,8 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
    * Updates the current workflow step
    */
   const setCurrentStep = (step: WorkflowStep) => {
+    // Scroll to top when changing steps
+    window.scrollTo(0, 0);
     setState(prevState => ({ ...prevState, currentStep: step }));
   };
 

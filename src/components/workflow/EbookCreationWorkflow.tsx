@@ -396,83 +396,115 @@ export default function EbookCreationWorkflow() {
           </div>
         </div>
 
-        {/* Progress indicator */}
-        <div className="hidden md:flex items-center mb-8 bg-paper rounded-lg border border-gray-100 shadow-textera-md overflow-hidden">
-          {steps.map((step, i) => {
-            const isActive = currentStep === step.id;
-            const isCompleted = i < currentStepIndex;
-            const isDisabled = i > currentStepIndex && !isActive;
-            
-            return (
-              <div 
-                key={step.id} 
-                className={cn(
-                  "flex items-center justify-center py-3.5 px-4 rounded-md transition-all duration-300 flex-1 relative group",
-                  isActive ? "bg-gradient-to-br from-accent-primary to-accent-secondary text-white font-medium" : 
-                  isCompleted ? "text-accent-primary hover:bg-accent-tertiary/10" : 
-                  "text-ink-light hover:text-ink-dark hover:bg-gray-50"
-                )}
-              >
-                <div className="flex flex-col items-start">
-                  <div className="flex items-center">
-                    <div className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center mr-2 flex-shrink-0 transition-all duration-300",
-                      isActive ? "bg-white text-accent-primary shadow-sm" :
-                      isCompleted ? "bg-accent-yellow text-white" :
-                      "bg-slate-100 text-slate-500"
-                    )}>
+        {/* Progress indicator - enhanced design */}
+        <div className="hidden md:block mb-10">
+          <div className="bg-paper rounded-xl border border-accent-tertiary/20 shadow-textera overflow-hidden p-4">
+            <div className="flex items-center justify-between relative">
+              {/* Progress line underneath - shows completion */}
+              <div className="absolute top-6 left-0 h-[3px] bg-accent-yellow/70" 
+                   style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }} />
+              
+              {/* Background line */}
+              <div className="absolute top-6 left-0 h-[3px] w-full bg-slate-200/70" />
+              
+              {/* Steps */}
+              {steps.map((step, i) => {
+                const isActive = currentStep === step.id;
+                const isCompleted = i < currentStepIndex;
+                const isDisabled = i > currentStepIndex && !isActive;
+                
+                return (
+                  <div key={step.id} className="z-10 flex flex-col items-center relative">
+                    {/* Step circle */}
+                    <div 
+                      className={cn(
+                        "h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 mb-3",
+                        isActive 
+                          ? "bg-accent-primary text-white shadow-md ring-4 ring-accent-primary/20" 
+                          : isCompleted 
+                            ? "bg-accent-yellow text-white" 
+                            : "bg-slate-100 text-slate-400 border border-slate-200"
+                      )}
+                    >
                       {isCompleted ? (
-                        <CheckCircle className="h-3.5 w-3.5" />
+                        <CheckCircle className="h-5 w-5" />
                       ) : (
-                        <span className="text-xs font-medium">{i + 1}</span>
+                        <span className="text-sm font-medium">{i + 1}</span>
                       )}
                     </div>
-                    <span className={cn(
-                      "font-serif text-small font-medium",
-                      isActive && "text-white"
-                    )}>
-                      {step.title}
-                    </span>
+                    
+                    {/* Step title with icon */}
+                    <div className="flex flex-col items-center">
+                      <div className={cn(
+                        "flex items-center justify-center mb-1",
+                        isActive 
+                          ? "text-accent-primary" 
+                          : isCompleted 
+                            ? "text-accent-yellow" 
+                            : "text-slate-500"
+                      )}>
+                        {step.icon}
+                      </div>
+                      <span className={cn(
+                        "text-xs font-medium font-serif text-center whitespace-nowrap px-1",
+                        isActive 
+                          ? "text-accent-primary" 
+                          : isCompleted 
+                            ? "text-accent-yellow" 
+                            : "text-slate-500"
+                      )}>
+                        {step.title}
+                      </span>
+                    </div>
                   </div>
-                  
-                  {/* Only show description for active step or on hover */}
-                  <div className={cn(
-                    "hidden md:block ml-8 text-xs font-serif max-w-[140px] mt-1 transition-opacity duration-200",
-                    isActive ? "text-white text-opacity-90 opacity-100" : 
-                    "text-ink-light opacity-0 group-hover:opacity-100"
-                  )}>
-                    {step.description}
-                  </div>
-                </div>
-                
-                {i < steps.length - 1 && (
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 z-10">
-                    <ChevronRight className={cn(
-                      "h-4 w-4", 
-                      isActive || isCompleted ? "text-white" : "text-slate-300"
-                    )} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Active step description */}
+          <div className="text-center mt-4">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent-primary/5 rounded-full border border-accent-primary/10">
+              {steps.find(s => s.id === currentStep)?.icon}
+              <span className="font-serif text-sm text-accent-primary">
+                {steps.find(s => s.id === currentStep)?.description}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Mobile progress indicator */}
-        <div className="md:hidden mb-6">
-          <div className="flex justify-between text-xs text-ink-light font-serif mb-2">
-            <span>Progress</span>
-            <span>{progress}%</span>
-          </div>
-          <Progress value={progress} className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-accent-primary to-accent-yellow rounded-full transition-all duration-1000"
-              style={{ width: `${progress}%` }}
-            />
-          </Progress>
-          <div className="mt-3 flex items-center text-small font-medium text-ink-dark font-serif">
-            {steps.find(s => s.id === currentStep)?.icon}
-            <span className="ml-2">{steps.find(s => s.id === currentStep)?.title || 'Unknown Step'}</span>
+        <div className="md:hidden mb-8">
+          <div className="bg-paper rounded-xl border border-accent-tertiary/20 shadow-textera-sm p-4">
+            {/* Progress bar */}
+            <div className="relative h-2 bg-slate-100 rounded-full mb-5 overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-accent-primary to-accent-yellow rounded-full transition-all duration-1000"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            
+            {/* Current step info */}
+            <div className="flex items-center gap-4">
+              <div 
+                className="h-10 w-10 rounded-full bg-accent-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm"
+              >
+                <span className="text-xs font-medium">{currentStepIndex + 1}</span>
+              </div>
+              
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  {steps.find(s => s.id === currentStep)?.icon}
+                  <span className="font-serif font-medium text-ink-dark">
+                    {steps.find(s => s.id === currentStep)?.title || 'Unknown Step'}
+                  </span>
+                </div>
+                
+                <span className="text-xs text-ink-light font-serif mt-0.5">
+                  {steps.find(s => s.id === currentStep)?.description}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -576,7 +576,7 @@ const EbookPreviewStep = () => {
                   </p>
                   <Button
                     onClick={handleDownloadPdf}
-                    className="gap-2 w-full"
+                    className="gap-2 w-full text-white"
                     variant="workflow"
                     disabled={isGenerating !== null}
                   >
@@ -641,7 +641,7 @@ const EbookPreviewStep = () => {
         </Button>
         
         <Button
-          className="gap-2 relative overflow-hidden"
+          className="gap-2 relative overflow-hidden text-white"
           variant={isFinalized ? "workflowGold" : "workflow"}
           onClick={handleFinalize}
           disabled={!allChaptersGenerated || isFinalized || isGenerating === 'finalizing'}

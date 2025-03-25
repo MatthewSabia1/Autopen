@@ -55,7 +55,7 @@ const CompletedStep = () => {
               </p>
               <Button
                 onClick={() => navigate('/dashboard')}
-                className="gap-2 mt-auto"
+                className="gap-2 mt-auto text-white"
                 variant="workflow"
               >
                 Go to Dashboard
@@ -109,7 +109,7 @@ const CompletedStep = () => {
               </p>
               <Button
                 onClick={() => resetWorkflow()}
-                className="gap-2 mt-auto"
+                className="gap-2 mt-auto text-white"
                 variant="workflowGold"
               >
                 <ArrowRight className="h-4 w-4" />
@@ -145,7 +145,7 @@ const CompletedStep = () => {
 
       <div className="flex justify-center mt-8">
         <Button
-          className="gap-2"
+          className="gap-2 text-white"
           variant="workflow"
           onClick={() => navigate('/dashboard')}
         >

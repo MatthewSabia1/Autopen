@@ -143,7 +143,7 @@ const CreatorStep = () => {
           
           <Button 
             type="submit" 
-            className="gap-2"
+            className="gap-2 text-white"
             variant="workflowGold"
             disabled={isSubmitting || !user}
           >

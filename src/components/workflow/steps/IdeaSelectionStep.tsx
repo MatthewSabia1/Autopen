@@ -40,24 +40,7 @@ const IdeaSelectionStep = () => {
     setSelectedIdea(id);
     setCustomMode(false);
     
-    // Find proceed button more safely - only scroll if needed
-    setTimeout(() => {
-      try {
-        // Try to find the proceed button container first
-        const actionButtons = document.querySelector('[data-proceed-buttons]');
-        if (actionButtons) {
-          actionButtons.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-          // Fallback to scrolling to the bottom
-          window.scrollTo({
-            top: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) - window.innerHeight,
-            behavior: 'smooth'
-          });
-        }
-      } catch (err) {
-        console.warn('Error scrolling to proceed button:', err);
-      }
-    }, 300);
+    // Remove auto-scrolling functionality
   };
 
   /**
@@ -150,6 +133,16 @@ const IdeaSelectionStep = () => {
           Based on your content, we've generated some eBook ideas for you. 
           Select one that resonates with your vision, or create your own custom idea.
         </p>
+        
+        {/* Selection instructions - added for clarity */}
+        <div className="mt-4 p-3 bg-accent-primary/5 rounded-lg border border-accent-primary/10 inline-flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full border-2 border-accent-primary bg-paper flex items-center justify-center">
+            <Check className="h-3 w-3 text-accent-primary" />
+          </div>
+          <p className="text-sm text-accent-primary font-serif">
+            Click on an idea card and select the circle to choose that option
+          </p>
+        </div>
       </div>
 
       {error && (
@@ -223,28 +216,34 @@ const IdeaSelectionStep = () => {
             >
               <Card 
                 className={cn(
-                  "h-full border cursor-pointer transition-all duration-200 overflow-hidden",
+                  "h-full border cursor-pointer transition-all duration-200 overflow-hidden relative",
                   selectedIdea === idea.id 
                     ? "border-accent-primary/50 bg-accent-primary/5 shadow-md" 
                     : "border-accent-tertiary/20 bg-paper hover:border-accent-tertiary/40 hover:shadow-sm"
                 )}
                 onClick={() => handleIdeaSelect(idea.id)}
               >
+                {/* Selection checkbox - made larger and more prominent */}
+                <div className="absolute top-4 right-4 z-10">
+                  <div 
+                    className={cn(
+                      "w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                      selectedIdea === idea.id
+                        ? "border-accent-primary bg-accent-primary text-white scale-110"
+                        : "border-accent-tertiary/60 bg-paper hover:border-accent-primary/60 hover:scale-105"
+                    )}
+                  >
+                    {selectedIdea === idea.id ? (
+                      <Check className="h-4 w-4 text-white" />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-accent-tertiary/60 group-hover:bg-accent-primary/60"></div>
+                    )}
+                  </div>
+                </div>
+                
                 <CardContent className="pt-6 h-full flex flex-col">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-display text-lg text-ink-dark flex-1">{idea.title}</h3>
-                    <div 
-                      className={cn(
-                        "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0",
-                        selectedIdea === idea.id
-                          ? "border-accent-primary bg-accent-primary/20"
-                          : "border-accent-tertiary/40"
-                      )}
-                    >
-                      {selectedIdea === idea.id && (
-                        <Check className="h-3 w-3 text-accent-primary" />
-                      )}
-                    </div>
                   </div>
                   <p className="text-ink-light font-serif text-sm mb-4">
                     {idea.description}
@@ -270,13 +269,28 @@ const IdeaSelectionStep = () => {
           >
             <Card 
               className={cn(
-                "h-full border overflow-hidden",
+                "h-full border overflow-hidden relative",
                 customMode 
                   ? "border-accent-primary/50 bg-accent-primary/5 shadow-md" 
                   : "border-accent-tertiary/20 bg-paper hover:border-accent-tertiary/40 hover:shadow-sm cursor-pointer"
               )}
               onClick={customMode ? undefined : handleCustomMode}
             >
+              {/* Custom mode selection indicator */}
+              {customMode ? (
+                <div className="absolute top-4 right-4 z-10">
+                  <div className="w-7 h-7 rounded-full border-2 border-accent-primary bg-accent-primary text-white scale-110 flex items-center justify-center transition-all duration-200">
+                    <Check className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+              ) : (
+                <div className="absolute top-4 right-4 z-10">
+                  <div className="w-7 h-7 rounded-full border-2 border-accent-tertiary/60 flex items-center justify-center bg-paper hover:border-accent-primary/60 hover:scale-105 transition-all duration-200">
+                    <div className="w-2 h-2 rounded-full bg-accent-tertiary/60"></div>
+                  </div>
+                </div>
+              )}
+              
               <CardContent className={`${customMode ? 'pt-6' : 'p-6'} h-full`}>
                 {customMode ? (
                   <div className="space-y-4">
@@ -347,7 +361,7 @@ const IdeaSelectionStep = () => {
           Back
         </Button>
         <Button
-          className="gap-2"
+          className="gap-2 text-white"
           variant={(!selectedIdea && !customMode) ? "workflow" : "workflowGold"}
           onClick={handleProceed}
           disabled={(!selectedIdea && !customMode) || isCreating}

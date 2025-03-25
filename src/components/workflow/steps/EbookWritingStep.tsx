@@ -159,12 +159,7 @@ const EbookWritingStep = () => {
       // Auto-expand the chapter being generated
       setExpandedChapter(chapterId);
       
-      // Scroll to the chapter being generated
-      const chapterElement = document.getElementById(`chapter-${chapterId}`);
-      if (chapterElement) {
-        chapterElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      
+      // Remove auto-scrolling functionality
       // Show a toast or notification that generation started
       console.log(`Generating chapter: ${chapterToGenerate.title}`);
       
@@ -304,21 +299,6 @@ const EbookWritingStep = () => {
         </div>
       )}
       
-      {/* Workflow Steps Display */}
-      <div className="hidden md:block">
-        <EbookHorizontalWorkflow 
-          steps={[
-            { title: "Brain Dump", description: "Collect your ideas", isCompleted: true },
-            { title: "Select Content", description: "Choose the best ideas", isCompleted: true },
-            { title: "Write Content", description: "Generate chapters", isCompleted: false },
-            { title: "Preview", description: "Review and finalize", isCompleted: false },
-            { title: "Export", description: "Download your eBook", isCompleted: false }
-          ]}
-          currentStep={3}
-          showNavButtons={false}
-        />
-      </div>
-
       {/* Book information */}
       <Card className="border border-accent-tertiary/20 bg-paper shadow-textera">
         <CardContent className="p-6">
@@ -427,7 +407,7 @@ const EbookWritingStep = () => {
                     <Button
                       size="sm"
                       variant="workflow"
-                      className="gap-1.5 px-3 h-8"
+                      className="gap-1.5 px-3 h-8 text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleGenerateChapter(chapter.id);
@@ -493,7 +473,7 @@ const EbookWritingStep = () => {
       {ebookChapters.some(c => c.status === 'pending') && (
         <div className="space-y-4">
           <Button
-            className="gap-2 w-full"
+            className="gap-2 w-full text-white"
             variant="workflowOutline"
             onClick={() => {
               const nextPendingChapter = ebookChapters.find(c => c.status === 'pending');
@@ -508,7 +488,7 @@ const EbookWritingStep = () => {
           </Button>
           
           <Button
-            className="gap-2 w-full"
+            className="gap-2 w-full text-white"
             variant="workflow"
             onClick={async () => {
               // Get all pending chapters
@@ -542,12 +522,7 @@ const EbookWritingStep = () => {
                     // Expand the current chapter
                     setExpandedChapter(chapter.id);
                     
-                    // Scroll to the chapter being generated
-                    const chapterElement = document.getElementById(`chapter-${chapter.id}`);
-                    if (chapterElement) {
-                      chapterElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                    
+                    // Remove auto-scrolling functionality
                     await generateEbookChapter(chapter.id);
                     
                     // Short pause between chapters
@@ -589,7 +564,7 @@ const EbookWritingStep = () => {
           Back
         </Button>
         <Button
-          className="gap-2"
+          className="gap-2 text-white"
           variant={allChaptersGenerated ? "workflowGold" : "workflow"}
           onClick={handleProceed}
           disabled={!allChaptersGenerated}
