@@ -209,19 +209,19 @@ export default function Home() {
     {
       name: "Sarah Johnson",
       role: "Author of 'Mindful Leadership'",
-      comment: "Autopen turned my manuscript from a wall of text into a professional e-book in under an hour. I've raised my price from $9.99 to $24.99 and sales have actually increased by 37%.",
+      comment: "Autopen turned my scattered ideas into a sellable e-book in under an hour. I uploaded random notes from three different sources and had a structured, ready-to-sell product that's now generating $2,400/month.",
       avatar: "SJ",
     },
     {
       name: "Michael Chen",
       role: "Content Creator",
-      comment: "After three failed attempts with other tools, Autopen saved my publishing deadline. My readers now describe my e-book as 'indistinguishable from major publishers' in quality.",
+      comment: "After failing to organize my content for months, Autopen turned my jumbled thoughts into a cohesive product in minutes. I went from overwhelmed to selling my expertise in a single afternoon.",
       avatar: "MC",
     },
     {
       name: "Aisha Patel",
       role: "Self-Publisher",
-      comment: "I was losing readers in the first 3 pages due to poor formatting. Since using Autopen, my completion rate is up 82% and I'm receiving review comments about 'professional presentation.'",
+      comment: "I had brilliant ideas trapped in voice memos, Google Docs, and notebooks. Autopen organized everything into a structured e-book that readers love. I made my first sale 48 hours after using Autopen.",
       avatar: "AP",
     },
   ];
@@ -278,34 +278,34 @@ export default function Home() {
   // Features for the feature section
   const features = [
     {
-      icon: <BookOpen className="h-5 w-5 text-accent-primary" />,
-      title: "AI-Powered Formatting",
-      description: "Stop losing readers to amateur formatting. Our AI transforms your raw text into professional pages with perfect spacing, hierarchy, and flow—creating an experience readers willingly pay premium prices for."
-    },
-    {
-      icon: <Sparkles className="h-5 w-5 text-accent-primary" />,
-      title: "Smart Templates",
-      description: "Access the same premium designs used by bestselling authors that instantly transform your perceived value. Readers judge books by their design in seconds—now yours will pass that crucial test."
-    },
-    {
       icon: <FileText className="h-5 w-5 text-accent-primary" />,
       title: "Brain Dump Technology",
-      description: "End the frustration of staring at scattered notes. Upload your unstructured content and watch as our AI organizes it into a cohesive, reader-magnetic structure that keeps pages turning."
-    },
-    {
-      icon: <Palette className="h-5 w-5 text-accent-primary" />,
-      title: "Beautiful Typography",
-      description: "Capture and hold attention with typography that makes your content irresistible. The difference between amateur and professional is measured in seconds of reader attention—now you'll have it."
+      description: "Turn chaos into cash. Simply upload your scattered ideas, random notes, and unstructured content from any source. Our AI instantly transforms them into an organized, ready-to-sell digital product."
     },
     {
       icon: <Upload className="h-5 w-5 text-accent-primary" />,
       title: "Multiple Import Formats",
-      description: "Never lose another hour to reformatting nightmares. Import from any platform—Word, Google Docs, Markdown, or notes—with perfect content integrity that preserves your hard work."
+      description: "Never rewrite another note. Import from anywhere—voice memos, Word docs, Google Docs, notebooks, emails—with our seamless system that preserves all your valuable thinking."
+    },
+    {
+      icon: <Sparkles className="h-5 w-5 text-accent-primary" />,
+      title: "AI-Powered Organization",
+      description: "Stop struggling with structure. Our AI analyzes your content and creates perfect chapters, sections, and flow—turning your scattered brilliance into a product customers can easily consume."
+    },
+    {
+      icon: <BookOpen className="h-5 w-5 text-accent-primary" />,
+      title: "Instant Digital Products",
+      description: "Go from idea to income in minutes. Transform your expertise into e-books, guides, and courses without the weeks of organization and formatting that delay your revenue."
+    },
+    {
+      icon: <Palette className="h-5 w-5 text-accent-primary" />,
+      title: "Ready-to-Sell Templates",
+      description: "Skip the learning curve. Your ideas are automatically formatted into proven templates that make your digital products instantly saleable across all platforms."
     },
     {
       icon: <Download className="h-5 w-5 text-accent-primary" />,
       title: "Export Flexibility",
-      description: "Reach every potential reader, everywhere they read. One-click exports to every major format and platform means you'll never miss a sale due to technical limitations again."
+      description: "Sell everywhere immediately. One-click exports to every major format and platform means your ideas start earning money within hours, not months."
     }
   ];
 
@@ -431,14 +431,14 @@ export default function Home() {
                 className="text-5xl md:text-6xl font-display font-medium leading-tight"
                 variants={textCharacterReveal}
               >
-                Amateur Design is <span className="text-accent-primary">Killing Your Sales</span>
+                Turn Your <span className="text-accent-primary">Random Notes</span> Into Sellable Products in Minutes
               </motion.h1>
               
               <motion.p 
                 className="text-lg md:text-xl text-ink-light max-w-xl"
                 variants={fadeInUp}
               >
-                Every day you wait costs you readers and revenue. Autopen's AI instantly transforms your content into professionally designed e-books that command attention, respect, and premium prices.
+                Stop letting your brilliant ideas stay trapped in scattered notes and voice memos. Autopen's AI instantly transforms your unorganized content into structured digital products ready to sell.
               </motion.p>
               
               <motion.div 
@@ -451,7 +451,7 @@ export default function Home() {
                       className="textera-button-primary text-base px-8 py-6 h-auto group"
                       onClick={() => handleOpenAuthModal('signup')}
                     >
-                      Transform Your E-book Now (Free)
+                      Turn Ideas Into Income Now
                       <motion.div
                         className="inline-block ml-2"
                         initial={{ x: 0 }}
@@ -503,7 +503,7 @@ export default function Home() {
                     transition={{ duration: 0.5, delay: 1 }}
                   >
                     4,000+
-                  </motion.span> authors increased their sales with Autopen
+                  </motion.span> creators turned ideas into income with Autopen
                 </div>
               </motion.div>
             </motion.div>
@@ -632,13 +632,13 @@ export default function Home() {
               className="text-4xl font-display font-medium mb-6"
               variants={fadeInUp}
             >
-              Stop Losing Readers to <span className="text-accent-primary">Amateur Formatting</span>
+              Stop Losing Money on <span className="text-accent-primary">Unorganized Ideas</span>
             </motion.h2>
             <motion.p 
               className="text-lg text-ink-light"
               variants={fadeInUp}
             >
-              Readers make snap judgments about your credibility in seconds. Autopen ensures your brilliant ideas are presented with the professional quality they deserve.
+              Your scattered notes and brilliant ideas are worth nothing until they're structured into products people can buy. Autopen bridges that gap in minutes, not months.
             </motion.p>
           </motion.div>
           
@@ -719,13 +719,13 @@ export default function Home() {
               className="text-4xl font-display font-medium mb-6"
               variants={fadeInUp}
             >
-              Go From Chaos to <span className="text-accent-primary">Published Perfection</span> in Three Steps
+              From Chaos to <span className="text-accent-primary">Cash Flow</span> in Three Steps
             </motion.h2>
             <motion.p 
               className="text-lg text-ink-light"
               variants={fadeInUp}
             >
-              While others struggle for weeks with formatting, you'll transform your content into a professional e-book ready to captivate readers in minutes.
+              While others waste months trying to organize their thoughts, you'll transform your ideas into sellable digital products in minutes.
             </motion.p>
           </motion.div>
           
@@ -747,7 +747,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-3xl font-display mb-4">Brain Dump</h3>
                 <p className="text-lg text-ink-light mb-6">
-                  Feel the relief as you simply upload your content—in any condition—and watch Autopen's AI transform chaos into clarity. No more staring at scattered notes wondering how to organize them. In just minutes, see your ideas take structured form with perfect flow and organization.
+                  Just upload everything—your scattered notes, voice memos, documents, and random ideas from anywhere. Autopen's AI instantly analyzes this chaos and organizes it into a coherent structure. No more staring at a jumble of thoughts wondering how to turn them into something sellable.
                 </p>
                 <motion.ul 
                   className="space-y-3"
@@ -865,9 +865,9 @@ export default function Home() {
                 <div className="inline-flex items-center px-3 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-sm font-medium mb-6">
                   Step 2
                 </div>
-                <h3 className="text-3xl font-display mb-4">Format & Design</h3>
+                <h3 className="text-3xl font-display mb-4">Format & Structure</h3>
                 <p className="text-lg text-ink-light mb-6">
-                  Experience the transformation as your content suddenly looks worthy of premium pricing. Autopen applies the exact typography, spacing, and design principles used by bestselling authors to instantly elevate your perceived value and credibility. This is the moment your e-book becomes impossible to ignore.
+                  Watch as your unorganized content transforms into a structured digital product. Autopen automatically creates chapters, sections, and a logical flow that makes your ideas digestible and valuable to customers. This is where your random thoughts become a sellable asset.
                 </p>
                 <motion.ul 
                   className="space-y-3"
@@ -904,9 +904,9 @@ export default function Home() {
                 <div className="inline-flex items-center px-3 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-sm font-medium mb-6">
                   Step 3
                 </div>
-                <h3 className="text-3xl font-display mb-4">Publish & Share</h3>
+                <h3 className="text-3xl font-display mb-4">Publish & Monetize</h3>
                 <p className="text-lg text-ink-light mb-6">
-                  While others are still struggling with formatting, you're already collecting payments. Export your finished e-book for any platform with one click and start receiving the recognition and revenue your ideas deserve. Never miss a potential reader due to technical limitations again.
+                  With a single click, export your newly structured product in any format for immediate sale. While others are still organizing their thoughts, you're already collecting payments. Turn your knowledge into a revenue stream without the months of frustrating preparation.
                 </p>
                 <motion.ul 
                   className="space-y-3"
@@ -991,13 +991,13 @@ export default function Home() {
               className="text-4xl font-display font-medium mb-6"
               variants={fadeInUp}
             >
-              Authors Who <span className="text-accent-primary">Doubled Their Income</span> With Professional Design
+              Creators Who Turned <span className="text-accent-primary">Ideas Into Income</span> in Hours
             </motion.h2>
             <motion.p 
               className="text-lg text-ink-light"
               variants={fadeInUp}
             >
-              Don't take our word for it. See how creators just like you transformed their content into professional e-books that readers happily pay premium prices for.
+              Don't let your brilliant ideas sit untapped. See how others transformed their scattered thoughts into profitable digital products in record time.
             </motion.p>
           </motion.div>
           
@@ -1096,9 +1096,9 @@ export default function Home() {
             <Badge variant="outline" className="mb-4 px-3 py-1 rounded-full bg-accent-primary/10 text-accent-primary border-transparent">
               Pricing
             </Badge>
-            <h2 className="text-4xl font-display font-medium mb-6">Stop Losing Sales to Poor Formatting</h2>
+            <h2 className="text-4xl font-display font-medium mb-6">Stop Leaving Money on the Table</h2>
             <p className="text-lg text-ink-light">
-              Choose your plan and transform your content today. All plans include our core AI technology that's helped 4,000+ authors increase their perceived value and sales.
+              Choose your plan and turn your ideas into income today. All plans include our core AI technology that's helped 4,000+ creators monetize their knowledge.
             </p>
           </div>
           
@@ -1243,7 +1243,7 @@ export default function Home() {
                     className="textera-button-primary text-base px-8 py-6 h-auto"
                     onClick={() => handleOpenAuthModal('signup')}
                   >
-                    Transform Your E-book Now (Free)
+                    Turn Ideas Into Income Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                   <Link to="/features">
