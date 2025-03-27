@@ -12,7 +12,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-accent-tertiary/10 p-1 text-ink-light",
+      "inline-flex h-10 items-center justify-center rounded-md bg-accent-tertiary/10 dark:bg-accent-tertiary/20 p-1 text-ink-light dark:text-ink-light border border-transparent dark:border-accent-tertiary/30 transition-colors duration-200",
       className
     )}
     {...props}
@@ -27,7 +27,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-serif font-medium transition-all duration-200 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:shadow-blue-sm hover:text-ink-dark",
+      "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-serif font-medium transition-all duration-200 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-accent-primary dark:data-[state=active]:text-accent-primary data-[state=active]:shadow-blue-sm dark:data-[state=active]:shadow-md hover:text-ink-dark dark:hover:text-ink-dark",
       className
     )}
     {...props}
@@ -42,7 +42,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/30 focus-visible:ring-offset-2",
+      "mt-2 ring-offset-background dark:ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/30 dark:focus-visible:ring-accent-primary/50 focus-visible:ring-offset-2 text-ink-dark dark:text-ink-light",
       className
     )}
     {...props}

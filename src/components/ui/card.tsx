@@ -11,10 +11,10 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const baseStyles = "rounded-lg transition-all duration-300 backdrop-blur-sm";
     
     const variantStyles = {
-      default: "border border-accent-tertiary/20 bg-paper text-ink-dark shadow-sm hover:shadow-md hover:border-accent-primary/30",
-      stat: "border border-accent-tertiary/30 bg-gradient-to-br from-white to-cream shadow-blue-sm",
-      action: "border border-accent-tertiary/20 bg-white hover:bg-accent-primary/5 hover:border-accent-primary/20 shadow-none cursor-pointer",
-      template: "border border-accent-yellow/30 bg-white shadow-yellow-sm",
+      default: "border border-accent-tertiary/20 dark:border-accent-tertiary/50 bg-paper dark:bg-card text-ink-dark dark:text-ink-light shadow-sm dark:shadow-dark-sm hover:shadow-md dark:hover:shadow-dark hover:border-accent-primary/30 dark:hover:border-accent-primary/40",
+      stat: "border border-accent-tertiary/30 dark:border-accent-tertiary/50 bg-gradient-to-br from-white to-cream dark:from-card dark:to-dark-bg shadow-blue-sm dark:shadow-dark-sm",
+      action: "border border-accent-tertiary/20 dark:border-accent-tertiary/50 bg-white dark:bg-card hover:bg-accent-primary/5 dark:hover:bg-accent-primary/10 hover:border-accent-primary/20 dark:hover:border-accent-primary/40 shadow-none dark:shadow-none cursor-pointer",
+      template: "border border-accent-yellow/30 dark:border-accent-yellow/40 bg-white dark:bg-card shadow-yellow-sm dark:shadow-dark-sm",
     };
     
     return (
@@ -34,7 +34,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-3 pb-3 pt-5 px-6 border-b border-accent-tertiary/20", className)}
+    className={cn("flex flex-col space-y-3 pb-3 pt-5 px-6 border-b border-accent-tertiary/20 dark:border-accent-tertiary/50", className)}
     {...props}
   />
 ));
@@ -47,7 +47,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "font-display text-card-title font-medium text-ink-dark leading-tight tracking-tight",
+      "font-display text-card-title font-medium text-ink-dark dark:text-ink-dark leading-tight tracking-tight",
       className,
     )}
     {...props}
@@ -59,7 +59,7 @@ const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-small text-ink-light font-serif", className)} {...props} />
+  <p ref={ref} className={cn("text-small text-ink-light dark:text-ink-light font-serif", className)} {...props} />
 ));
 CardDescription.displayName = "CardDescription";
 

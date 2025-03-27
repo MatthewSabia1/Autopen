@@ -251,11 +251,11 @@ export default function ProductDetail() {
 
   // Get icon based on product type
   const getProductIcon = (type: string) => {
-    if (type.includes('ebook')) return <BookText className="h-5 w-5 text-[#738996]" />;
-    if (type === 'brain_dump' || type === 'notes') return <FileText className="h-5 w-5 text-[#ccb595]" />;
-    if (type === 'course') return <Layers className="h-5 w-5 text-[#738996]" />;
-    if (type === 'blog') return <FileType className="h-5 w-5 text-[#738996]" />;
-    return <PenTool className="h-5 w-5 text-[#738996]" />;
+    if (type.includes('ebook')) return <BookText className="h-5 w-5 text-[#738996] dark:text-accent-primary" />;
+    if (type === 'brain_dump' || type === 'notes') return <FileText className="h-5 w-5 text-[#ccb595] dark:text-accent-yellow" />;
+    if (type === 'course') return <Layers className="h-5 w-5 text-[#738996] dark:text-accent-primary" />;
+    if (type === 'blog') return <FileType className="h-5 w-5 text-[#738996] dark:text-accent-primary" />;
+    return <PenTool className="h-5 w-5 text-[#738996] dark:text-accent-primary" />;
   };
 
   // Render status badge with appropriate color
@@ -269,38 +269,38 @@ export default function ProductDetail() {
     // Define status variants with consistent styling - using brand colors to match app theme
     const variants = {
       draft: { 
-        bg: "bg-[#F9F7F4]", 
-        text: "text-[#888888]",
-        border: "border-[#E8E8E8]",
-        dot: "bg-[#888888]",
+        bg: "bg-[#F9F7F4] dark:bg-[#888888]/20", 
+        text: "text-[#888888] dark:text-[#AAAAAA]",
+        border: "border-[#E8E8E8] dark:border-[#888888]/40",
+        dot: "bg-[#888888] dark:bg-[#AAAAAA]",
         label: "Draft"
       },
       complete: { 
-        bg: "bg-[#F1F8F4]", 
-        text: "text-[#10B981]",
-        border: "border-[#D1E9D8]",
-        dot: "bg-[#10B981]",
+        bg: "bg-[#F1F8F4] dark:bg-[#10B981]/20", 
+        text: "text-[#10B981] dark:text-[#10B981]",
+        border: "border-[#D1E9D8] dark:border-[#10B981]/40",
+        dot: "bg-[#10B981] dark:bg-[#10B981]",
         label: "Complete"
       },
       inProgress: { 
-        bg: "bg-[#738996]/10", 
-        text: "text-[#738996]",
-        border: "border-[#738996]/20",
-        dot: "bg-[#738996]",
+        bg: "bg-[#738996]/10 dark:bg-accent-primary/25", 
+        text: "text-[#738996] dark:text-accent-primary",
+        border: "border-[#738996]/20 dark:border-accent-primary/50",
+        dot: "bg-[#738996] dark:bg-accent-primary",
         label: "In Progress"
       },
       published: { 
-        bg: "bg-[#ccb595]/10", 
-        text: "text-[#ccb595]",
-        border: "border-[#ccb595]/20",
-        dot: "bg-[#ccb595]",
+        bg: "bg-[#ccb595]/10 dark:bg-accent-yellow/25", 
+        text: "text-[#ccb595] dark:text-accent-yellow",
+        border: "border-[#ccb595]/20 dark:border-accent-yellow/50",
+        dot: "bg-[#ccb595] dark:bg-accent-yellow",
         label: "Published"
       },
       generating: { 
-        bg: "bg-[#8B5CF6]/10", 
-        text: "text-[#8B5CF6]",
-        border: "border-[#8B5CF6]/20",
-        dot: "bg-[#8B5CF6]",
+        bg: "bg-[#8B5CF6]/10 dark:bg-[#8B5CF6]/25", 
+        text: "text-[#8B5CF6] dark:text-[#A78BFA]",
+        border: "border-[#8B5CF6]/20 dark:border-[#8B5CF6]/50",
+        dot: "bg-[#8B5CF6] dark:bg-[#A78BFA]",
         label: "Generating"
       }
     };
@@ -380,13 +380,13 @@ export default function ProductDetail() {
         <div className="flex h-[60vh] w-full items-center justify-center">
           <div className="flex flex-col items-center animate-fade-in">
             <div className="w-16 h-16 relative mb-5">
-              <div className="absolute inset-0 animate-spin h-16 w-16 rounded-full border-4 border-[#738996]/10 border-t-[#738996]"></div>
+              <div className="absolute inset-0 animate-spin h-16 w-16 rounded-full border-4 border-[#738996]/10 dark:border-accent-primary/20 border-t-[#738996] dark:border-t-accent-primary"></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <BookText className="h-7 w-7 text-[#738996]/70" />
+                <BookText className="h-7 w-7 text-[#738996]/70 dark:text-accent-primary/70" />
               </div>
             </div>
-            <p className="font-serif text-base text-[#666666] mb-1">Loading product details...</p>
-            <p className="text-[#888888] text-sm">This may take a moment</p>
+            <p className="font-serif text-base text-[#666666] dark:text-ink-light mb-1">Loading product details...</p>
+            <p className="text-[#888888] dark:text-ink-light/70 text-sm">This may take a moment</p>
           </div>
         </div>
       </DashboardLayout>
@@ -398,29 +398,29 @@ export default function ProductDetail() {
     return (
       <DashboardLayout activeTab="Product">
         <div className="flex flex-col h-[60vh] w-full items-center justify-center animate-fade-in">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-5 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+          <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-5 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 dark:text-red-400">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
           </div>
-          <div className="text-[#333333] font-serif text-center max-w-lg px-6 mb-5">
+          <div className="text-[#333333] dark:text-ink-dark font-serif text-center max-w-lg px-6 mb-5">
             <h3 className="text-2xl font-display font-medium mb-3">Couldn't Load Product</h3>
-            <p className="text-[#666666]">{error || hookError || "Product not found"}</p>
+            <p className="text-[#666666] dark:text-ink-light">{error || hookError || "Product not found"}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button 
               onClick={() => navigate("/products")} 
               variant="outline"
-              className="flex items-center gap-2 border-[#E8E8E8] text-[#333333] hover:bg-[#F5F5F5] transition-all duration-300"
+              className="flex items-center gap-2 border-[#E8E8E8] dark:border-accent-tertiary/40 text-[#333333] dark:text-ink-dark hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300"
             >
               <ChevronLeft className="h-4 w-4" />
               Back to Products
             </Button>
             <Button 
               onClick={handleRefresh} 
-              className="bg-[#738996] text-white hover:bg-[#738996]/90 flex items-center gap-2 transition-all duration-300"
+              className="bg-[#738996] dark:bg-accent-primary text-white hover:bg-[#738996]/90 dark:hover:bg-accent-primary/90 flex items-center gap-2 transition-all duration-300"
             >
               <RefreshCw className="h-4 w-4" />
               Try Again
@@ -441,13 +441,13 @@ export default function ProductDetail() {
               onClick={() => navigate("/products")} 
               variant="outline" 
               size="sm"
-              className="mr-2 sm:mr-3 border-[#E8E8E8] text-[#555555] hover:bg-[#F5F5F5] transition-all duration-300 group min-h-9 min-w-9 p-0 sm:px-2"
+              className="mr-2 sm:mr-3 border-[#E8E8E8] dark:border-accent-tertiary/40 text-[#555555] dark:text-ink-light hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300 group min-h-9 min-w-9 p-0 sm:px-2"
             >
               <ChevronLeft className="h-4 w-4 mx-1 sm:mr-1 group-hover:-translate-x-0.5 transition-transform duration-300" />
               <span className="hidden sm:inline">Back</span>
             </Button>
             
-            <Badge className="bg-[#F9F5ED] text-[#ccb595] border-[#ccb595] border font-normal px-2 py-0.5 rounded text-xs mr-2">
+            <Badge className="bg-[#F9F5ED] dark:bg-accent-yellow/15 text-[#ccb595] dark:text-accent-yellow border-[#ccb595] dark:border-accent-yellow/50 border font-normal px-2 py-0.5 rounded text-xs mr-2">
               {getProductCategory(product)}
             </Badge>
             
@@ -456,15 +456,15 @@ export default function ProductDetail() {
           
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4">
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-medium text-[#333333] tracking-tight mb-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-medium text-[#333333] dark:text-ink-dark tracking-tight mb-2">
                 {product.title}
               </h1>
-              <div className="flex flex-wrap items-center text-[#666666] text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center text-[#666666] dark:text-ink-light text-xs sm:text-sm">
                 <span className="flex items-center">
                   <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-1.5 opacity-70" />
                   Updated {formatDate(product.updated_at)}
                 </span>
-                <span className="mx-2 text-[#CCCCCC]">•</span>
+                <span className="mx-2 text-[#CCCCCC] dark:text-[#555555]">•</span>
                 <span className="flex items-center">
                   <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-1.5 opacity-70" />
                   Created by you
@@ -476,7 +476,7 @@ export default function ProductDetail() {
               <Button 
                 onClick={handleEdit}
                 variant="outline" 
-                className="text-xs sm:text-sm font-serif font-medium border-[#E8E8E8] text-[#555555] hover:bg-[#F5F5F5] transition-all duration-300 group h-9 px-2 sm:px-3"
+                className="text-xs sm:text-sm font-serif font-medium border-[#E8E8E8] dark:border-accent-tertiary/40 text-[#555555] dark:text-ink-light hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300 group h-9 px-2 sm:px-3"
               >
                 <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 group-hover:scale-110 transition-transform duration-300" />
                 Edit
@@ -484,7 +484,7 @@ export default function ProductDetail() {
               
               <Button 
                 onClick={handleContinue}
-                className="bg-[#738996] text-white hover:bg-[#738996]/90 text-xs sm:text-sm font-serif font-medium transition-all duration-300 shadow-sm hover:shadow group h-9 px-2 sm:px-3"
+                className="bg-[#738996] dark:bg-accent-primary text-white hover:bg-[#738996]/90 dark:hover:bg-accent-primary/90 text-xs sm:text-sm font-serif font-medium transition-all duration-300 shadow-sm dark:shadow-md hover:shadow dark:hover:shadow-lg group h-9 px-2 sm:px-3"
                 disabled={product.status === 'complete' || product.status === 'published'}
               >
                 <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 group-hover:translate-x-0.5 transition-transform duration-300" />
@@ -497,23 +497,23 @@ export default function ProductDetail() {
         {/* Dashboard Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-5 sm:mb-8">
           {/* Main KPI Card */}
-          <Card className="col-span-1 md:col-span-2 border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden hover:shadow-blue-sm transition-all duration-300">
+          <Card className="col-span-1 md:col-span-2 border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-white dark:bg-card shadow-sm dark:shadow-md rounded-lg overflow-hidden hover:shadow-blue-sm dark:hover:shadow-lg transition-all duration-300">
             <CardContent className="p-3 sm:p-4 md:p-5">
               <div className="flex flex-col gap-3 sm:gap-4 md:gap-5">
                 {/* Progress tracker */}
                 <div>
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
-                    <span className="text-[#333333] font-medium font-serif text-sm sm:text-base">Progress</span>
-                    <span className="text-[#738996] text-xs sm:text-sm font-medium">{calculateProgress(product)}%</span>
+                    <span className="text-[#333333] dark:text-ink-dark font-medium font-serif text-sm sm:text-base">Progress</span>
+                    <span className="text-[#738996] dark:text-accent-primary text-xs sm:text-sm font-medium">{calculateProgress(product)}%</span>
                   </div>
-                  <div className="w-full bg-[#E8E8E8] rounded-full h-2 sm:h-2.5 overflow-hidden">
+                  <div className="w-full bg-[#E8E8E8] dark:bg-accent-tertiary/30 rounded-full h-2 sm:h-2.5 overflow-hidden">
                     <div 
                       className={`h-2 sm:h-2.5 rounded-full transition-all duration-1000 ease-in-out ${
                         calculateProgress(product) >= 100 
-                          ? 'bg-[#10B981]' 
+                          ? 'bg-[#10B981] dark:bg-[#10B981]' 
                           : calculateProgress(product) > 75
-                            ? 'bg-[#ccb595]'
-                            : 'bg-[#738996]'
+                            ? 'bg-[#ccb595] dark:bg-accent-yellow'
+                            : 'bg-[#738996] dark:bg-accent-primary'
                       }`} 
                       style={{ width: `${calculateProgress(product)}%` }}
                     ></div>
@@ -522,28 +522,28 @@ export default function ProductDetail() {
                 
                 {/* Status & dates */}
                 <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                  <div className="bg-[#FAF9F5] rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8]">
-                    <p className="text-[#666666] text-xs mb-1">Status</p>
+                  <div className="bg-[#FAF9F5] dark:bg-accent-tertiary/10 rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8] dark:border-accent-tertiary/30">
+                    <p className="text-[#666666] dark:text-ink-light text-xs mb-1">Status</p>
                     <div className="flex items-center">
                       {renderStatusBadge(product.status)}
                     </div>
                   </div>
                   
                   {product.metadata?.wordCount && (
-                    <div className="bg-[#FAF9F5] rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8]">
-                      <p className="text-[#666666] text-xs mb-1">Word Count</p>
-                      <p className="text-[#333333] font-medium text-sm sm:text-base">{product.metadata.wordCount.toLocaleString()}</p>
+                    <div className="bg-[#FAF9F5] dark:bg-accent-tertiary/10 rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8] dark:border-accent-tertiary/30">
+                      <p className="text-[#666666] dark:text-ink-light text-xs mb-1">Word Count</p>
+                      <p className="text-[#333333] dark:text-ink-dark font-medium text-sm sm:text-base">{product.metadata.wordCount.toLocaleString()}</p>
                     </div>
                   )}
                   
-                  <div className="bg-[#FAF9F5] rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8]">
-                    <p className="text-[#666666] text-xs mb-1">Created</p>
-                    <p className="text-[#333333] font-medium text-sm sm:text-base">{format(new Date(product.created_at), 'MMM d, yyyy')}</p>
+                  <div className="bg-[#FAF9F5] dark:bg-accent-tertiary/10 rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8] dark:border-accent-tertiary/30">
+                    <p className="text-[#666666] dark:text-ink-light text-xs mb-1">Created</p>
+                    <p className="text-[#333333] dark:text-ink-dark font-medium text-sm sm:text-base">{format(new Date(product.created_at), 'MMM d, yyyy')}</p>
                   </div>
                   
-                  <div className="bg-[#FAF9F5] rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8]">
-                    <p className="text-[#666666] text-xs mb-1">Last Updated</p>
-                    <p className="text-[#333333] font-medium text-sm sm:text-base">{format(new Date(product.updated_at), 'MMM d, yyyy')}</p>
+                  <div className="bg-[#FAF9F5] dark:bg-accent-tertiary/10 rounded-lg p-2 sm:p-2.5 md:p-3 border border-[#E8E8E8] dark:border-accent-tertiary/30">
+                    <p className="text-[#666666] dark:text-ink-light text-xs mb-1">Last Updated</p>
+                    <p className="text-[#333333] dark:text-ink-dark font-medium text-sm sm:text-base">{format(new Date(product.updated_at), 'MMM d, yyyy')}</p>
                   </div>
                 </div>
               </div>
@@ -551,35 +551,35 @@ export default function ProductDetail() {
           </Card>
           
           {/* Quick actions card */}
-          <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden">
-            <CardHeader className="pb-2 pt-3 sm:pb-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0]">
+          <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-white dark:bg-card shadow-sm dark:shadow-md rounded-lg overflow-hidden">
+            <CardHeader className="pb-2 pt-3 sm:pb-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0] dark:border-accent-tertiary/30">
               <div className="flex items-center">
-                <div className="bg-[#738996]/10 p-1.5 rounded-md mr-2">
-                  <Wand2 className="h-4 w-4 sm:h-5 sm:w-5 text-[#738996]" />
+                <div className="bg-[#738996]/10 dark:bg-accent-primary/20 p-1.5 rounded-md mr-2">
+                  <Wand2 className="h-4 w-4 sm:h-5 sm:w-5 text-[#738996] dark:text-accent-primary" />
                 </div>
-                <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333]">
+                <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333] dark:text-ink-dark">
                   Quick Actions
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-[#F0F0F0]">
+              <div className="divide-y divide-[#F0F0F0] dark:divide-accent-tertiary/30">
                 <Button 
                   onClick={handleContinue}
                   variant="ghost" 
-                  className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] hover:bg-[#F5F5F5] transition-all duration-300 group text-sm h-auto"
+                  className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] dark:text-ink-dark hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300 group text-sm h-auto"
                   disabled={product.status === 'complete' || product.status === 'published'}
                 >
-                  <ArrowRight className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] group-hover:translate-x-0.5 transition-transform duration-300" />
+                  <ArrowRight className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] dark:text-accent-primary group-hover:translate-x-0.5 transition-transform duration-300" />
                   Continue Editing
                 </Button>
                 
                 <Button 
                   onClick={handleEdit}
                   variant="ghost" 
-                  className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] hover:bg-[#F5F5F5] transition-all duration-300 group text-sm h-auto"
+                  className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] dark:text-ink-dark hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300 group text-sm h-auto"
                 >
-                  <Pencil className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+                  <Pencil className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] dark:text-accent-primary group-hover:scale-110 transition-transform duration-300" />
                   Edit Details
                 </Button>
                 
@@ -587,9 +587,9 @@ export default function ProductDetail() {
                   <Button 
                     onClick={() => navigate(`/workflow/${product.project_id}`)}
                     variant="ghost" 
-                    className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] hover:bg-[#F5F5F5] transition-all duration-300 group text-sm h-auto"
+                    className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] dark:text-ink-dark hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300 group text-sm h-auto"
                   >
-                    <Layers className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+                    <Layers className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] dark:text-accent-primary group-hover:scale-110 transition-transform duration-300" />
                     View Workflow
                   </Button>
                 )}
@@ -597,9 +597,9 @@ export default function ProductDetail() {
                 <Button 
                   onClick={handleRefresh}
                   variant="ghost" 
-                  className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] hover:bg-[#F5F5F5] transition-all duration-300 group text-sm h-auto"
+                  className="w-full justify-start rounded-none py-2 sm:py-2.5 md:py-3 px-3 sm:px-4 md:px-6 text-[#333333] dark:text-ink-dark hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 transition-all duration-300 group text-sm h-auto"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] group-hover:rotate-180 transition-transform duration-700" />
+                  <RefreshCw className="h-4 w-4 mr-2 sm:mr-3 text-[#738996] dark:text-accent-primary group-hover:rotate-180 transition-transform duration-700" />
                   Refresh
                 </Button>
               </div>
@@ -608,14 +608,14 @@ export default function ProductDetail() {
         </div>
         
         {/* Tab navigation */}
-        <div className="border-b border-[#E8E8E8] mb-3 sm:mb-4 md:mb-6 overflow-x-auto -mx-2 px-2 xs:-mx-3 xs:px-3 sm:-mx-4 sm:px-4 md:-mx-0 md:px-0 pb-0.5">
+        <div className="border-b border-[#E8E8E8] dark:border-accent-tertiary/30 mb-3 sm:mb-4 md:mb-6 overflow-x-auto -mx-2 px-2 xs:-mx-3 xs:px-3 sm:-mx-4 sm:px-4 md:-mx-0 md:px-0 pb-0.5">
           <div className="flex space-x-3 sm:space-x-4 md:space-x-6 min-w-fit">
             <button
               onClick={() => setActiveTab('overview')}
               className={`pb-2.5 sm:pb-3 pt-1 px-1.5 sm:px-2 font-serif font-medium text-sm border-b-2 transition-all duration-200 min-h-[40px] sm:min-h-[44px] min-w-[60px] sm:min-w-[70px] ${
                 activeTab === 'overview' 
-                  ? 'border-[#738996] text-[#333333]' 
-                  : 'border-transparent text-[#666666] hover:text-[#333333]'
+                  ? 'border-[#738996] dark:border-accent-primary text-[#333333] dark:text-ink-dark' 
+                  : 'border-transparent text-[#666666] dark:text-ink-light hover:text-[#333333] dark:hover:text-ink-dark'
               }`}
             >
               Overview
@@ -624,8 +624,8 @@ export default function ProductDetail() {
               onClick={() => setActiveTab('details')}
               className={`pb-2.5 sm:pb-3 pt-1 px-1.5 sm:px-2 font-serif font-medium text-sm border-b-2 transition-all duration-200 min-h-[40px] sm:min-h-[44px] min-w-[60px] sm:min-w-[70px] ${
                 activeTab === 'details' 
-                  ? 'border-[#738996] text-[#333333]' 
-                  : 'border-transparent text-[#666666] hover:text-[#333333]'
+                  ? 'border-[#738996] dark:border-accent-primary text-[#333333] dark:text-ink-dark' 
+                  : 'border-transparent text-[#666666] dark:text-ink-light hover:text-[#333333] dark:hover:text-ink-dark'
               }`}
             >
               Details
@@ -634,8 +634,8 @@ export default function ProductDetail() {
               onClick={() => setActiveTab('history')}
               className={`pb-2.5 sm:pb-3 pt-1 px-1.5 sm:px-2 font-serif font-medium text-sm border-b-2 transition-all duration-200 min-h-[40px] sm:min-h-[44px] min-w-[60px] sm:min-w-[70px] ${
                 activeTab === 'history' 
-                  ? 'border-[#738996] text-[#333333]' 
-                  : 'border-transparent text-[#666666] hover:text-[#333333]'
+                  ? 'border-[#738996] dark:border-accent-primary text-[#333333] dark:text-ink-dark' 
+                  : 'border-transparent text-[#666666] dark:text-ink-light hover:text-[#333333] dark:hover:text-ink-dark'
               }`}
             >
               History
@@ -650,19 +650,19 @@ export default function ProductDetail() {
             <div className="space-y-3 sm:space-y-4 md:space-y-6 animate-fade-in">
               {/* Summary card */}
               {product.metadata?.summary && (
-                <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden">
-                  <CardHeader className="pb-2 pt-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0]">
+                <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-white dark:bg-card shadow-sm dark:shadow-md rounded-lg overflow-hidden">
+                  <CardHeader className="pb-2 pt-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0] dark:border-accent-tertiary/30">
                     <div className="flex items-center">
-                      <div className="bg-[#738996]/10 p-1.5 rounded-md mr-2">
-                        <Info className="h-4 w-4 sm:h-5 sm:w-5 text-[#738996]" />
+                      <div className="bg-[#738996]/10 dark:bg-accent-primary/20 p-1.5 rounded-md mr-2">
+                        <Info className="h-4 w-4 sm:h-5 sm:w-5 text-[#738996] dark:text-accent-primary" />
                       </div>
-                      <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333]">
+                      <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333] dark:text-ink-dark">
                         Summary
                       </CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">
-                    <p className="text-[#666666] text-sm leading-relaxed font-serif">
+                    <p className="text-[#666666] dark:text-ink-light text-sm leading-relaxed font-serif">
                       {product.metadata.summary}
                     </p>
                   </CardContent>
@@ -672,16 +672,16 @@ export default function ProductDetail() {
               {/* Additional overview cards */}
               <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                 {/* Product Type */}
-                <Card className="border border-[#E8E8E8] bg-gradient-to-br from-white to-[#F9F7F4] shadow-sm rounded-lg overflow-hidden">
+                <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-gradient-to-br from-white via-white to-[#F9F7F4] dark:from-card dark:via-card dark:to-card/90 shadow-sm dark:shadow-md rounded-lg overflow-hidden">
                   <CardContent className="p-3 sm:p-4 md:p-5">
                     <div className="flex items-center justify-between mb-2 sm:mb-3">
-                      <p className="text-[#666666] text-xs sm:text-sm font-medium">Product Type</p>
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#F5F5F5] rounded-full flex items-center justify-center">
+                      <p className="text-[#666666] dark:text-ink-light text-xs sm:text-sm font-medium">Product Type</p>
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#F5F5F5] dark:bg-accent-tertiary/20 rounded-full flex items-center justify-center">
                         {getProductIcon(product.type)}
                       </div>
                     </div>
                     <div className="flex items-baseline">
-                      <p className="text-[#2A2A2A] text-base sm:text-lg md:text-xl font-display font-medium">
+                      <p className="text-[#2A2A2A] dark:text-ink-dark text-base sm:text-lg md:text-xl font-display font-medium">
                         {getProductCategory(product)}
                       </p>
                     </div>
@@ -690,19 +690,19 @@ export default function ProductDetail() {
                 
                 {/* Word Count */}
                 {product.metadata?.wordCount && (
-                  <Card className="border border-[#E8E8E8] bg-gradient-to-br from-white to-[#F9F7F4] shadow-sm rounded-lg overflow-hidden">
+                  <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-gradient-to-br from-white via-white to-[#F9F7F4] dark:from-card dark:via-card dark:to-card/90 shadow-sm dark:shadow-md rounded-lg overflow-hidden">
                     <CardContent className="p-3 sm:p-4 md:p-5">
                       <div className="flex items-center justify-between mb-2 sm:mb-3">
-                        <p className="text-[#666666] text-xs sm:text-sm font-medium">Word Count</p>
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#F5F5F5] rounded-full flex items-center justify-center">
-                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-[#738996]" />
+                        <p className="text-[#666666] dark:text-ink-light text-xs sm:text-sm font-medium">Word Count</p>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#F5F5F5] dark:bg-accent-tertiary/20 rounded-full flex items-center justify-center">
+                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-[#738996] dark:text-accent-primary" />
                         </div>
                       </div>
                       <div className="flex items-baseline">
-                        <p className="text-[#2A2A2A] text-base sm:text-lg md:text-xl font-display font-medium">
+                        <p className="text-[#2A2A2A] dark:text-ink-dark text-base sm:text-lg md:text-xl font-display font-medium">
                           {product.metadata.wordCount.toLocaleString()}
                         </p>
-                        <span className="ml-2 text-xs text-[#738996] font-medium px-1.5 py-0.5 bg-[#738996]/10 rounded">
+                        <span className="ml-2 text-xs text-[#738996] dark:text-accent-primary font-medium px-1.5 py-0.5 bg-[#738996]/10 dark:bg-accent-primary/20 rounded">
                           words
                         </span>
                       </div>
@@ -713,21 +713,21 @@ export default function ProductDetail() {
                 {/* Project Link */}
                 {product.project_id && (
                   <Card 
-                    className="border border-[#E8E8E8] bg-gradient-to-br from-white to-[#F9F7F4] shadow-sm hover:shadow-blue-sm rounded-lg overflow-hidden transition-all duration-300 group cursor-pointer"
+                    className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-gradient-to-br from-white via-white to-[#F9F7F4] dark:from-card dark:via-card dark:to-card/90 shadow-sm dark:shadow-md hover:shadow-blue-sm dark:hover:shadow-lg rounded-lg overflow-hidden transition-all duration-300 group cursor-pointer"
                     onClick={() => navigate(`/workflow/${product.project_id}`)}
                   >
                     <CardContent className="p-3 sm:p-4 md:p-5">
                       <div className="flex items-center justify-between mb-2 sm:mb-3">
-                        <p className="text-[#666666] text-xs sm:text-sm font-medium">Connected Workflow</p>
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#F5F5F5] group-hover:bg-[#738996]/10 rounded-full flex items-center justify-center transition-colors duration-300">
-                          <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+                        <p className="text-[#666666] dark:text-ink-light text-xs sm:text-sm font-medium">Connected Workflow</p>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#F5F5F5] dark:bg-accent-tertiary/20 group-hover:bg-[#738996]/10 dark:group-hover:bg-accent-primary/30 rounded-full flex items-center justify-center transition-colors duration-300">
+                          <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-[#738996] dark:text-accent-primary group-hover:scale-110 transition-transform duration-300" />
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <p className="text-[#2A2A2A] text-sm sm:text-base font-display font-medium">
+                        <p className="text-[#2A2A2A] dark:text-ink-dark text-sm sm:text-base font-display font-medium">
                           View Workflow
                         </p>
-                        <ChevronRight className="h-4 w-4 text-[#738996] group-hover:translate-x-0.5 transition-transform duration-300" />
+                        <ChevronRight className="h-4 w-4 text-[#738996] dark:text-accent-primary group-hover:translate-x-0.5 transition-transform duration-300" />
                       </div>
                     </CardContent>
                   </Card>
@@ -740,13 +740,13 @@ export default function ProductDetail() {
           {activeTab === 'details' && (
             <div className="space-y-3 sm:space-y-4 md:space-y-6 animate-fade-in">
               {/* Product details grid */}
-              <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden">
-                <CardHeader className="pb-2 pt-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0]">
+              <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-white dark:bg-card shadow-sm dark:shadow-md rounded-lg overflow-hidden">
+                <CardHeader className="pb-2 pt-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0] dark:border-accent-tertiary/30">
                   <div className="flex items-center">
-                    <div className="bg-[#738996]/10 p-1.5 rounded-md mr-2">
+                    <div className="bg-[#738996]/10 dark:bg-accent-primary/20 p-1.5 rounded-md mr-2">
                       {getProductIcon(product.type)}
                     </div>
-                    <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333]">
+                    <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333] dark:text-ink-dark">
                       Product Details
                     </CardTitle>
                   </div>
@@ -754,31 +754,31 @@ export default function ProductDetail() {
                 <CardContent className="px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                     {/* Basic info */}
-                    <div className="bg-[#FAF9F5] rounded-lg p-3 sm:p-4 md:p-5 border border-[#E8E8E8] hover:shadow-xs transition-all duration-300">
-                      <h3 className="text-[#333333] font-medium font-display mb-2 sm:mb-3 md:mb-4 text-sm">Basic Information</h3>
+                    <div className="bg-[#FAF9F5] dark:bg-accent-tertiary/10 rounded-lg p-3 sm:p-4 md:p-5 border border-[#E8E8E8] dark:border-accent-tertiary/30 hover:shadow-xs dark:hover:shadow-md transition-all duration-300">
+                      <h3 className="text-[#333333] dark:text-ink-dark font-medium font-display mb-2 sm:mb-3 md:mb-4 text-sm">Basic Information</h3>
                       <div className="space-y-2 sm:space-y-3">
-                        <div className="flex justify-between items-center p-2 bg-white rounded-md border border-[#F0F0F0]">
-                          <span className="text-[#666666] text-xs">Product Type</span>
-                          <span className="text-[#333333] font-medium text-xs sm:text-sm">
+                        <div className="flex justify-between items-center p-2 bg-white dark:bg-card rounded-md border border-[#F0F0F0] dark:border-accent-tertiary/20">
+                          <span className="text-[#666666] dark:text-ink-light text-xs">Product Type</span>
+                          <span className="text-[#333333] dark:text-ink-dark font-medium text-xs sm:text-sm">
                             {getProductCategory(product)}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center p-2 bg-white rounded-md border border-[#F0F0F0]">
-                          <span className="text-[#666666] text-xs">Created On</span>
-                          <span className="text-[#333333] font-medium text-xs sm:text-sm">
+                        <div className="flex justify-between items-center p-2 bg-white dark:bg-card rounded-md border border-[#F0F0F0] dark:border-accent-tertiary/20">
+                          <span className="text-[#666666] dark:text-ink-light text-xs">Created On</span>
+                          <span className="text-[#333333] dark:text-ink-dark font-medium text-xs sm:text-sm">
                             {formatDate(product.created_at)}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center p-2 bg-white rounded-md border border-[#F0F0F0]">
-                          <span className="text-[#666666] text-xs">Last Updated</span>
-                          <span className="text-[#333333] font-medium text-xs sm:text-sm">
+                        <div className="flex justify-between items-center p-2 bg-white dark:bg-card rounded-md border border-[#F0F0F0] dark:border-accent-tertiary/20">
+                          <span className="text-[#666666] dark:text-ink-light text-xs">Last Updated</span>
+                          <span className="text-[#333333] dark:text-ink-dark font-medium text-xs sm:text-sm">
                             {formatDateTime(product.updated_at)}
                           </span>
                         </div>
                         {product.metadata?.wordCount && (
-                          <div className="flex justify-between items-center p-2 bg-white rounded-md border border-[#F0F0F0]">
-                            <span className="text-[#666666] text-xs">Word Count</span>
-                            <span className="text-[#333333] font-medium text-xs sm:text-sm">
+                          <div className="flex justify-between items-center p-2 bg-white dark:bg-card rounded-md border border-[#F0F0F0] dark:border-accent-tertiary/20">
+                            <span className="text-[#666666] dark:text-ink-light text-xs">Word Count</span>
+                            <span className="text-[#333333] dark:text-ink-dark font-medium text-xs sm:text-sm">
                               {product.metadata.wordCount.toLocaleString()}
                             </span>
                           </div>
@@ -790,8 +790,8 @@ export default function ProductDetail() {
                     {product.metadata && Object.keys(product.metadata).some(key => 
                       !['summary', 'wordCount', 'coverImage', 'generationInfo', 'category', 'workflow_step'].includes(key)
                     ) && (
-                      <div className="bg-[#FAF9F5] rounded-lg p-3 sm:p-4 md:p-5 border border-[#E8E8E8] hover:shadow-xs transition-all duration-300">
-                        <h3 className="text-[#333333] font-medium font-display mb-2 sm:mb-3 md:mb-4 text-sm">Additional Details</h3>
+                      <div className="bg-[#FAF9F5] dark:bg-accent-tertiary/10 rounded-lg p-3 sm:p-4 md:p-5 border border-[#E8E8E8] dark:border-accent-tertiary/30 hover:shadow-xs dark:hover:shadow-md transition-all duration-300">
+                        <h3 className="text-[#333333] dark:text-ink-dark font-medium font-display mb-2 sm:mb-3 md:mb-4 text-sm">Additional Details</h3>
                         <div className="space-y-2 sm:space-y-3">
                           {Object.entries(product.metadata).map(([key, value]) => {
                             // Skip already displayed or irrelevant metadata
@@ -802,11 +802,11 @@ export default function ProductDetail() {
                             // Check if value is displayable
                             if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
                               return (
-                                <div key={key} className="flex justify-between items-center p-2 bg-white rounded-md border border-[#F0F0F0]">
-                                  <span className="text-[#666666] text-xs capitalize">
+                                <div key={key} className="flex justify-between items-center p-2 bg-white dark:bg-card rounded-md border border-[#F0F0F0] dark:border-accent-tertiary/20">
+                                  <span className="text-[#666666] dark:text-ink-light text-xs capitalize">
                                     {key.replace(/([A-Z])/g, ' $1').trim()}
                                   </span>
-                                  <span className="text-[#333333] font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-[150px]" title={String(value)}>
+                                  <span className="text-[#333333] dark:text-ink-dark text-xs sm:text-sm truncate max-w-[120px] sm:max-w-[150px]" title={String(value)}>
                                     {String(value)}
                                   </span>
                                 </div>
@@ -826,38 +826,38 @@ export default function ProductDetail() {
           {/* History tab */}
           {activeTab === 'history' && (
             <div className="space-y-3 sm:space-y-4 md:space-y-6 animate-fade-in">
-              <Card className="border border-[#E8E8E8] bg-white shadow-sm rounded-lg overflow-hidden">
-                <CardHeader className="pb-2 pt-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0]">
+              <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/40 bg-white dark:bg-card shadow-sm dark:shadow-md rounded-lg overflow-hidden">
+                <CardHeader className="pb-2 pt-3 sm:pt-4 md:pt-5 px-3 sm:px-4 md:px-6 border-b border-[#F0F0F0] dark:border-accent-tertiary/30">
                   <div className="flex items-center">
-                    <div className="bg-[#738996]/10 p-1.5 rounded-md mr-2">
-                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-[#738996]" />
+                    <div className="bg-[#738996]/10 dark:bg-accent-primary/20 p-1.5 rounded-md mr-2">
+                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-[#738996] dark:text-accent-primary" />
                     </div>
-                    <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333]">
+                    <CardTitle className="text-base sm:text-lg font-medium font-display text-[#333333] dark:text-ink-dark">
                       Activity History
                     </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">
-                  <div className="relative border-l-2 border-[#F0F0F0] pl-5 sm:pl-6 md:pl-8 ml-2 space-y-4 sm:space-y-6 md:space-y-8">
+                  <div className="relative border-l-2 border-[#F0F0F0] dark:border-accent-tertiary/30 pl-5 sm:pl-6 md:pl-8 ml-2 space-y-4 sm:space-y-6 md:space-y-8">
                     {/* Most recent update */}
                     <div className="relative">
-                      <div className="absolute -left-8 sm:-left-9 top-0 w-5 h-5 sm:w-6 sm:h-6 bg-[#738996] rounded-full flex items-center justify-center">
+                      <div className="absolute -left-8 sm:-left-9 top-0 w-5 h-5 sm:w-6 sm:h-6 bg-[#738996] dark:bg-accent-primary rounded-full flex items-center justify-center">
                         <Pencil className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs sm:text-sm text-[#333333] font-medium">Updated product</p>
-                        <p className="text-xs text-[#666666]">{formatDateTime(product.updated_at)}</p>
+                        <p className="text-xs sm:text-sm text-[#333333] dark:text-ink-dark font-medium">Updated product</p>
+                        <p className="text-xs text-[#666666] dark:text-ink-light">{formatDateTime(product.updated_at)}</p>
                       </div>
                     </div>
                     
                     {/* Creation event */}
                     <div className="relative">
-                      <div className="absolute -left-8 sm:-left-9 top-0 w-5 h-5 sm:w-6 sm:h-6 bg-[#ccb595] rounded-full flex items-center justify-center">
+                      <div className="absolute -left-8 sm:-left-9 top-0 w-5 h-5 sm:w-6 sm:h-6 bg-[#ccb595] dark:bg-accent-yellow rounded-full flex items-center justify-center">
                         <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs sm:text-sm text-[#333333] font-medium">Created product</p>
-                        <p className="text-xs text-[#666666]">{formatDateTime(product.created_at)}</p>
+                        <p className="text-xs sm:text-sm text-[#333333] dark:text-ink-dark font-medium">Created product</p>
+                        <p className="text-xs text-[#666666] dark:text-ink-light">{formatDateTime(product.created_at)}</p>
                       </div>
                     </div>
                   </div>

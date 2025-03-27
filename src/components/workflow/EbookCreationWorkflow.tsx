@@ -336,23 +336,23 @@ export default function EbookCreationWorkflow() {
       <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
         {/* Loading indicator during project creation */}
         {isCreating && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-paper rounded-lg p-8 flex flex-col items-center shadow-blue">
-              <Loader2 className="h-10 w-10 text-accent-primary animate-spin mb-4" />
-              <p className="font-serif text-ink-light">Creating your eBook project...</p>
+          <div className="fixed inset-0 bg-black bg-opacity-30 dark:bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-paper dark:bg-card rounded-lg p-8 flex flex-col items-center shadow-blue dark:shadow-lg">
+              <Loader2 className="h-10 w-10 text-accent-primary dark:text-accent-primary animate-spin mb-4" />
+              <p className="font-serif text-ink-light dark:text-ink-light">Creating your eBook project...</p>
             </div>
           </div>
         )}
         
         {/* Database warning banner */}
         {showDatabaseWarning && (
-          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md mb-4">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-400 dark:border-amber-500 p-4 rounded-md mb-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-amber-400" />
+                <AlertCircle className="h-5 w-5 text-amber-400 dark:text-amber-300" />
               </div>
               <div className="ml-3">
-                <p className="text-sm text-amber-700 font-serif">
+                <p className="text-sm text-amber-700 dark:text-amber-200 font-serif">
                   We encountered database connection issues. Your work is still being saved locally, 
                   and you can continue creating your eBook. Some features might be limited.
                 </p>
@@ -360,7 +360,7 @@ export default function EbookCreationWorkflow() {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+                    className="text-xs border-amber-300 dark:border-amber-500/70 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/50"
                     onClick={dismissDatabaseWarning}
                   >
                     Dismiss
@@ -372,16 +372,16 @@ export default function EbookCreationWorkflow() {
         )}
         
         {/* Hero section - UPDATED TO BE MORE COMPACT */}
-        <div className="bg-gradient-to-br from-accent-primary/15 to-accent-primary/5 rounded-lg p-4 shadow-sm mb-4 border border-accent-tertiary/10 flex items-center justify-between">
+        <div className="bg-gradient-to-br from-accent-primary/15 to-accent-primary/5 dark:from-accent-primary/25 dark:to-accent-primary/10 rounded-lg p-4 shadow-sm dark:shadow-md mb-4 border border-accent-tertiary/10 dark:border-accent-tertiary/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F9F7F4] rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-              <BookText className="h-5 w-5 text-[#738996]" />
+            <div className="w-10 h-10 bg-[#F9F7F4] dark:bg-card rounded-full flex items-center justify-center shadow-sm dark:shadow-md flex-shrink-0">
+              <BookText className="h-5 w-5 text-[#738996] dark:text-accent-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-display text-ink-dark leading-tight tracking-tight flex items-center gap-1">
+              <h1 className="text-lg font-display text-ink-dark dark:text-ink-dark leading-tight tracking-tight flex items-center gap-1">
                 {project ? project.title : 'Create New eBook'}
               </h1>
-              <p className="text-sm text-ink-light font-serif line-clamp-1">
+              <p className="text-sm text-ink-light dark:text-ink-light/80 font-serif line-clamp-1">
                 {project?.description || 'Transform your ideas into a polished eBook with our guided AI-powered workflow.'}
               </p>
             </div>
@@ -391,7 +391,7 @@ export default function EbookCreationWorkflow() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 h-8 border-[#E8E8E8] hover:bg-[#F5F5F5] hover:border-[#E8E8E8] transition-all duration-200"
+            className="gap-1.5 h-8 border-[#E8E8E8] dark:border-accent-tertiary/40 hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 hover:border-[#E8E8E8] dark:hover:border-accent-tertiary/50 transition-all duration-200"
             onClick={() => navigate('/dashboard')}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -401,14 +401,14 @@ export default function EbookCreationWorkflow() {
 
         {/* Progress indicator - enhanced design */}
         <div className="hidden md:block mb-10">
-          <div className="bg-paper rounded-xl border border-accent-tertiary/20 shadow-textera overflow-hidden p-4">
+          <div className="bg-paper dark:bg-card rounded-xl border border-accent-tertiary/20 dark:border-accent-tertiary/30 shadow-textera dark:shadow-md overflow-hidden p-4">
             <div className="flex items-center justify-between relative">
               {/* Progress line underneath - shows completion */}
-              <div className="absolute top-6 left-0 h-[3px] bg-accent-yellow/70" 
+              <div className="absolute top-6 left-0 h-[3px] bg-accent-yellow/70 dark:bg-accent-yellow/80" 
                    style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }} />
               
               {/* Background line */}
-              <div className="absolute top-6 left-0 h-[3px] w-full bg-slate-200/70" />
+              <div className="absolute top-6 left-0 h-[3px] w-full bg-slate-200/70 dark:bg-slate-700/50" />
               
               {/* Steps */}
               {steps.map((step, i) => {
@@ -423,10 +423,10 @@ export default function EbookCreationWorkflow() {
                       className={cn(
                         "h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 mb-3",
                         isActive 
-                          ? "bg-accent-primary text-white shadow-md ring-4 ring-accent-primary/20" 
+                          ? "bg-[#ccb595] dark:bg-[#ccb595] text-white shadow-md dark:shadow-lg ring-4 ring-[#ccb595]/20 dark:ring-[#ccb595]/30" 
                           : isCompleted 
                             ? "bg-accent-yellow text-white" 
-                            : "bg-slate-100 text-slate-400 border border-slate-200"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700"
                       )}
                     >
                       {isCompleted ? (
@@ -441,20 +441,20 @@ export default function EbookCreationWorkflow() {
                       <div className={cn(
                         "flex items-center justify-center mb-1",
                         isActive 
-                          ? "text-accent-primary" 
+                          ? "text-[#ccb595] dark:text-[#ccb595]" 
                           : isCompleted 
                             ? "text-accent-yellow" 
-                            : "text-slate-500"
+                            : "text-slate-500 dark:text-slate-400"
                       )}>
                         {step.icon}
                       </div>
                       <span className={cn(
                         "text-xs font-medium font-serif text-center whitespace-nowrap px-1",
                         isActive 
-                          ? "text-accent-primary" 
+                          ? "text-[#ccb595] dark:text-[#ccb595]" 
                           : isCompleted 
                             ? "text-accent-yellow" 
-                            : "text-slate-500"
+                            : "text-slate-500 dark:text-slate-400"
                       )}>
                         {step.title}
                       </span>
@@ -467,9 +467,9 @@ export default function EbookCreationWorkflow() {
           
           {/* Active step description */}
           <div className="text-center mt-4">
-            <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent-primary/5 rounded-full border border-accent-primary/10">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ccb595]/5 dark:bg-[#ccb595]/20 rounded-full border border-[#ccb595]/10 dark:border-[#ccb595]/30">
               {steps.find(s => s.id === currentStep)?.icon}
-              <span className="font-serif text-sm text-accent-primary">
+              <span className="font-serif text-sm text-[#ccb595] dark:text-[#ccb595]/90">
                 {steps.find(s => s.id === currentStep)?.description}
               </span>
             </div>
@@ -478,11 +478,11 @@ export default function EbookCreationWorkflow() {
 
         {/* Mobile progress indicator */}
         <div className="md:hidden mb-8">
-          <div className="bg-paper rounded-xl border border-accent-tertiary/20 shadow-textera-sm p-4">
+          <div className="bg-paper dark:bg-card rounded-xl border border-accent-tertiary/20 dark:border-accent-tertiary/30 shadow-textera-sm dark:shadow-md p-4">
             {/* Progress bar */}
-            <div className="relative h-2 bg-slate-100 rounded-full mb-5 overflow-hidden">
+            <div className="relative h-2 bg-slate-100 dark:bg-slate-800 rounded-full mb-5 overflow-hidden">
               <div 
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-accent-primary to-accent-yellow rounded-full transition-all duration-1000"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ccb595] to-accent-yellow dark:from-[#ccb595] dark:to-accent-yellow rounded-full transition-all duration-1000"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -490,7 +490,7 @@ export default function EbookCreationWorkflow() {
             {/* Current step info */}
             <div className="flex items-center gap-4">
               <div 
-                className="h-10 w-10 rounded-full bg-accent-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm"
+                className="h-10 w-10 rounded-full bg-[#ccb595] dark:bg-[#ccb595] text-white flex items-center justify-center flex-shrink-0 shadow-sm dark:shadow-md"
               >
                 <span className="text-xs font-medium">{currentStepIndex + 1}</span>
               </div>
@@ -498,12 +498,12 @@ export default function EbookCreationWorkflow() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   {steps.find(s => s.id === currentStep)?.icon}
-                  <span className="font-serif font-medium text-ink-dark">
+                  <span className="font-serif font-medium text-ink-dark dark:text-ink-dark">
                     {steps.find(s => s.id === currentStep)?.title || 'Unknown Step'}
                   </span>
                 </div>
                 
-                <span className="text-xs text-ink-light font-serif mt-0.5">
+                <span className="text-xs text-ink-light dark:text-ink-light/80 font-serif mt-0.5">
                   {steps.find(s => s.id === currentStep)?.description}
                 </span>
               </div>

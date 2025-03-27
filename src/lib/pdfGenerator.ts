@@ -151,6 +151,57 @@ function convertMarkdownToHtml(markdown: string): string {
     <head>
       <meta charset="UTF-8">
       <title>eBook</title>
+      <style>
+        :root {
+          --text-color: #333;
+          --bg-color: #fff;
+          --heading-color: #111;
+          --link-color: #0066cc;
+          --border-color: #ddd;
+          --code-bg: #f5f5f5;
+        }
+        @media (prefers-color-scheme: dark) {
+          :root {
+            --text-color: #e0e0e0;
+            --bg-color: #1a1a1a;
+            --heading-color: #ffffff;
+            --link-color: #3b82f6;
+            --border-color: #444;
+            --code-bg: #2a2a2a;
+          }
+        }
+        body {
+          font-family: 'Merriweather', Georgia, serif;
+          line-height: 1.6;
+          color: var(--text-color);
+          background-color: var(--bg-color);
+          margin: 0;
+          padding: 20px;
+        }
+        h1, h2, h3 {
+          color: var(--heading-color);
+          font-weight: bold;
+        }
+        p {
+          margin-bottom: 1em;
+        }
+        code {
+          background-color: var(--code-bg);
+          padding: 0.2em 0.4em;
+          border-radius: 3px;
+        }
+        pre {
+          background-color: var(--code-bg);
+          padding: 1em;
+          border-radius: 5px;
+          overflow-x: auto;
+        }
+        blockquote {
+          border-left: 3px solid var(--border-color);
+          padding-left: 1em;
+          font-style: italic;
+        }
+      </style>
     </head>
     <body>
   `;

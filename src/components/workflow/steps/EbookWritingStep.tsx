@@ -494,28 +494,28 @@ const EbookWritingStep = () => {
   const formatContent = (content: string | null): string => {
     if (!content) return '';
     
-    // More comprehensive markdown formatting
+    // More comprehensive markdown formatting with dark mode support
     return content
       // Headers
-      .replace(/# (.*)/g, '<h1 class="text-xl font-bold mt-4 mb-2">$1</h1>')
-      .replace(/## (.*)/g, '<h2 class="text-lg font-bold mt-3 mb-2">$1</h2>')
-      .replace(/### (.*)/g, '<h3 class="text-base font-bold mt-2 mb-1">$1</h3>')
-      .replace(/#### (.*)/g, '<h4 class="text-sm font-bold mt-2 mb-1">$1</h4>')
+      .replace(/# (.*)/g, '<h1 class="text-xl font-bold mt-4 mb-2 text-ink-dark dark:text-ink-dark">$1</h1>')
+      .replace(/## (.*)/g, '<h2 class="text-lg font-bold mt-3 mb-2 text-ink-dark dark:text-ink-dark">$1</h2>')
+      .replace(/### (.*)/g, '<h3 class="text-base font-bold mt-2 mb-1 text-ink-dark dark:text-ink-dark">$1</h3>')
+      .replace(/#### (.*)/g, '<h4 class="text-sm font-bold mt-2 mb-1 text-ink-dark dark:text-ink-dark">$1</h4>')
       // Bold and italic
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       // Lists
-      .replace(/^\s*\d+\.\s*(.*)/gm, '<li class="ml-6 list-decimal">$1</li>')
-      .replace(/^\s*-\s*(.*)/gm, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/^\s*\d+\.\s*(.*)/gm, '<li class="ml-6 list-decimal text-ink-dark dark:text-ink-light">$1</li>')
+      .replace(/^\s*-\s*(.*)/gm, '<li class="ml-4 list-disc text-ink-dark dark:text-ink-light">$1</li>')
       // Code blocks
-      .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto my-2">$1</pre>')
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded font-mono text-sm">$1</code>')
+      .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded font-mono text-sm overflow-x-auto my-2 text-ink-dark dark:text-ink-light">$1</pre>')
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono text-sm text-ink-dark dark:text-ink-light">$1</code>')
       // Blockquotes
-      .replace(/^>\s*(.*)/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 italic my-2">$1</blockquote>')
+      .replace(/^>\s*(.*)/gm, '<blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-2 text-ink-light dark:text-ink-light/80">$1</blockquote>')
       // Horizontal rule
-      .replace(/^---$/gm, '<hr class="my-4 border-t border-gray-300">')
+      .replace(/^---$/gm, '<hr class="my-4 border-t border-gray-300 dark:border-gray-600">')
       // Paragraphs and line breaks
-      .replace(/\n\n/g, '<p class="mb-4"></p>')
+      .replace(/\n\n/g, '<p class="mb-4 text-ink-dark dark:text-ink-light"></p>')
       .replace(/\n/g, '<br />');
   };
 
@@ -733,18 +733,18 @@ const EbookWritingStep = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <Card className="border border-[#E8E8E8] bg-gradient-to-br from-white to-[#F9F7F4]/30 shadow-sm rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md">
+        <Card className="border border-[#E8E8E8] dark:border-accent-tertiary/30 bg-gradient-to-br from-white to-[#F9F7F4]/30 dark:from-card dark:to-card shadow-sm dark:shadow-md rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md dark:hover:shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start gap-5">
-              <div className="w-16 h-16 bg-[#738996]/10 rounded-full flex items-center justify-center flex-shrink-0 group transition-all duration-300 hover:scale-105 hover:bg-[#738996]/20">
-                <BookText className="h-8 w-8 text-[#738996] group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-16 h-16 bg-[#738996]/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center flex-shrink-0 group transition-all duration-300 hover:scale-105 hover:bg-[#738996]/20 dark:hover:bg-accent-primary/30">
+                <BookText className="h-8 w-8 text-[#738996] dark:text-accent-primary group-hover:scale-110 transition-transform duration-300" />
               </div>
               <div className="flex-1">
-                <h3 className="font-display text-xl text-ink-dark mb-1 tracking-tight">
+                <h3 className="font-display text-xl text-ink-dark dark:text-ink-dark mb-1 tracking-tight">
                   {ebook?.title}
                 </h3>
                 {ebook?.description && (
-                  <p className="text-ink-light font-serif text-sm mb-5 leading-relaxed">
+                  <p className="text-ink-light dark:text-ink-light/80 font-serif text-sm mb-5 leading-relaxed">
                     {ebook.description}
                   </p>
                 )}
@@ -752,16 +752,16 @@ const EbookWritingStep = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-xs font-serif mb-1">
                     <span className="text-ink-light flex items-center">
-                      <span className="w-2 h-2 mr-1.5 rounded-full bg-[#738996]/70"></span>
+                      <span className="w-2 h-2 mr-1.5 rounded-full bg-[#738996]/70 dark:bg-accent-primary/70"></span>
                       {completedChapters} of {totalChapters} chapters completed
                     </span>
-                    <span className="text-[#738996] font-medium bg-[#738996]/10 px-2.5 py-1 rounded-full shadow-sm">
+                    <span className="text-[#738996] dark:text-accent-primary font-medium bg-[#738996]/10 dark:bg-accent-primary/20 px-2.5 py-1 rounded-full shadow-sm">
                       {Math.round(progressPercentage)}%
                     </span>
                   </div>
-                  <div className="w-full bg-[#E8E8E8] rounded-full h-2">
+                  <div className="w-full bg-[#E8E8E8] dark:bg-gray-700/50 rounded-full h-2">
                     <motion.div 
-                      className="bg-[#738996] h-2 rounded-full"
+                      className="bg-[#738996] dark:bg-accent-primary h-2 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${progressPercentage}%` }}
                       transition={{ duration: 1, ease: "easeOut" }}
@@ -779,343 +779,345 @@ const EbookWritingStep = () => {
         {localChapters.map((chapter, index) => (
           <motion.div
             key={chapter.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.4 }}
+            transition={{ 
+              duration: 0.3, 
+              delay: index * 0.05 
+            }}
+            className={cn(
+              "overflow-hidden rounded-lg shadow-sm dark:shadow-md border transition-all duration-300",
+              expandedChapter === chapter.id
+                ? "mb-6 border-[#738996]/40 dark:border-accent-primary/50 bg-white dark:bg-card"
+                : "mb-4 border-accent-tertiary/20 dark:border-accent-tertiary/30 bg-white dark:bg-card hover:border-accent-tertiary/40 dark:hover:border-accent-tertiary/50 hover:shadow-md dark:hover:shadow-lg"
+            )}
           >
-            <Card 
-              id={`chapter-${chapter.id}`}
-              className={cn(
-                "border overflow-hidden transition-all duration-300 rounded-lg group",
-                expandedChapter === chapter.id 
-                  ? "shadow-blue border-[#738996]/30" 
-                  : chapter.status === 'generated'
-                    ? "border-[#E8E8E8] hover:border-[#738996]/20 hover:shadow-sm" 
-                    : "border-[#E8E8E8] hover:border-[#E8E8E8]/80 hover:shadow-sm"
-              )}
+            <div className={cn(
+              "px-5 py-4 cursor-pointer transition-colors duration-200 flex justify-between",
+              expandedChapter === chapter.id
+                ? "bg-[#738996]/5 dark:bg-accent-primary/10"
+                : "hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10"
+            )}
+              onClick={() => toggleChapter(chapter.id)}
             >
-              <div 
-                className={cn(
-                  "py-4 px-5 flex items-center justify-between cursor-pointer transition-all duration-300",
-                  expandedChapter === chapter.id 
-                    ? "border-b border-[#E8E8E8] bg-[#F9F7F4]" 
-                    : "hover:bg-[#F9F7F4]/50"
-                )}
-                onClick={() => toggleChapter(chapter.id)}
-              >
-                <div className="flex items-center gap-4">
-                  <div 
-                    className={cn(
-                      "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105",
+              <div className="flex items-center gap-4">
+                <div 
+                  className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105",
+                    chapter.status === 'generated' 
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" 
+                      : chapter.status === 'generating'
+                        ? "bg-[#738996]/10 dark:bg-accent-primary/20 text-[#738996] dark:text-accent-primary"
+                        : "bg-[#F5F5F5] dark:bg-gray-700/40 text-[#888888] dark:text-gray-400"
+                  )}
+                >
+                  {chapter.status === 'generated' ? (
+                    <FileEdit className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                  ) : chapter.status === 'generating' ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ 
+                        duration: 2, 
+                        repeat: Infinity, 
+                        ease: "linear" 
+                      }}
+                    >
+                      <Loader2 className="h-5 w-5" />
+                    </motion.div>
+                  ) : (
+                    <Clock className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-display font-medium text-ink-dark dark:text-ink-dark tracking-tight">
+                    {chapter.title}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={cn(
+                      "inline-flex items-center justify-center px-2.5 py-0.5 text-xs rounded-full font-medium shadow-sm transition-all duration-300",
                       chapter.status === 'generated' 
-                        ? "bg-green-100 text-green-600" 
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
                         : chapter.status === 'generating'
-                          ? "bg-[#738996]/10 text-[#738996]"
-                          : "bg-[#F5F5F5] text-[#888888]"
-                    )}
-                  >
-                    {chapter.status === 'generated' ? (
-                      <FileEdit className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    ) : chapter.status === 'generating' ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ 
-                          duration: 2, 
-                          repeat: Infinity, 
-                          ease: "linear" 
-                        }}
-                      >
-                        <Loader2 className="h-5 w-5" />
-                      </motion.div>
-                    ) : (
-                      <Clock className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-display font-medium text-ink-dark tracking-tight">
-                      {chapter.title}
-                    </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={cn(
-                        "inline-flex items-center justify-center px-2.5 py-0.5 text-xs rounded-full font-medium shadow-sm transition-all duration-300",
-                        chapter.status === 'generated' 
-                          ? "bg-green-100 text-green-700" 
-                          : chapter.status === 'generating'
-                            ? "bg-[#738996]/10 text-[#738996]"
-                            : "bg-[#F5F5F5] text-[#888888]"
-                      )}>
-                        {chapter.status === 'generated' 
-                          ? 'Generated'
-                          : chapter.status === 'generating'
-                            ? 'Generating...'
-                            : 'Pending'}
+                          ? "bg-[#738996]/10 dark:bg-accent-primary/20 text-[#738996] dark:text-accent-primary"
+                          : "bg-[#F5F5F5] dark:bg-gray-700/50 text-[#888888] dark:text-gray-400"
+                    )}>
+                      {chapter.status === 'generated' 
+                        ? 'Generated'
+                        : chapter.status === 'generating'
+                          ? 'Generating...'
+                          : 'Pending'}
+                    </span>
+                    {chapter.status === 'generated' && chapter.content && (
+                      <span className="text-xs text-ink-light dark:text-ink-light/70 font-serif flex items-center">
+                        <span className="h-1 w-1 bg-ink-faded dark:bg-ink-light/40 rounded-full mx-2"></span>
+                        {chapter.content.split(/\s+/).length.toLocaleString()} words
                       </span>
-                      {chapter.status === 'generated' && chapter.content && (
-                        <span className="text-xs text-ink-light font-serif flex items-center">
-                          <span className="h-1 w-1 bg-ink-faded rounded-full mx-2"></span>
-                          {chapter.content.split(/\s+/).length.toLocaleString()} words
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {chapter.status === 'pending' && (
+              </div>
+              <div className="flex items-center gap-3">
+                {chapter.status === 'pending' && (
+                  <Button
+                    className="gap-1.5 bg-[#738996] dark:bg-accent-primary hover:bg-[#637885] dark:hover:bg-accent-primary/90 text-white"
+                    onClick={() => handleGenerateChapter(chapter.id)}
+                    disabled={!!generatingChapter}
+                  >
+                    {generatingChapter === chapter.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Generate Content
+                      </>
+                    )}
+                  </Button>
+                )}
+                {chapter.status === 'generated' && !editingChapter && (
+                  <>
                     <Button
-                      size="sm"
-                      className="gap-1.5 px-3.5 h-9 bg-[#738996] text-white hover:bg-[#738996]/90 transition-all duration-200 shadow-sm hover:shadow"
+                      variant="outline"
+                      className="gap-1.5 text-[#738996] dark:text-accent-primary border-[#738996]/30 dark:border-accent-primary/30 hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEditing(chapter);
+                        setExpandedChapter(chapter.id); // Ensure chapter is expanded when editing
+                      }}
+                      disabled={!!generatingChapter || !!editingChapter}
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Content
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-1.5 text-ink-light dark:text-ink-light/80 border-accent-tertiary/30 dark:border-accent-tertiary/40 hover:bg-accent-tertiary/5 dark:hover:bg-accent-tertiary/10"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleGenerateChapter(chapter.id);
                       }}
                       disabled={!!generatingChapter || !!editingChapter}
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Generate
+                      <RotateCcw className="h-4 w-4" />
+                      Regenerate
                     </Button>
-                  )}
-                  {chapter.status === 'generated' && !editingChapter && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 px-3.5 h-9 border-accent-tertiary/30 text-ink-dark hover:border-[#738996]/30 hover:bg-[#738996]/5 transition-all duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartEditing(chapter);
-                          setExpandedChapter(chapter.id); // Ensure chapter is expanded when editing
-                        }}
-                        disabled={!!generatingChapter || !!editingChapter}
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="gap-1.5 px-3.5 h-9 text-ink-light hover:bg-accent-tertiary/20 transition-all duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGenerateChapter(chapter.id);
-                        }}
-                        disabled={!!generatingChapter || !!editingChapter}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Regenerate
-                      </Button>
-                    </>
-                  )}
-                  {/* Delete button - Only show if not editing and not the only chapter */}
-                  {!editingChapter && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className={cn(
-                        "transition-all duration-200 h-9 w-9 p-0",
-                        localChapters.length > 1
-                          ? "text-red-600 hover:bg-red-50 hover:text-red-700"
-                          : "text-red-300 cursor-not-allowed"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (localChapters.length > 1) {
-                          handleDeleteChapterClick(chapter.id, e);
-                        }
-                      }}
-                      disabled={!!generatingChapter || !!editingChapter || deletingChapter === chapter.id || localChapters.length <= 1}
-                      title={localChapters.length > 1 ? "Delete chapter" : "Cannot delete the only chapter"}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <motion.div 
-                    animate={{ rotate: expandedChapter === chapter.id ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F5F5F5] transition-colors duration-200"
+                  </>
+                )}
+                {/* Delete button - Only show if not editing and not the only chapter */}
+                {!editingChapter && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={cn(
+                      "transition-all duration-200 h-9 w-9 p-0",
+                      localChapters.length > 1
+                        ? "text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-400"
+                        : "text-red-300 dark:text-red-700/50 cursor-not-allowed"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (localChapters.length > 1) {
+                        handleDeleteChapterClick(chapter.id, e);
+                      }
+                    }}
+                    disabled={!!generatingChapter || !!editingChapter || deletingChapter === chapter.id || localChapters.length <= 1}
+                    title={localChapters.length > 1 ? "Delete chapter" : "Cannot delete the only chapter"}
                   >
-                    <ChevronDown className="h-5 w-5 text-ink-faded" />
-                  </motion.div>
-                </div>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+                <motion.div 
+                  animate={{ rotate: expandedChapter === chapter.id ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F5F5F5] dark:hover:bg-gray-700/40 transition-colors duration-200"
+                >
+                  <ChevronDown className="h-5 w-5 text-ink-faded dark:text-gray-400" />
+                </motion.div>
               </div>
-              
-              {/* Expanded chapter content */}
-              <AnimatePresence>
-                {expandedChapter === chapter.id && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className={cn(
-                      "px-6 pt-5 pb-6 transition-all duration-300",
-                      editingChapter === chapter.id 
-                        ? "bg-white" 
-                        : "bg-[#FAF9F5] border-t border-[#E8E8E8]"
-                    )}>
-                      {chapter.status === 'generated' && chapter.content && !editingChapter ? (
-                        <motion.div 
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.5 }}
-                          className="prose prose-sm max-w-none font-serif text-ink-dark prose-headings:font-display prose-headings:text-ink-dark prose-p:text-ink-light prose-p:leading-relaxed prose-headings:mb-3 prose-li:text-ink-light prose-li:leading-relaxed"
-                        >
-                          <div dangerouslySetInnerHTML={{ __html: formatContent(chapter.content) }} />
-                          
-                          {/* Add action buttons at the bottom of displayed content */}
-                          <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#E8E8E8]">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5 px-3.5 h-9 border-accent-tertiary/30 text-ink-dark hover:border-[#738996]/30 hover:bg-[#738996]/5 transition-all duration-200"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartEditing(chapter);
-                              }}
-                              disabled={!!generatingChapter || !!editingChapter}
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                              Edit Chapter
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="gap-1.5 px-3.5 h-9 text-ink-light hover:bg-accent-tertiary/20 transition-all duration-200"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleGenerateChapter(chapter.id);
-                              }}
-                              disabled={!!generatingChapter || !!editingChapter}
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              Regenerate
-                            </Button>
-                          </div>
-                        </motion.div>
-                      ) : chapter.status === 'generating' ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                          <div className="w-20 h-20 bg-[#738996]/10 rounded-full flex items-center justify-center mb-5 shadow-inner">
-                            <motion.div
-                              animate={{ 
-                                rotate: 360,
-                                scale: [1, 1.1, 1]
-                              }}
-                              transition={{ 
-                                rotate: { duration: 3, repeat: Infinity, ease: "linear" },
-                                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                              }}
-                            >
-                              <Loader2 className="h-10 w-10 text-[#738996]" />
-                            </motion.div>
-                          </div>
-                          <h4 className="font-display text-lg text-ink-dark mb-2">Generating Chapter Content</h4>
-                          <p className="text-sm text-ink-light font-serif max-w-md">
-                            Our AI is crafting high-quality content for this chapter. This may take a minute or two.
-                          </p>
-                        </div>
-                      ) : editingChapter === chapter.id ? (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="space-y-5"
-                        >
-                          <div className="bg-[#738996]/5 p-5 rounded-lg border border-[#738996]/10 shadow-sm">
-                            <div className="flex items-start">
-                              <div className="bg-[#738996]/15 p-2 rounded-md mr-4 flex-shrink-0 mt-0.5 shadow-sm">
-                                <FileEdit className="h-5 w-5 text-[#738996]" />
-                              </div>
-                              <div>
-                                <h4 className="font-display text-base text-[#738996] mb-2">Editing Chapter</h4>
-                                <p className="text-sm text-ink-light font-serif mb-0 leading-relaxed">
-                                  Use markdown formatting for headings (#, ##), lists (-, 1.), and emphasis (**bold**, *italic*).
-                                  Your changes will be saved in real-time.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-[#738996]/20 to-[#ccb595]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-                            <Textarea 
-                              value={editContent}
-                              onChange={e => setEditContent(e.target.value)}
-                              className="relative w-full min-h-[400px] font-mono text-sm text-ink-dark border-[#E8E8E8] focus:border-[#738996] focus:ring-[#738996]/20 transition-colors duration-300 rounded-lg shadow-sm resize-y"
-                              placeholder="Write or paste your chapter content here. Use markdown for formatting..."
-                            />
-                          </div>
-                          <div className="flex justify-end gap-3 mt-5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1.5 text-ink-light hover:bg-accent-tertiary/20 transition-all duration-200 h-10"
-                              onClick={handleCancelEditing}
-                              disabled={savingChapter === chapter.id}
-                            >
-                              <X className="h-4 w-4" />
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="gap-1.5 bg-[#738996] text-white hover:bg-[#738996]/90 transition-all duration-200 shadow-sm hover:shadow h-10"
-                              onClick={() => handleSaveEdits(chapter.id)}
-                              disabled={savingChapter === chapter.id}
-                            >
-                              {savingChapter === chapter.id ? (
-                                <>
-                                  <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ 
-                                      duration: 1.5, 
-                                      repeat: Infinity, 
-                                      ease: "linear" 
-                                    }}
-                                  >
-                                    <Loader2 className="h-4 w-4" />
-                                  </motion.div>
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save className="h-4 w-4" />
-                                  Save Changes
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5 }}
-                          className="py-12 flex flex-col items-center justify-center"
-                        >
-                          <div className="w-20 h-20 bg-[#F5F5F5] rounded-full flex items-center justify-center mb-5 shadow-inner">
-                            <BookText className="h-9 w-9 text-[#CCCCCC]" />
-                          </div>
-                          <h4 className="font-display text-lg text-ink-dark mb-2">Ready to Generate</h4>
-                          <p className="text-ink-light font-serif text-center mb-6 max-w-md">
-                            Click the "Generate" button to create AI-powered content for this chapter.
-                          </p>
+            </div>
+            
+            {/* Expanded chapter content */}
+            <AnimatePresence>
+              {expandedChapter === chapter.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className={cn(
+                    "px-6 pt-5 pb-6 transition-all duration-300",
+                    editingChapter === chapter.id 
+                      ? "bg-white dark:bg-card" 
+                      : "bg-[#FAF9F5] dark:bg-card/80 border-t border-[#E8E8E8] dark:border-accent-tertiary/30"
+                  )}>
+                    {chapter.status === 'generated' && chapter.content && !editingChapter ? (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        className="prose prose-sm max-w-none font-serif text-ink-dark prose-headings:font-display prose-headings:text-ink-dark prose-p:text-ink-light prose-p:leading-relaxed prose-headings:mb-3 prose-li:text-ink-light prose-li:leading-relaxed"
+                      >
+                        <div
+                          dangerouslySetInnerHTML={{ __html: formatContent(chapter.content) }}
+                          className="text-ink-dark dark:text-ink-light"
+                        />
+                        
+                        {/* Add action buttons at the bottom of displayed content */}
+                        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#E8E8E8] dark:border-accent-tertiary/30">
                           <Button
-                            className="gap-2 bg-gradient-to-r from-[#738996] to-[#738996]/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 transition-all duration-300 shadow-sm hover:shadow px-5 py-2 h-auto"
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 px-3.5 h-9 border-accent-tertiary/30 dark:border-accent-tertiary/40 text-ink-dark dark:text-ink-light hover:border-[#738996]/30 dark:hover:border-accent-primary/30 hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 transition-all duration-200"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartEditing(chapter);
+                            }}
+                            disabled={!!generatingChapter || !!editingChapter}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit Chapter
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1.5 px-3.5 h-9 text-ink-light hover:bg-accent-tertiary/20 transition-all duration-200"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleGenerateChapter(chapter.id);
                             }}
-                            disabled={!!generatingChapter}
+                            disabled={!!generatingChapter || !!editingChapter}
                           >
-                            <Sparkles className="h-4 w-4" />
-                            Generate Chapter
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Regenerate
                           </Button>
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Card>
+                        </div>
+                      </motion.div>
+                    ) : chapter.status === 'generating' ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-20 h-20 bg-[#738996]/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mb-5 shadow-inner dark:shadow-inner-dark">
+                          <motion.div
+                            animate={{ 
+                              rotate: 360,
+                              scale: [1, 1.1, 1]
+                            }}
+                            transition={{ 
+                              rotate: { duration: 3, repeat: Infinity, ease: "linear" },
+                              scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                            }}
+                          >
+                            <Loader2 className="h-10 w-10 text-[#738996] dark:text-accent-primary" />
+                          </motion.div>
+                        </div>
+                        <h4 className="font-display text-lg text-ink-dark dark:text-ink-dark mb-2">Generating Chapter Content</h4>
+                        <p className="text-sm text-ink-light dark:text-ink-light/80 font-serif max-w-md">
+                          Our AI is crafting high-quality content for this chapter. This may take a minute or two.
+                        </p>
+                      </div>
+                    ) : editingChapter === chapter.id ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-5"
+                      >
+                        <div className="bg-[#738996]/5 dark:bg-accent-primary/15 p-5 rounded-lg border border-[#738996]/10 dark:border-accent-primary/30 shadow-sm dark:shadow-md">
+                          <div className="flex items-start">
+                            <div className="bg-[#738996]/15 dark:bg-accent-primary/25 p-2 rounded-md mr-4 flex-shrink-0 mt-0.5 shadow-sm dark:shadow-md">
+                              <FileEdit className="h-5 w-5 text-[#738996] dark:text-accent-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-display text-base text-[#738996] dark:text-accent-primary mb-2">Editing Chapter</h4>
+                              <p className="text-sm text-ink-light dark:text-ink-light/80 font-serif mb-0 leading-relaxed">
+                                Use markdown formatting for headings (#, ##), lists (-, 1.), and emphasis (**bold**, *italic*).
+                                Your changes will be saved in real-time.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-[#738996]/20 to-[#ccb595]/20 dark:from-accent-primary/30 dark:to-accent-yellow/30 rounded-lg blur opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+                          <Textarea 
+                            value={editContent}
+                            onChange={e => setEditContent(e.target.value)}
+                            className="relative w-full min-h-[400px] font-mono text-sm text-ink-dark dark:text-ink-light border-[#E8E8E8] dark:border-accent-tertiary/30 focus:border-[#738996] dark:focus:border-accent-primary focus:ring-[#738996]/20 dark:focus:ring-accent-primary/30 transition-colors duration-300 rounded-lg shadow-sm dark:shadow-md resize-y dark:bg-card"
+                            placeholder="Write or paste your chapter content here. Use markdown for formatting..."
+                          />
+                        </div>
+                        <div className="flex justify-end gap-3 mt-5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-ink-light dark:text-ink-light hover:bg-accent-tertiary/20 transition-all duration-200 h-10"
+                            onClick={handleCancelEditing}
+                            disabled={savingChapter === chapter.id}
+                          >
+                            <X className="h-4 w-4" />
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-[#738996] text-white hover:bg-[#738996]/90 transition-all duration-200 shadow-sm hover:shadow h-10"
+                            onClick={() => handleSaveEdits(chapter.id)}
+                            disabled={savingChapter === chapter.id}
+                          >
+                            {savingChapter === chapter.id ? (
+                              <>
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{ 
+                                    duration: 1.5, 
+                                    repeat: Infinity, 
+                                    ease: "linear" 
+                                  }}
+                                >
+                                  <Loader2 className="h-4 w-4" />
+                                </motion.div>
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-4 w-4" />
+                                Save Changes
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="py-12 flex flex-col items-center justify-center"
+                      >
+                        <div className="w-20 h-20 bg-[#F5F5F5] dark:bg-gray-800/50 rounded-full flex items-center justify-center mb-5 shadow-inner dark:shadow-inner-dark">
+                          <BookText className="h-9 w-9 text-[#CCCCCC] dark:text-gray-600" />
+                        </div>
+                        <h4 className="font-display text-lg text-ink-dark dark:text-ink-dark mb-2">Ready to Generate</h4>
+                        <p className="text-ink-light dark:text-ink-light/80 font-serif text-center mb-6 max-w-md">
+                          Click the "Generate" button to create AI-powered content for this chapter.
+                        </p>
+                        <Button
+                          className="gap-2 bg-gradient-to-r from-[#738996] to-[#738996]/90 dark:from-accent-primary dark:to-accent-primary/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 dark:hover:from-accent-primary/90 dark:hover:to-accent-primary/80 transition-all duration-300 shadow-sm dark:shadow-md hover:shadow px-5 py-2 h-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerateChapter(chapter.id);
+                          }}
+                          disabled={!!generatingChapter}
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          Generate Chapter
+                        </Button>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         ))}
       </div>
@@ -1127,7 +1129,7 @@ const EbookWritingStep = () => {
         transition={{ delay: 0.2, duration: 0.4 }}
       >
         <Button
-          className="gap-2 w-full border border-[#738996]/20 text-[#738996] hover:bg-[#738996]/5 hover:border-[#738996]/40 transition-all duration-300 py-6"
+          className="gap-2 w-full border border-[#738996]/20 dark:border-accent-primary/30 text-[#738996] dark:text-accent-primary hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 hover:border-[#738996]/40 dark:hover:border-accent-primary/50 transition-all duration-300 py-6"
           variant="outline"
           onClick={handleAddChapterClick}
           disabled={!!editingChapter || !!generatingChapter}
@@ -1146,7 +1148,7 @@ const EbookWritingStep = () => {
           className="space-y-4"
         >
           <Button
-            className="gap-2 w-full border border-[#738996]/30 text-[#738996] hover:bg-[#738996]/5 hover:border-[#738996]/50 transition-all duration-300 shadow-sm h-12"
+            className="gap-2 w-full border border-[#738996]/30 dark:border-accent-primary/30 text-[#738996] dark:text-accent-primary hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 hover:border-[#738996]/50 dark:hover:border-accent-primary/50 transition-all duration-300 shadow-sm h-12"
             variant="outline"
             onClick={() => {
               const nextPendingChapter = localChapters.find(c => c.status === 'pending');
@@ -1161,7 +1163,7 @@ const EbookWritingStep = () => {
           </Button>
           
           <Button
-            className="gap-2 w-full bg-gradient-to-r from-[#738996] to-[#738996]/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 transition-all duration-300 shadow-sm hover:shadow h-12"
+            className="gap-2 w-full bg-gradient-to-r from-[#738996] to-[#738996]/90 dark:from-accent-primary dark:to-accent-primary/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 dark:hover:from-accent-primary/90 dark:hover:to-accent-primary/80 transition-all duration-300 shadow-sm dark:shadow-md hover:shadow h-12"
             onClick={handleAutoGenerateAllChapters}
             disabled={!!generatingChapter || !!editingChapter}
           >
@@ -1169,7 +1171,7 @@ const EbookWritingStep = () => {
             Auto-Generate All Chapters
           </Button>
           
-          <p className="text-xs text-ink-faded text-center font-serif">
+          <p className="text-xs text-ink-faded dark:text-ink-light/60 text-center font-serif">
             Each chapter builds on previous ones. For best results, generate chapters in order from beginning to end.
           </p>
         </motion.div>
@@ -1184,17 +1186,17 @@ const EbookWritingStep = () => {
         <Button
           variant="outline"
           onClick={() => setCurrentStep('idea-selection')}
-          className="gap-2 border-[#E8E8E8] hover:bg-[#F5F5F5] hover:border-[#E8E8E8] transition-all duration-200"
+          className="gap-2 border-[#E8E8E8] dark:border-accent-tertiary/30 hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/10 hover:border-[#E8E8E8] dark:hover:border-accent-tertiary/40 transition-all duration-200"
           disabled={!!editingChapter}
         >
           Back
         </Button>
         <Button
           className={cn(
-            "gap-2 text-white transition-all duration-300 shadow-sm hover:shadow px-6",
+            "gap-2 text-white transition-all duration-300 shadow-sm dark:shadow-md hover:shadow px-6",
             allChaptersGenerated 
-              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80" 
-              : "bg-[#738996] hover:bg-[#738996]/90"
+              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 dark:from-accent-yellow dark:to-accent-yellow/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 dark:hover:from-accent-yellow/90 dark:hover:to-accent-yellow/80" 
+              : "bg-[#738996] dark:bg-accent-primary hover:bg-[#738996]/90 dark:hover:bg-accent-primary/90"
           )}
           onClick={handleProceed}
           disabled={!allChaptersGenerated || !!editingChapter}
@@ -1208,35 +1210,34 @@ const EbookWritingStep = () => {
         </Button>
       </motion.div>
 
-      {/* Delete Chapter Confirmation Dialog */}
+      {/* Delete chapter confirmation dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-card border-accent-tertiary/20 dark:border-accent-tertiary/30">
           <DialogHeader>
-            <DialogTitle className="font-display text-ink-dark">Delete Chapter</DialogTitle>
-            <DialogDescription className="font-serif text-ink-light">
+            <DialogTitle className="text-ink-dark dark:text-ink-dark font-display">Confirm Delete Chapter</DialogTitle>
+            <DialogDescription className="text-ink-light dark:text-ink-light/80 font-serif">
               Are you sure you want to delete this chapter? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-ink-dark font-serif mb-4">
-              {localChapters.find(c => c.id === deletingChapter)?.title}
+          
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-md p-3 my-2">
+            <p className="text-red-800 dark:text-red-300 text-sm font-serif">
+              <strong>Warning:</strong> Deleting this chapter may affect the flow and coherence of your eBook.
             </p>
-            <div className="bg-red-50 p-3 rounded-md border border-red-100 text-red-700 text-sm font-serif">
-              <AlertCircle className="h-4 w-4 inline-block mr-2 mb-0.5" />
-              This will permanently remove the chapter from your eBook.
-            </div>
           </div>
-          <DialogFooter>
+          
+          <DialogFooter className="flex justify-between">
             <Button
               variant="ghost"
               onClick={() => setDeleteConfirmOpen(false)}
-              className="text-ink-light hover:bg-accent-tertiary/20"
+              className="text-ink-light dark:text-ink-light/80 border border-[#E8E8E8] dark:border-accent-tertiary/30 hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/10"
             >
               Cancel
             </Button>
             <Button
-              className="bg-red-600 text-white hover:bg-red-700"
+              variant="destructive"
               onClick={deleteChapter}
+              className="bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-800 text-white"
               disabled={!deletingChapter}
             >
               Delete Chapter
@@ -1245,13 +1246,13 @@ const EbookWritingStep = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add New Chapter Dialog */}
+      {/* Add chapter dialog */}
       <Dialog open={addChapterDialogOpen} onOpenChange={setAddChapterDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-card border-accent-tertiary/20 dark:border-accent-tertiary/30">
           <DialogHeader>
-            <DialogTitle className="font-display text-ink-dark">Add New Chapter</DialogTitle>
-            <DialogDescription className="font-serif text-ink-light">
-              Create a new chapter for your eBook. You can choose to generate content with AI or write it manually.
+            <DialogTitle className="text-ink-dark dark:text-ink-dark font-display">Add New Chapter</DialogTitle>
+            <DialogDescription className="text-ink-light dark:text-ink-light/80 font-serif">
+              Create a new chapter for your eBook. You can have it AI-generated or write it yourself.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
@@ -1264,7 +1265,7 @@ const EbookWritingStep = () => {
                 placeholder="Enter chapter title..."
                 value={newChapterTitle}
                 onChange={(e) => setNewChapterTitle(e.target.value)}
-                className="border-accent-tertiary/30 focus:border-[#738996] focus:ring-[#738996]/20"
+                className="font-serif bg-white dark:bg-card border-[#E8E8E8] dark:border-accent-tertiary/40 focus:border-[#738996] dark:focus:border-accent-primary text-ink-dark dark:text-ink-light"
                 disabled={addingChapter}
               />
             </div>
@@ -1278,41 +1279,41 @@ const EbookWritingStep = () => {
                 className="space-y-3"
                 disabled={addingChapter}
               >
-                <div className="flex items-start space-x-3 p-3 rounded-md border border-[#E8E8E8] hover:border-[#738996]/20 transition-all duration-200 cursor-pointer">
+                <div className="flex items-start space-x-3 p-3 rounded-md border border-[#E8E8E8] dark:border-accent-tertiary/30 hover:border-[#738996]/20 dark:hover:border-accent-primary/40 transition-all duration-200 cursor-pointer bg-white dark:bg-card">
                   <RadioGroupItem 
                     value="ai" 
                     id="option-ai" 
-                    className="mt-1 data-[state=checked]:border-[#738996] data-[state=checked]:text-[#738996]" 
+                    className="mt-1 data-[state=checked]:border-[#738996] dark:data-[state=checked]:border-accent-primary data-[state=checked]:text-[#738996] dark:data-[state=checked]:text-accent-primary" 
                   />
                   <div className="space-y-1.5">
                     <Label 
                       htmlFor="option-ai" 
-                      className="text-ink-dark font-medium flex items-center cursor-pointer"
+                      className="text-ink-dark dark:text-ink-dark font-medium flex items-center cursor-pointer"
                     >
-                      <Sparkles className="h-4 w-4 mr-2 text-[#738996]" />
+                      <Sparkles className="h-4 w-4 mr-2 text-[#738996] dark:text-accent-primary" />
                       AI-Generated Chapter
                     </Label>
-                    <p className="text-sm text-ink-light font-serif">
+                    <p className="text-sm text-ink-light dark:text-ink-light/80 font-serif">
                       Our AI will generate high-quality content for this chapter based on your eBook topic and previous chapters.
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3 p-3 rounded-md border border-[#E8E8E8] hover:border-[#738996]/20 transition-all duration-200 cursor-pointer">
+                <div className="flex items-start space-x-3 p-3 rounded-md border border-[#E8E8E8] dark:border-accent-tertiary/30 hover:border-[#738996]/20 dark:hover:border-accent-primary/40 transition-all duration-200 cursor-pointer bg-white dark:bg-card">
                   <RadioGroupItem 
                     value="manual" 
                     id="option-manual" 
-                    className="mt-1 data-[state=checked]:border-[#738996] data-[state=checked]:text-[#738996]" 
+                    className="mt-1 data-[state=checked]:border-[#738996] dark:data-[state=checked]:border-accent-primary data-[state=checked]:text-[#738996] dark:data-[state=checked]:text-accent-primary" 
                   />
                   <div className="space-y-1.5">
                     <Label 
                       htmlFor="option-manual" 
-                      className="text-ink-dark font-medium flex items-center cursor-pointer"
+                      className="text-ink-dark dark:text-ink-dark font-medium flex items-center cursor-pointer"
                     >
-                      <PenLine className="h-4 w-4 mr-2 text-[#738996]" />
-                      Write Chapter Manually
+                      <PenLine className="h-4 w-4 mr-2 text-[#738996] dark:text-accent-primary" />
+                      Custom Chapter (Manual)
                     </Label>
-                    <p className="text-sm text-ink-light font-serif">
-                      Create the chapter content yourself using our markdown editor.
+                    <p className="text-sm text-ink-light dark:text-ink-light/80 font-serif">
+                      Start with a blank editor to write your own custom chapter content.
                     </p>
                   </div>
                 </div>
@@ -1323,40 +1324,90 @@ const EbookWritingStep = () => {
             <Button
               variant="ghost"
               onClick={() => setAddChapterDialogOpen(false)}
-              className="text-ink-light hover:bg-accent-tertiary/20"
+              className="mr-1 text-ink-light dark:text-ink-light border border-[#E8E8E8] dark:border-accent-tertiary/30 hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/10"
               disabled={addingChapter}
             >
               Cancel
             </Button>
-            <Button
-              className="bg-[#738996] text-white hover:bg-[#738996]/90"
+            <Button 
               onClick={handleAddChapter}
+              className="bg-[#738996] dark:bg-accent-primary text-white"
               disabled={!newChapterTitle.trim() || addingChapter}
             >
               {addingChapter ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Adding...
+                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                  Creating...
                 </>
               ) : (
                 <>
-                  {newChapterCreationType === 'ai' ? (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Add & Generate
-                    </>
-                  ) : (
-                    <>
-                      <PenLine className="h-4 w-4 mr-2" />
-                      Add & Edit
-                    </>
-                  )}
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Add Chapter
                 </>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Progress bar and action buttons */}
+      <div className="bg-white dark:bg-card rounded-lg p-6 shadow-sm dark:shadow-md border border-accent-tertiary/20 dark:border-accent-tertiary/30 mt-8">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-display text-lg text-ink-dark dark:text-ink-dark">
+              eBook Generation Progress
+            </h4>
+            <span className="text-ink-light dark:text-ink-light/80 font-serif text-sm">
+              {completedChapters} of {totalChapters} chapters completed
+            </span>
+          </div>
+          
+          <Progress value={progressPercentage} className="h-2.5 bg-[#E8E8E8] dark:bg-gray-700/50" />
+          
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex gap-2">
+              {/* Auto-generate all button */}
+              {!allChaptersGenerated && !generatingChapter && localChapters.some(c => c.status === 'pending') && (
+                <Button
+                  variant="outline"
+                  className="gap-1.5 text-[#738996] dark:text-accent-primary border-[#738996]/30 dark:border-accent-primary/30 hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10"
+                  onClick={handleAutoGenerateAllChapters}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Auto-Generate All
+                </Button>
+              )}
+              
+              {/* Add chapter button */}
+              <Button
+                variant="outline"
+                className="gap-1.5 text-ink-light dark:text-ink-light/80 border-accent-tertiary/30 dark:border-accent-tertiary/40 hover:bg-accent-tertiary/5 dark:hover:bg-accent-tertiary/10"
+                onClick={handleAddChapterClick}
+              >
+                <Plus className="h-4 w-4" />
+                Add Chapter
+              </Button>
+            </div>
+            
+            {/* Next step button */}
+            <Button
+              className="gap-1.5 bg-[#738996] dark:bg-accent-primary hover:bg-[#637885] dark:hover:bg-accent-primary/90 text-white"
+              onClick={handleProceed}
+              disabled={!allChaptersGenerated}
+            >
+              Preview eBook
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Add CSS for dark mode shadow-inner */}
+      <style jsx global>{`
+        .dark .shadow-inner-dark {
+          box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+        }
+      `}</style>
     </div>
   );
 };

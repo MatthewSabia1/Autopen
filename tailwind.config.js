@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindcssAnimate from "tailwindcss-animate";
+import scrollbarPlugin from "tailwind-scrollbar";
 
 export default {
   darkMode: ["class"],
@@ -60,23 +61,26 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Autopen colors based on style guide
-        cream: "#FAF9F5",  // Light cream background
-        paper: "#FFFFFF",  // White background for cards
-        dark: "#191f25",   // Dark background for nav and sidebar
-        gold: "#ccb595",   // Gold accent color for logo and highlights
+        // Autopen colors based on style guide with HSL support
+        cream: "hsl(var(--cream))",
+        paper: "hsl(var(--paper))",
+        dark: "hsl(var(--dark-bg))",
+        gold: "hsl(var(--accent-yellow))",
         ink: {
-          dark: "#333333", // Main text color
-          light: "#666666", // Secondary text color
-          faded: "#888888", // Lighter text for placeholders
+          dark: "hsl(var(--ink-dark))",
+          light: "hsl(var(--ink-light))",
+          faded: "hsl(var(--ink-faded))",
         },
         accent: {
-          primary: "#738996",    // Primary grayish blue accent - 55% of UI
-          secondary: "#5e7282",  // Slightly darker blue for hover states
-          tertiary: "#F1F0EC",   // Light beige/gray for subtle backgrounds and borders
-          yellow: "#ccb595",     // Secondary gold color - 25% of UI
+          primary: "hsl(var(--accent-primary))",
+          secondary: "hsl(var(--accent-secondary))",
+          tertiary: "hsl(var(--accent-tertiary))",
+          yellow: "hsl(var(--accent-yellow))",
         },
-        danger: "#DC2626", // For error messages and destructive actions
+        danger: "hsl(var(--danger))",
+        success: "hsl(var(--success))",
+        info: "hsl(var(--info))",
+        warning: "hsl(var(--warning))",
         slate: {
           50: "#f8fafc",
           100: "#f1f5f9",
@@ -159,6 +163,10 @@ export default {
           "0%, 100%": { opacity: 0.6 },
           "50%": { opacity: 0.8 },
         },
+        "theme-fade": {
+          "0%": { opacity: 0.7 },
+          "100%": { opacity: 1 },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -167,6 +175,7 @@ export default {
         "fade-out": "fade-out 0.3s ease-in-out",
         "slide-in": "slide-in 0.4s ease-out",
         "pulse-slow": "pulse-slow 3s ease-in-out infinite",
+        "theme-fade": "theme-fade 0.2s ease-in-out",
       },
       boxShadow: {
         textera: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
@@ -179,9 +188,14 @@ export default {
         "blue-sm": "0 2px 5px rgba(115, 137, 150, 0.1)",
         "yellow": "0 4px 12px rgba(204, 181, 149, 0.15)",
         "yellow-sm": "0 2px 5px rgba(204, 181, 149, 0.1)",
+        "dark": "0 4px 12px rgba(0, 0, 0, 0.3)",
+        "dark-sm": "0 2px 5px rgba(0, 0, 0, 0.2)",
         "none": "none"
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [
+    tailwindcssAnimate,
+    scrollbarPlugin({ nocompatible: true }),
+  ],
 };

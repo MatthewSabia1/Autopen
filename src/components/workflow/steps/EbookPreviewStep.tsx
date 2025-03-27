@@ -176,27 +176,37 @@ const EbookPreviewStep = () => {
     try {
       const content = getFullEbookContent();
       
-      // Convert markdown to HTML using a more robust method
+      // Convert markdown to HTML using a more robust method with dark mode support
       const html = content
         // Headers - do these first to avoid conflicts with bold/italic markdown
-        .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4 mt-6">$1</h1>')
-        .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mb-3 mt-5">$1</h2>')
-        .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mb-2 mt-4">$1</h3>')
+        .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4 mt-6 text-ink-dark dark:text-ink-dark">$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mb-3 mt-5 text-ink-dark dark:text-ink-dark">$1</h2>')
+        .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mb-2 mt-4 text-ink-dark dark:text-ink-dark">$1</h3>')
         
         // Bold and italic
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-ink-dark dark:text-ink-dark">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em class="text-ink-dark dark:text-ink-light">$1</em>')
         
         // Lists - multi-step to handle nested lists properly
-        .replace(/^\s*\n\* (.*)/gm, '<ul>\n<li>$1</li>')
-        .replace(/^\* (.*)/gm, '<li>$1</li>')
-        .replace(/^\s*\n(\d+\. .*)/gm, '<ol>\n<li>$1</li>')
-        .replace(/^(\d+\. .*)/gm, '<li>$1</li>')
+        .replace(/^\s*\n\* (.*)/gm, '<ul class="list-disc pl-5 space-y-1 my-3">\n<li class="text-ink-light dark:text-ink-light">$1</li>')
+        .replace(/^\* (.*)/gm, '<li class="text-ink-light dark:text-ink-light">$1</li>')
+        .replace(/^\s*\n(\d+\. .*)/gm, '<ol class="list-decimal pl-5 space-y-1 my-3">\n<li class="text-ink-light dark:text-ink-light">$1</li>')
+        .replace(/^(\d+\. .*)/gm, '<li class="text-ink-light dark:text-ink-light">$1</li>')
         .replace(/<\/ul>\s*\n<ul>/g, '')
         .replace(/<\/ol>\s*\n<ol>/g, '')
         
+        // Code blocks
+        .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-3 my-3 rounded-md overflow-x-auto text-ink-dark dark:text-ink-light"><code>$1</code></pre>')
+        .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm text-ink-dark dark:text-ink-light">$1</code>')
+        
+        // Blockquotes
+        .replace(/^>\s*(.*)/gm, '<blockquote class="border-l-4 border-accent-tertiary/50 dark:border-accent-tertiary/30 pl-4 py-1 my-3 italic text-ink-light dark:text-ink-light/80">$1</blockquote>')
+        
+        // Horizontal rule
+        .replace(/^---$/gm, '<hr class="my-6 border-t border-accent-tertiary/30 dark:border-accent-tertiary/20">')
+        
         // Paragraphs - careful to maintain appropriate spacing
-        .replace(/^\s*\n(?!\<)/gm, '</p>\n<p>')
+        .replace(/^\s*\n(?!\<)/gm, '</p>\n<p class="text-ink-light dark:text-ink-light leading-relaxed mb-4">')
         
         // Fix any leftover trailing line breaks
         .replace(/\n+$/g, '');
@@ -204,19 +214,20 @@ const EbookPreviewStep = () => {
       // Ensure the content is properly wrapped in paragraphs
       let htmlContent = html;
       if (!htmlContent.startsWith('<')) {
-        htmlContent = '<p>' + htmlContent;
+        htmlContent = '<p class="text-ink-light dark:text-ink-light leading-relaxed mb-4">' + htmlContent;
       }
       if (!htmlContent.endsWith('>')) {
         htmlContent += '</p>';
       }
       
       // Remove any empty paragraphs
+      htmlContent = htmlContent.replace(/<p\s[^>]*>\s*<\/p>/g, '');
       htmlContent = htmlContent.replace(/<p>\s*<\/p>/g, '');
       
       return htmlContent;
     } catch (error) {
       console.error('Error converting markdown to HTML:', error);
-      return '<p>Error converting content to HTML for preview.</p>';
+      return '<p class="text-red-500 dark:text-red-400">Error converting content to HTML for preview.</p>';
     }
   };
 
@@ -902,7 +913,7 @@ const EbookPreviewStep = () => {
         <Button
           variant="outline"
           onClick={() => setCurrentStep('ebook-writing')}
-          className="gap-2 border-[#E8E8E8] hover:bg-[#F5F5F5] hover:border-[#E8E8E8] transition-all duration-200"
+          className="gap-2 border-[#E8E8E8] dark:border-accent-tertiary/40 hover:bg-[#F5F5F5] dark:hover:bg-accent-tertiary/20 hover:border-[#E8E8E8] dark:hover:border-accent-tertiary/50 transition-all duration-200"
           disabled={isGenerating !== null || isFinalized}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -911,17 +922,17 @@ const EbookPreviewStep = () => {
         
         <Button
           className={cn(
-            "gap-2 relative overflow-hidden shadow-sm hover:shadow transition-all duration-300",
+            "gap-2 relative overflow-hidden shadow-sm dark:shadow-md hover:shadow dark:hover:shadow-lg transition-all duration-300",
             isFinalized 
-              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 text-white" 
-              : "bg-[#738996] hover:bg-[#738996]/90 text-white"
+              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 dark:from-accent-yellow dark:to-accent-yellow/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 dark:hover:from-accent-yellow/90 dark:hover:to-accent-yellow/80 text-white" 
+              : "bg-[#738996] dark:bg-accent-primary hover:bg-[#637885] dark:hover:bg-accent-primary/90 text-white"
           )}
           onClick={handleFinalize}
           disabled={!allChaptersGenerated || isFinalized || isGenerating === 'finalizing'}
         >
           {isGenerating === 'finalizing' ? (
             <>
-              <div className="absolute inset-0 bg-[#738996] opacity-90">
+              <div className="absolute inset-0 bg-[#738996] dark:bg-accent-primary opacity-90">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shine"></div>
               </div>
               <div className="relative flex items-center gap-2">
@@ -958,6 +969,18 @@ const EbookPreviewStep = () => {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #738996;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #60a5fa;
+          }
         }
         
         @keyframes shine {
