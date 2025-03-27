@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useLocalStorage } from '../utils';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark';
 
 type ThemeContextType = {
   theme: Theme;
@@ -13,37 +13,20 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeValue] = useLocalStorage<Theme>('autopen-theme', 'system');
+  // Ensure light mode is the default by explicitly setting 'light'
+  const [theme, setThemeValue] = useLocalStorage<Theme>('autopen-theme', 'light');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   
-  // Function to determine if dark mode should be applied
-  const getSystemTheme = (): boolean => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  };
-
-  // Initially set dark mode based on the theme setting
+  // Enforce light mode on initial load
   useEffect(() => {
-    if (theme === 'system') {
-      setIsDarkMode(getSystemTheme());
-    } else {
-      setIsDarkMode(theme === 'dark');
-    }
-  }, [theme]);
-
-  // Listen for system theme changes
-  useEffect(() => {
-    if (theme !== 'system') return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      setIsDarkMode(mediaQuery.matches);
-    };
+    // Make sure we remove any dark mode classes on initial load
+    document.documentElement.classList.remove('dark');
     
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+    // Then set the state based on saved theme
+    setIsDarkMode(theme === 'dark');
+  }, []);
 
-  // Apply dark mode class to html element
+  // Apply dark mode class to html element when theme changes
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -55,9 +38,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Utility function to set theme and trigger dark mode update
   const setTheme = (newTheme: Theme) => {
     setThemeValue(newTheme);
+    setIsDarkMode(newTheme === 'dark');
   };
 
-  // Toggle between light and dark (ignoring system)
+  // Toggle between light and dark
   const toggleTheme = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
   };
