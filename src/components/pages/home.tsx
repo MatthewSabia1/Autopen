@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 import AuthModal from "../auth/AuthModal";
 import { motion, useScroll, useTransform, AnimatePresence, stagger, Variants } from "framer-motion";
+import React from "react";
 
 // Author avatar data
 const authors = [
@@ -629,13 +630,13 @@ export default function Home() {
               </Badge>
             </motion.div>
             <motion.h2 
-              className="text-4xl font-display font-medium mb-6"
+              className="text-4xl md:text-5xl font-display font-medium mb-6"
               variants={fadeInUp}
             >
               Stop Losing Money on <span className="text-accent-primary">Unorganized Ideas</span>
             </motion.h2>
             <motion.p 
-              className="text-lg text-ink-light"
+              className="text-lg md:text-xl text-ink-light max-w-2xl mx-auto"
               variants={fadeInUp}
             >
               Your scattered notes and brilliant ideas are worth nothing until they're structured into products people can buy. Autopen bridges that gap in minutes, not months.
@@ -643,7 +644,7 @@ export default function Home() {
           </motion.div>
           
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10"
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
@@ -652,14 +653,18 @@ export default function Home() {
             {features.map((feature, index) => (
               <motion.div 
                 key={index} 
-                className="textera-card p-8 flex flex-col h-full border border-accent-tertiary/10 hover:border-accent-primary/20 transition-all duration-300"
+                className="textera-card p-8 md:p-10 flex flex-col h-full border border-accent-tertiary/10 hover:border-accent-primary/20 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
                 variants={fadeInUp}
                 whileHover="hover"
                 initial="rest"
               >
-                <motion.div variants={cardHover} className="h-full">
-                  <div className="bg-accent-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-6">
+                {/* Subtle background gradient */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full -mr-16 -mt-16 blur-xl"></div>
+                
+                <motion.div variants={cardHover} className="h-full flex flex-col relative z-10">
+                  <div className="bg-gradient-to-br from-accent-primary/15 to-accent-primary/5 w-16 h-16 rounded-full flex items-center justify-center mb-6 shadow-sm">
                     <motion.div
+                      className="text-accent-primary"
                       animate={{ rotate: [0, 5, 0, -5, 0] }}
                       transition={{ 
                         duration: 6, 
@@ -667,14 +672,30 @@ export default function Home() {
                         delay: index * 0.5
                       }}
                     >
-                      {feature.icon}
+                      {React.cloneElement(feature.icon, { className: "h-7 w-7" })}
                     </motion.div>
                   </div>
-                  <h3 className="text-xl font-display mb-3">{feature.title}</h3>
-                  <p className="text-ink-light">{feature.description}</p>
+                  <h3 className="text-2xl font-display font-medium text-ink-dark mb-4">{feature.title}</h3>
+                  <p className="text-ink-light leading-relaxed text-base flex-grow">{feature.description}</p>
                 </motion.div>
               </motion.div>
             ))}
+          </motion.div>
+
+          <motion.div 
+            className="text-center mt-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Button 
+              className="textera-button-primary text-base px-8 py-4 h-auto"
+              onClick={() => handleOpenAuthModal('signup')}
+            >
+              Start Creating Digital Products
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </motion.div>
         </div>
       </section>
