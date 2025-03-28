@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../../supabase/supabase';
 import { useAuth } from '../../../supabase/auth';
 import { logError, logSupabaseOperation } from '../utils/debug';
+import { generateStructuredDocument } from '../brainDumpAnalyzer';
 
 // Define common workflow steps
 export type BaseWorkflowStep =
@@ -43,7 +44,9 @@ export interface BrainDump {
   project_id: string;
   raw_content: string | null;
   analyzed_content: any | null;
-  status: 'pending' | 'analyzing' | 'analyzed';
+  status: 'pending' | 'analyzing' | 'analyzed' | 'complete';
+  analysis_result?: any;
+  structured_document?: string;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +86,9 @@ export interface EbookIdea {
   title: string;
   description: string | null;
   source_data: string | null;
+  target_audience?: string | null;
+  format_approach?: string | null;
+  unique_value?: string | null;
   created_at: string;
 }
 
@@ -96,6 +102,11 @@ export interface Ebook {
   status: 'generating' | 'generated' | 'finalized';
   created_at: string;
   updated_at: string;
+  metadata?: {
+    target_audience?: string;
+    format_approach?: string;
+    unique_value?: string;
+  };
 }
 
 // E-book chapter type definition
@@ -148,14 +159,14 @@ interface WorkflowContextFunctions {
   saveBrainDump: (content: string) => Promise<string>;
   addBrainDumpFile: (file: File) => Promise<void>;
   removeBrainDumpFile: (fileId: string) => Promise<void>;
-  addBrainDumpLink: (url: string, title: string, linkType: 'youtube' | 'webpage') => Promise<string>;
+  addBrainDumpLink: (url: string, title: string, linkType: 'youtube' | 'webpage', existingId?: string, thumbnail?: string, transcript?: string, isLoadingTranscript?: boolean, transcriptError?: string) => Promise<string>;
   removeBrainDumpLink: (linkId: string) => Promise<void>;
   analyzeBrainDump: (progressCallback?: (status: string) => void) => Promise<void>;
-  resetWorkflow: (newWorkflowType?: WorkflowType) => void;
+  resetWorkflow: (newWorkflowType?: WorkflowType, productId?: string) => void;
   
   // eBook specific functions
   selectEbookIdea: (ideaId: string) => Promise<void>;
-  createEbook: (title: string, description: string) => Promise<string>;
+  createEbook: (title: string, description: string, targetAudience?: string, formatApproach?: string, uniqueValue?: string) => Promise<string>;
   generateEbookChapter: (chapterId: string) => Promise<void>;
   finalizeEbook: () => Promise<void>;
   updateEbookChapters: (chapters: EbookChapter[]) => void;
@@ -675,53 +686,98 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   const addBrainDumpLink = async (
     url: string, 
     title: string, 
-    linkType: 'youtube' | 'webpage'
+    linkType: 'youtube' | 'webpage',
+    existingId?: string,
+    thumbnail?: string,
+    transcript?: string,
+    isLoadingTranscript?: boolean,
+    transcriptError?: string
   ): Promise<string> => {
     if (!state.brainDump?.id) throw new Error('No active brain dump');
     
     setState(prevState => ({ ...prevState, loading: true, error: null }));
     
     try {
-      // Create link record in database
-      const { data, error } = await supabase
-        .from('brain_dump_links')
-        .insert({
-          brain_dump_id: state.brainDump.id,
-          url,
-          title,
-          link_type: linkType,
-          transcript: null
-        })
-        .select()
-        .single();
+      let linkId: string;
       
-      if (error) throw error;
-      
-      // Add YouTube thumbnail if applicable
-      let thumbnail: string | undefined;
-      if (linkType === 'youtube') {
-        try {
-          const videoId = extractYoutubeVideoId(url);
-          if (videoId) {
-            thumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+      // Check if we're updating an existing link or creating a new one
+      if (existingId) {
+        // Update existing link
+        const { error } = await supabase
+          .from('brain_dump_links')
+          .update({
+            url,
+            title,
+            link_type: linkType,
+            transcript: transcript || null
+          })
+          .eq('id', existingId);
+        
+        if (error) throw error;
+        linkId = existingId;
+        
+        // Update link in state
+        setState(prevState => ({ 
+          ...prevState, 
+          brainDumpLinks: prevState.brainDumpLinks.map(link => 
+            link.id === existingId ? {
+              ...link,
+              url,
+              title,
+              link_type: linkType,
+              transcript,
+              thumbnail: thumbnail || link.thumbnail,
+              isLoadingTranscript,
+              transcriptError
+            } : link
+          ),
+          loading: false 
+        }));
+      } else {
+        // Create new link record in database
+        const { data, error } = await supabase
+          .from('brain_dump_links')
+          .insert({
+            brain_dump_id: state.brainDump.id,
+            url,
+            title,
+            link_type: linkType,
+            transcript: transcript || null
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        linkId = data.id;
+        
+        // Add YouTube thumbnail if applicable and not provided
+        let linkThumbnail = thumbnail;
+        if (linkType === 'youtube' && !linkThumbnail) {
+          try {
+            const videoId = extractYoutubeVideoId(url);
+            if (videoId) {
+              linkThumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+            }
+          } catch (err) {
+            console.error('Error generating YouTube thumbnail:', err);
           }
-        } catch (err) {
-          console.error('Error generating YouTube thumbnail:', err);
         }
+        
+        const linkData: BrainDumpLink = {
+          ...data,
+          thumbnail: linkThumbnail,
+          isLoadingTranscript,
+          transcriptError
+        };
+        
+        setState(prevState => ({ 
+          ...prevState, 
+          brainDumpLinks: [...prevState.brainDumpLinks, linkData],
+          loading: false 
+        }));
       }
       
-      const linkData: BrainDumpLink = {
-        ...data,
-        thumbnail
-      };
-      
-      setState(prevState => ({ 
-        ...prevState, 
-        brainDumpLinks: [...prevState.brainDumpLinks, linkData],
-        loading: false 
-      }));
-      
-      return data.id;
+      return linkId;
     } catch (error: any) {
       setState(prevState => ({ 
         ...prevState, 
@@ -801,236 +857,185 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
       
-      // Import OpenRouter API integration
-      let openRouterModule;
+      // Use the shared content analyzer function
       try {
-        openRouterModule = await import('../openRouter');
+        // Import the brain dump analyzer
+        const { analyzeBrainDumpContent } = await import('../brainDumpAnalyzer');
         
         if (progressCallback) {
-          progressCallback("AI module loaded, preparing to analyze content...");
+          progressCallback("Analysis modules loaded, preparing to analyze content...");
         }
         
-        // Test OpenRouter connectivity before proceeding
-        if (progressCallback) {
-          progressCallback("Testing OpenRouter API connectivity...");
-        }
-        
-        const { testOpenRouterConnectivity } = openRouterModule;
-        const connectivityTest = await testOpenRouterConnectivity();
-        
-        if (!connectivityTest.success) {
-          if (progressCallback) {
-            progressCallback(`OpenRouter API connectivity test failed: ${connectivityTest.message}`);
-          }
-          
+        // Get content for analysis
+        const content = state.brainDump.raw_content || '';
+        if (!content.trim()) {
           setState(prevState => ({ 
             ...prevState, 
             loading: false, 
-            error: `OpenRouter API connectivity issue: ${connectivityTest.message}`,
-            brainDump: { 
-              ...prevState.brainDump!, 
-              status: 'pending' // Reset to pending to allow retrying 
-            }
+            error: "Brain dump content is empty. Please add content and try again." 
           }));
-          
-          throw new Error(`OpenRouter API connectivity issue: ${connectivityTest.message}`);
+          throw new Error("Brain dump content is empty");
         }
         
-        if (progressCallback) {
-          progressCallback("OpenRouter API connectivity confirmed. Starting analysis...");
+        // Also generate a title for the brain dump if needed
+        if (!state.project?.title || state.project.title === 'New Project') {
+          try {
+            const { generateTitle } = await import('../ai/textProcessor');
+            const generatedTitle = await generateTitle(content);
+            
+            if (progressCallback) {
+              progressCallback(`Generated title: "${generatedTitle}"`);
+            }
+            
+            // Update project title
+            try {
+              await updateProject({ title: generatedTitle });
+            } catch (titleUpdateError) {
+              console.error("Error updating project title:", titleUpdateError);
+            }
+          } catch (titleError) {
+            console.error("Error generating title:", titleError);
+          }
         }
-      } catch (importError: any) {
-        console.error("Failed to import OpenRouter module:", importError);
         
-        // Provide more detailed error information
-        const errorMessage = importError.message 
-          ? `Failed to load OpenRouter module: ${importError.message}` 
-          : "Failed to load OpenRouter module";
+        // Process the content with the shared analyzer
+        const analysisResult = await analyzeBrainDumpContent(
+          content, 
+          state.brainDumpFiles, 
+          state.brainDumpLinks,
+          progressCallback
+        );
+        
+        // Generate a structured document from the analysis results
+        const structuredDocument = generateStructuredDocument(analysisResult);
+        
+        // Update state with results and structured document
+        setState(prevState => ({
+          ...prevState,
+          loading: false,
+          brainDump: {
+            ...prevState.brainDump!,
+            status: 'analyzed',
+            analysis_result: analysisResult,
+            structured_document: structuredDocument
+          }
+        }));
+        
+        // Convert the analysis to ideas for the e-book workflow
+        const ideas = generateIdeasFromAnalysis(analysisResult, content);
+        
+        // Create analyzed content summary
+        const analyzedContent = {
+          topics: analysisResult.keywords.slice(0, 5),
+          keyPoints: ideas.map((idea: any) => idea.title),
+          summary: analysisResult.summary,
+          generateDate: new Date().toISOString(),
+          ideaCount: ideas.length,
+          stats: analysisResult.stats
+        };
+        
+        // Update brain dump with analyzed content
+        try {
+          if (progressCallback) {
+            progressCallback("Saving analysis results...");
+          }
           
+          const { error } = await supabase
+            .from('brain_dumps')
+            .update({ 
+              analyzed_content: analyzedContent,
+              status: 'analyzed'
+            })
+            .eq('id', state.brainDump.id);
+            
+          if (error) {
+            console.error("Database error during brain dump update:", error);
+            if (progressCallback) {
+              progressCallback("Warning: Database update failed, but analysis completed.");
+            }
+          } else if (progressCallback) {
+            progressCallback("Analysis saved successfully!");
+          }
+        } catch (updateError) {
+          console.error("Error updating brain dump with analysis:", updateError);
+          if (progressCallback) {
+            progressCallback("Warning: Failed to save analysis to database.");
+          }
+        }
+        
+        // Store the generated ideas in the database
+        let createdIdeas = [];
+        try {
+          if (progressCallback) {
+            progressCallback("Saving generated ideas...");
+          }
+          
+          const { data, error } = await supabase
+            .from('ebook_ideas')
+            .insert(ideas.map((idea: any) => ({
+              brain_dump_id: state.brainDump!.id,
+              title: idea.title,
+              description: idea.description,
+              source_data: idea.source_data
+            })))
+            .select();
+            
+          if (!error && data) {
+            createdIdeas = data;
+            if (progressCallback) {
+              progressCallback(`${data.length} ideas saved successfully.`);
+            }
+          } else if (error) {
+            console.error("Error inserting ideas:", error);
+            throw error;
+          }
+        } catch (ideasError) {
+          console.error("Error inserting ebook ideas:", ideasError);
+          setState(prevState => ({ 
+            ...prevState, 
+            loading: false, 
+            error: `Failed to save ideas: ${ideasError.message || "Database error"}` 
+          }));
+          throw ideasError;
+        }
+        
+        // Update state and proceed to next step
         setState(prevState => ({ 
           ...prevState, 
-          loading: false, 
-          error: errorMessage,
           brainDump: { 
             ...prevState.brainDump!, 
-            status: 'pending' // Reset to pending to allow retrying 
-          }
-        }));
-        
-        if (progressCallback) {
-          progressCallback(`Error: ${errorMessage}. Please try again.`);
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      const { generateIdeasFromBrainDump } = openRouterModule as any;
-      
-      if (!generateIdeasFromBrainDump) {
-        setState(prevState => ({ 
-          ...prevState, 
-          loading: false, 
-          error: "OpenRouter functionality not available. Please check your installation." 
-        }));
-        throw new Error("OpenRouter generateIdeasFromBrainDump function not available");
-      }
-      
-      // Get content for analysis
-      const content = state.brainDump.raw_content || '';
-      if (!content.trim()) {
-        setState(prevState => ({ 
-          ...prevState, 
-          loading: false, 
-          error: "Brain dump content is empty. Please add content and try again." 
-        }));
-        throw new Error("Brain dump content is empty");
-      }
-      
-      // Get file names
-      const fileNames = state.brainDumpFiles.map(file => file.file_name);
-      
-      // Get link URLs
-      const linkUrls = state.brainDumpLinks.map(link => link.url);
-      
-      // Handle API progress updates
-      const handleApiProgress = (status: {retry: number, maxRetries: number, message: string}) => {
-        if (progressCallback) {
-          progressCallback(status.message);
-        }
-      };
-      
-      // Generate ideas with explicit error handling
-      let ideas;
-      try {
-        if (progressCallback) {
-          progressCallback("Sending content to AI for analysis...");
-        }
-        
-        ideas = await generateIdeasFromBrainDump(content, fileNames, linkUrls, handleApiProgress);
-        
-        if (!ideas || !Array.isArray(ideas) || ideas.length === 0) {
-          setState(prevState => ({ 
-            ...prevState, 
-            loading: false, 
-            error: "OpenRouter API did not return any ideas. Please try again." 
-          }));
-          throw new Error("No ideas returned from API");
-        }
-        
-        if (progressCallback) {
-          progressCallback(`Analysis complete! Generated ${ideas.length} ideas.`);
-        }
-      } catch (apiError) {
-        console.error("API error during analysis:", apiError);
-        setState(prevState => ({ 
-          ...prevState, 
-          loading: false, 
-          error: `OpenRouter API error: ${apiError.message || "Unknown error during analysis"}` 
-        }));
-        throw apiError;
-      }
-      
-      // Create analyzed content summary
-      const analyzedContent = {
-        topics: ideas.map((idea: any) => idea.title.split(' ')[0]).slice(0, 5),
-        keyPoints: ideas.map((idea: any) => idea.title),
-        generateDate: new Date().toISOString(),
-        ideaCount: ideas.length
-      };
-      
-      // Update brain dump with analyzed content
-      try {
-        if (progressCallback) {
-          progressCallback("Saving analysis results...");
-        }
-        
-        const { error } = await supabase
-          .from('brain_dumps')
-          .update({ 
             analyzed_content: analyzedContent,
             status: 'analyzed'
-          })
-          .eq('id', state.brainDump.id);
-          
-        if (error) {
-          console.error("Database error during brain dump update:", error);
-          if (progressCallback) {
-            progressCallback("Warning: Database update failed, but analysis completed.");
+          },
+          ebookIdeas: createdIdeas,
+          loading: false,
+          currentStep: 'idea-selection', // Automatically advance to idea selection
+          error: null
+        }));
+        
+        if (progressCallback) {
+          progressCallback("Analysis complete! Moving to idea selection.");
+        }
+      } catch (analysisError: any) {
+        console.error("Error in analysis process:", analysisError);
+        
+        // Make sure the UI reflects the error state
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false, 
+          error: analysisError.message || "An unexpected error occurred during analysis",
+          brainDump: { 
+            ...prevState.brainDump!, 
+            status: 'pending' // Reset to pending to allow retrying
           }
-        } else if (progressCallback) {
-          progressCallback("Analysis saved successfully!");
-        }
-      } catch (updateError) {
-        console.error("Error updating brain dump with analysis:", updateError);
+        }));
+        
         if (progressCallback) {
-          progressCallback("Warning: Failed to save analysis to database.");
-        }
-      }
-      
-      // Store the generated ideas in the database
-      let createdIdeas = [];
-      try {
-        if (progressCallback) {
-          progressCallback("Saving generated ideas...");
+          progressCallback(`Error: ${analysisError.message || "Analysis failed"}`);
         }
         
-        const { data, error } = await supabase
-          .from('ebook_ideas')
-          .insert(ideas.map((idea: any) => ({
-            brain_dump_id: state.brainDump!.id,
-            title: idea.title,
-            description: idea.description,
-            source_data: idea.source_data
-          })))
-          .select();
-          
-        if (!error && data) {
-          createdIdeas = data;
-          if (progressCallback) {
-            progressCallback(`${data.length} ideas saved successfully.`);
-          }
-        } else if (error) {
-          console.error("Error inserting ideas:", error);
-          throw error;
-        }
-      } catch (ideasError) {
-        console.error("Error inserting ebook ideas:", ideasError);
-        setState(prevState => ({ 
-          ...prevState, 
-          loading: false, 
-          error: `Failed to save ideas: ${ideasError.message || "Database error"}` 
-        }));
-        throw ideasError;
+        throw analysisError;
       }
-      
-      // Use local state if no created ideas (this should normally not happen given the error throwing above)
-      if (createdIdeas.length === 0) {
-        setState(prevState => ({ 
-          ...prevState, 
-          loading: false, 
-          error: "Failed to save ideas to database" 
-        }));
-        throw new Error("No ideas were created in the database");
-      }
-      
-      // Update state and proceed to next step
-      setState(prevState => ({ 
-        ...prevState, 
-        brainDump: { 
-          ...prevState.brainDump!, 
-          analyzed_content: analyzedContent,
-          status: 'analyzed'
-        },
-        ebookIdeas: createdIdeas,
-        loading: false,
-        currentStep: 'idea-selection', // Automatically advance to idea selection
-        error: null
-      }));
-      
-      if (progressCallback) {
-        progressCallback("Analysis complete! Moving to idea selection.");
-      }
-      
     } catch (error: any) {
       console.error('Error in analyzeBrainDump:', error);
       
@@ -1052,12 +1057,116 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   /**
-   * Helper function to generate fallback ideas when AI analysis fails
-   * This function is kept for reference but should no longer be used
+   * Helper function to generate ideas from brain dump analysis
    */
-  const generateFallbackIdeas = (content: string, brainDumpId: string) => {
-    console.warn("generateFallbackIdeas called but should not be used");
-    throw new Error("Fallback ideas should not be used");
+  const generateIdeasFromAnalysis = (analysis: any, content: string): any[] => {
+    try {
+      // Generate at least 5 ideas based on the analysis
+      const ideas = [];
+      
+      // Use keywords as the basis for ideas
+      if (analysis.keywords && analysis.keywords.length > 0) {
+        // Create base ideas from keywords
+        for (const keyword of analysis.keywords.slice(0, 5)) {
+          ideas.push({
+            title: `${keyword.charAt(0).toUpperCase() + keyword.slice(1)}: A Complete Guide`,
+            description: `A comprehensive exploration of ${keyword}, covering key concepts, practical applications, and best practices.`,
+            source_data: JSON.stringify({
+              keyword,
+              source: 'keyword-analysis'
+            })
+          });
+        }
+        
+        // Create some alternative formats using the same keywords
+        if (analysis.keywords.length >= 3) {
+          ideas.push({
+            title: `The Ultimate Guide to ${analysis.keywords[0]}, ${analysis.keywords[1]}, and ${analysis.keywords[2]}`,
+            description: `A comprehensive guide covering the interconnections between these key topics, with practical advice and strategies.`,
+            source_data: JSON.stringify({
+              keywords: analysis.keywords.slice(0, 3),
+              source: 'combined-keywords'
+            })
+          });
+        }
+      }
+      
+      // If we couldn't generate enough ideas, add some generic ones based on the content length
+      if (ideas.length < 5) {
+        const words = content.trim().split(/\s+/);
+        const wordSample = words.slice(0, 100).join(' ');
+        
+        ideas.push({
+          title: 'The Complete Guide Based on Your Content',
+          description: `A structured exploration of the key concepts in your content, organized for clarity and impact.`,
+          source_data: JSON.stringify({
+            contentSample: wordSample,
+            source: 'content-analysis'
+          })
+        });
+        
+        ideas.push({
+          title: 'Mastering the Fundamentals',
+          description: `Learn the essential concepts and practical applications from your content, organized into a step-by-step guide.`,
+          source_data: JSON.stringify({
+            contentLength: words.length,
+            source: 'fallback-idea'
+          })
+        });
+      }
+      
+      // Add an idea based on the summary if available
+      if (analysis.summary) {
+        const summaryWords = analysis.summary.split(/\s+/);
+        if (summaryWords.length >= 5) {
+          // Extract a potential title from the first sentence
+          const firstSentence = analysis.summary.split(/[.!?]+/)[0];
+          const potentialTitle = firstSentence.length > 50 
+            ? firstSentence.substring(0, 50) + '...'
+            : firstSentence;
+            
+          ideas.push({
+            title: potentialTitle,
+            description: analysis.summary,
+            source_data: JSON.stringify({
+              source: 'summary-based'
+            })
+          });
+        }
+      }
+      
+      return ideas;
+    } catch (err) {
+      console.error("Error generating ideas from analysis:", err);
+      
+      // Return at least one fallback idea
+      return [
+        {
+          title: 'A Comprehensive Guide to Your Content',
+          description: 'A structured exploration of the key concepts in your content, organized for clarity and impact.',
+          source_data: JSON.stringify({
+            source: 'error-fallback'
+          })
+        }
+      ];
+    }
+  };
+
+  /**
+   * Helper function to extract YouTube video ID
+   */
+  const extractYoutubeVideoId = (url: string): string | null => {
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.hostname.includes('youtube.com')) {
+        return parsedUrl.searchParams.get('v');
+      } else if (parsedUrl.hostname.includes('youtu.be')) {
+        return parsedUrl.pathname.slice(1);
+      }
+    } catch {
+      // Invalid URL
+    }
+    return null;
   };
 
   /**
@@ -1073,7 +1182,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   /**
    * Creates a new e-book based on the selected idea
    */
-  const createEbook = async (title: string, description: string): Promise<string> => {
+  const createEbook = async (title: string, description: string, targetAudience?: string, formatApproach?: string, uniqueValue?: string): Promise<string> => {
     if (!state.project?.id) throw new Error('No active project');
     if (!state.selectedIdeaId && !title) throw new Error('No idea selected or title provided');
     
@@ -1125,6 +1234,11 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
           project_id: state.project.id,
           title: bookStructure.title,
           description: bookStructure.description,
+          metadata: {
+            target_audience: targetAudience,
+            format_approach: formatApproach,
+            unique_value: uniqueValue
+          },
           status: 'generating'
         })
         .select()
@@ -1294,7 +1408,13 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         chapter.order_index,
         sortedChapters.length,
         referenceContent,
-        previousChapters
+        previousChapters,
+        // @ts-ignore - We're adding metadata fields that may not be in the type definition yet
+        state.ebook.metadata?.target_audience,
+        // @ts-ignore - We're adding metadata fields that may not be in the type definition yet
+        state.ebook.metadata?.format_approach,
+        // @ts-ignore - We're adding metadata fields that may not be in the type definition yet
+        state.ebook.metadata?.unique_value
       );
       
       // Update chapter in database
@@ -1473,10 +1593,84 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   /**
    * Resets the workflow state
    * Optionally can specify a specific workflow type to reset to
+   * Can also provide a productId to resume an existing workflow
    */
-  const resetWorkflow = (newWorkflowType?: WorkflowType) => {
-    console.log('resetWorkflow called with:', newWorkflowType);
+  const resetWorkflow = (newWorkflowType?: WorkflowType, productId?: string) => {
+    console.log('resetWorkflow called with:', { newWorkflowType, productId });
     
+    // If we have a productId, load the product first
+    if (productId) {
+      console.log(`Attempting to resume workflow for product: ${productId}`);
+      
+      // Set loading state while we fetch the product
+      setState(prevState => ({
+        ...prevState,
+        loading: true,
+        error: null
+      }));
+      
+      // Fetch the product data
+      (async () => {
+        try {
+          // Get product data - assume there's a supabase query or API call
+          const { data, error } = await supabase
+            .from('creator_contents')
+            .select('*')
+            .eq('id', productId)
+            .single();
+            
+          if (error) throw error;
+          if (!data) throw new Error('Product not found');
+          
+          console.log('Product data loaded:', data);
+          
+          // Use the product's type if newWorkflowType wasn't specified
+          const workflowType = newWorkflowType || (data.type as WorkflowType) || 'ebook';
+          
+          // Prepare the initial state with product data
+          // This is a simplified version - you'd need to adapt this based on your data model
+          const initialStateWithProduct = {
+            ...initialState,
+            workflowType,
+            project: {
+              id: data.id,
+              title: data.title,
+              description: data.description || '',
+              status: data.status,
+              user_id: data.user_id,
+              created_at: data.created_at,
+              updated_at: data.updated_at,
+              type: data.type
+            },
+            // If you have brain dump data in the product metadata, load it here
+            brainDump: data.metadata?.brainDump || null,
+            // Other properties based on your data model
+            loading: false
+          };
+          
+          setState(initialStateWithProduct);
+          
+          // Navigate to the appropriate workflow page
+          navigate(`/workflow/${workflowType}/${data.id}`);
+        } catch (error: any) {
+          console.error('Error loading product for workflow:', error);
+          setState(prevState => ({
+            ...prevState,
+            loading: false,
+            error: error.message || 'Failed to load product'
+          }));
+          
+          // Fall back to creating a new workflow
+          if (newWorkflowType) {
+            resetWorkflow(newWorkflowType);
+          }
+        }
+      })();
+      
+      return;
+    }
+    
+    // If no productId, proceed with normal workflow reset
     if (newWorkflowType) {
       // Validate the workflow type to ensure it's a valid enum value
       const validWorkflowTypes: WorkflowType[] = ['ebook', 'course', 'video', 'blog', 'social'];
@@ -1498,23 +1692,6 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
       setState(initialState);
       navigate('/workflow');
     }
-  };
-
-  /**
-   * Helper function to extract YouTube video ID
-   */
-  const extractYoutubeVideoId = (url: string): string | null => {
-    try {
-      const parsedUrl = new URL(url);
-      if (parsedUrl.hostname.includes('youtube.com')) {
-        return parsedUrl.searchParams.get('v');
-      } else if (parsedUrl.hostname.includes('youtu.be')) {
-        return parsedUrl.pathname.slice(1);
-      }
-    } catch {
-      // Invalid URL
-    }
-    return null;
   };
 
   // Context value

@@ -29,6 +29,9 @@ const IdeaSelectionStep = () => {
   const [customMode, setCustomMode] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [customDescription, setCustomDescription] = useState('');
+  const [customTargetAudience, setCustomTargetAudience] = useState('');
+  const [customFormatApproach, setCustomFormatApproach] = useState('');
+  const [customUniqueValue, setCustomUniqueValue] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +92,7 @@ const IdeaSelectionStep = () => {
         }
         
         // Create eBook with custom title and description
-        await createEbook(customTitle, customDescription);
+        await createEbook(customTitle, customDescription, customTargetAudience, customFormatApproach, customUniqueValue);
       } else if (selectedIdea) {
         // Find the selected idea
         const idea = ebookIdeas.find(idea => idea.id === selectedIdea);
@@ -108,7 +111,7 @@ const IdeaSelectionStep = () => {
           return;
         }
         
-        await createEbook(idea.title, idea.description || '');
+        await createEbook(idea.title, idea.description || '', idea.target_audience || '', idea.format_approach || '', idea.unique_value || '');
       } else {
         setError('Please select an idea or create your own');
         setIsCreating(false);
@@ -248,6 +251,31 @@ const IdeaSelectionStep = () => {
                   <p className="text-ink-light dark:text-ink-light/80 font-serif text-sm mb-4">
                     {idea.description}
                   </p>
+                  
+                  {/* New fields display */}
+                  {(idea.target_audience || idea.unique_value || idea.format_approach) && (
+                    <div className="mt-1 mb-4 space-y-2 text-xs text-ink-light dark:text-ink-light/80 font-serif">
+                      {idea.target_audience && (
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-ink-dark dark:text-ink-dark">Audience:</span>
+                          <span>{idea.target_audience}</span>
+                        </div>
+                      )}
+                      {idea.format_approach && (
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-ink-dark dark:text-ink-dark">Format:</span>
+                          <span>{idea.format_approach}</span>
+                        </div>
+                      )}
+                      {idea.unique_value && (
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-ink-dark dark:text-ink-dark">Unique Value:</span>
+                          <span>{idea.unique_value}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {idea.source_data && (
                     <div className="mt-auto pt-3 border-t border-accent-tertiary/10 dark:border-accent-tertiary/20">
                       <p className="text-xs text-ink-faded dark:text-ink-light/60 font-serif italic">
@@ -316,6 +344,42 @@ const IdeaSelectionStep = () => {
                         value={customDescription}
                         onChange={(e) => setCustomDescription(e.target.value)}
                         className="font-serif min-h-[120px]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-target-audience" className="text-ink-dark dark:text-ink-dark">
+                        Target Audience
+                      </Label>
+                      <Input
+                        id="custom-target-audience"
+                        placeholder="Who is this eBook for?"
+                        value={customTargetAudience}
+                        onChange={(e) => setCustomTargetAudience(e.target.value)}
+                        className="font-serif"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-format-approach" className="text-ink-dark dark:text-ink-dark">
+                        Format Approach
+                      </Label>
+                      <Input
+                        id="custom-format-approach"
+                        placeholder="How will you approach this eBook?"
+                        value={customFormatApproach}
+                        onChange={(e) => setCustomFormatApproach(e.target.value)}
+                        className="font-serif"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-unique-value" className="text-ink-dark dark:text-ink-dark">
+                        Unique Value
+                      </Label>
+                      <Input
+                        id="custom-unique-value"
+                        placeholder="What makes this eBook idea unique?"
+                        value={customUniqueValue}
+                        onChange={(e) => setCustomUniqueValue(e.target.value)}
+                        className="font-serif"
                       />
                     </div>
                     <Button

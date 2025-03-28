@@ -425,10 +425,26 @@ export async function generateIdeasFromBrainDump(
     throw new Error("Content is too short or empty. Please provide more substantial content for analysis.");
   }
 
-  const systemPrompt = `You are an expert content strategist helping generate high-quality eBook ideas from unstructured content.
-Analyze the content, identify key themes and topics, and generate 4-8 compelling eBook ideas that would make excellent 
-full-length eBooks (approx. 50-100 pages). Each idea should include a catchy title, a brief description, and a note 
-about what part of the input data inspired this idea.`;
+  const systemPrompt = `You are an expert content strategist and creative idea generator helping to create diverse, unique eBook ideas from unstructured content.
+Analyze the content, identify key themes, topics, subtopics, and angles. Think deeply about different target audiences, perspectives, and formats.
+
+Your goal is to generate 4-6 HIGHLY DIVERSE, NON-REPETITIVE eBook ideas with DIFFERENT STRUCTURES, FORMATS, and APPROACHES.
+
+CRITICAL REQUIREMENTS:
+1. NO TWO TITLES may follow the same pattern or format (e.g., avoid repetitive patterns like "X: A Complete Guide" for multiple ideas)
+2. Each description MUST use different language patterns and sentence structures
+3. Target audiences MUST be highly specific and different demographics
+4. Each idea MUST use a completely different approach: how-to guide, case study collection, workbook, framework explanation, etc.
+5. AVOID generic, broad ideas - be specific, focused, and unique
+
+Here are EXAMPLES of diverse eBook types (use these for inspiration, but create your own):
+- A tactical how-to manual with step-by-step instructions for beginners
+- A deep analysis of case studies with lessons for industry veterans
+- A provocative manifesto challenging conventional wisdom
+- A practical workbook with exercises and templates
+- A focused deep-dive on a specific niche application
+- A collection of interviews and perspectives from diverse experts
+- A problem-solving framework with decision trees and flowcharts`;
 
   const prompt = `
 CONTENT:
@@ -437,15 +453,35 @@ ${content.substring(0, 10000)}
 ${files.length > 0 ? `FILES: ${files.join(', ')}` : ''}
 ${links.length > 0 ? `LINKS: ${links.join(', ')}` : ''}
 
-Based on this content, generate 4-6 high-quality eBook ideas. For each idea, provide:
-1. Title: A catchy, marketable title
+Process:
+1) First, identify 10+ distinct themes, topics, or angles from the input data
+2) For each theme, identify 3-4 completely different ways it could be approached
+3) Select the most promising combinations that would make excellent, diverse eBooks
+4) Ensure each idea uses a COMPLETELY DIFFERENT title format and structure
+
+Based on this, generate 4-6 high-quality, EXTREMELY DIVERSE eBook ideas. 
+
+IMPORTANT FORMAT REQUIREMENTS:
+- DO NOT use the same title structure for any two ideas (avoid patterns like "The X Guide to Y" repeatedly)
+- EVERY title must have a unique structure and approach
+- NO GENERIC TITLES like "A Complete Guide" or "The Ultimate Guide" - be specific and creative
+- NO REPETITIVE DESCRIPTIONS - each description should have a unique structure and focus
+
+For each idea, provide:
+1. Title: A catchy, marketable title with a unique structure
 2. Description: A brief description of what the eBook would cover (2-3 sentences)
-3. Source: Which part of the input data inspired this idea
+3. Target Audience: The specific audience this eBook serves (be very specific about demographics, experience level, etc.)
+4. Format/Approach: The specific format or approach this eBook will take (e.g., workbook, case studies, how-to guide)
+5. Unique Value: What makes this idea stand out from the others
+6. Source: Which part of the input data inspired this idea
 
 Format each idea as:
 {
   "title": "Title Here",
   "description": "Description here...",
+  "target_audience": "Specific audience description...",
+  "format_approach": "Specific format/approach...", 
+  "unique_value": "What makes this idea stand out...",
   "source_data": "Inspired by..."
 }
 
@@ -564,18 +600,26 @@ const generateFallbackStructure = (idea: { title: string; description: string })
 export async function generateEbookStructure(idea: {
   title: string;
   description: string;
+  target_audience?: string;
+  unique_value?: string;
 }, brainDumpContent: string): Promise<{
   title: string;
   description: string;
   chapters: { title: string; description: string; order_index: number }[];
 }> {
-  const systemPrompt = `You are an expert eBook writer and editor. Your task is to create a compelling title and 
-detailed table of contents for an eBook based on the provided idea and content. The eBook should be substantial, 
-with enough chapters to reach 30,000+ words when fully developed.`;
+  const systemPrompt = `You are an expert eBook writer and editor with deep expertise in creating engaging, targeted content. 
+Your task is to create a compelling title and detailed table of contents for an eBook based on the provided idea, 
+target audience, unique value proposition, and content.
+
+The eBook should be substantial, with enough chapters to reach 30,000+ words when fully developed.
+You should tailor the structure and content approach specifically to the target audience's needs, interests, and knowledge level.
+Emphasize the unique value throughout the chapter structure, ensuring the eBook delivers on its core promise.`;
 
   const prompt = `
 IDEA TITLE: ${idea.title}
 IDEA DESCRIPTION: ${idea.description}
+${idea.target_audience ? `TARGET AUDIENCE: ${idea.target_audience}` : ''}
+${idea.unique_value ? `UNIQUE VALUE: ${idea.unique_value}` : ''}
 
 BRAIN DUMP CONTENT:
 ${brainDumpContent.substring(0, 10000)}
@@ -665,7 +709,10 @@ export async function generateChapterContent(
   chapterIndex: number,
   totalChapters: number,
   brainDumpContent: string,
-  previousChapters: { title: string; content?: string }[]
+  previousChapters: { title: string; content?: string }[],
+  targetAudience?: string,
+  formatApproach?: string,
+  uniqueValue?: string
 ): Promise<string> {
   // Validate inputs and fail if required data is missing
   if (!bookTitle) {
@@ -693,7 +740,10 @@ export async function generateChapterContent(
   const systemPrompt = `You are an award-winning professional author with expertise in the subject matter.
 Write a ${chapterType} for an eBook titled "${bookTitle}" with the quality and depth expected from a bestselling author.
 Your writing should be engaging, informative, and substantial. Use clear language, relevant examples, and insightful analysis.
-Each chapter should be approximately 2,500-3,000 words in length to ensure the complete book reaches 30,000+ words total.`;
+Each chapter should be approximately 2,500-3,000 words in length to ensure the complete book reaches 30,000+ words total.
+${targetAudience ? `\nTARGET AUDIENCE: ${targetAudience}\nTailor your writing style, examples, and content specifically for this audience.` : ''}
+${formatApproach ? `\nFORMAT/APPROACH: ${formatApproach}\nFollow this specific format and approach consistently throughout your writing.` : ''}
+${uniqueValue ? `\nUNIQUE VALUE: ${uniqueValue}\nEmphasize this unique perspective or value throughout your writing.` : ''}`;
 
   // Create context from previous chapters if available
   // For continuity, we summarize previous chapters and provide their key points
@@ -722,6 +772,9 @@ Each chapter should be approximately 2,500-3,000 words in length to ensure the c
 WRITE ${chapterType.toUpperCase()} FOR EBOOK: "${bookTitle}"
 
 BOOK DESCRIPTION: "${bookDescription}"
+${targetAudience ? `TARGET AUDIENCE: ${targetAudience}` : ''}
+${formatApproach ? `FORMAT/APPROACH: ${formatApproach}` : ''}
+${uniqueValue ? `UNIQUE VALUE: ${uniqueValue}` : ''}
 
 CHAPTER TITLE: "${chapterTitle}"
 CHAPTER DESCRIPTION: "${chapterDescription || ''}"
