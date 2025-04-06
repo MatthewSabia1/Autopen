@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Settings, LogOut, Moon, Sun, Laptop } from 'lucide-react';
+import { User, Settings, LogOut, Moon, Sun, Laptop, ShieldCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const UserNavDropdown = () => {
@@ -76,6 +76,16 @@ const UserNavDropdown = () => {
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
+
+        {profile?.is_admin && (
+          <DropdownMenuItem asChild className="cursor-pointer py-2 text-white hover:bg-white/10 hover:text-accent-yellow font-serif text-[15px]">
+            <Link to="/admin" className="flex w-full cursor-pointer items-center">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              <span>Admin</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
+
         <DropdownMenuSeparator className="bg-white/10" />
         <DropdownMenuItem
           onClick={() => setTheme('light')}
