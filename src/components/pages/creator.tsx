@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useWorkflow, WorkflowType } from "@/lib/contexts/WorkflowContext";
 import DashboardLayout from "../layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -25,15 +25,100 @@ import {
   FileEdit,
   Calendar,
   Share2,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import CreateContentModal, { ContentData } from "../creator/CreateContentModal";
+import { useBrainDumps } from "@/hooks/useBrainDumps";
+import { useProducts, Product } from "@/hooks/useProducts";
+import { format, formatDistanceToNow } from "date-fns";
 
 const Creator = () => {
   const [open, setOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const navigate = useNavigate();
-  const { resetWorkflow } = useWorkflow();
-
+  const location = useLocation();
+  const { resetWorkflow, setBrainDump, setBrainDumpFiles, setBrainDumpLinks } = useWorkflow();
+  const { getBrainDumpById } = useBrainDumps();
+  const [loading, setLoading] = useState(false);
+  
+  // Add the useProducts hook
+  const { products, isLoading: isLoadingProducts, error: productsError, refreshProducts } = useProducts();
+  
+  // Force reload of products when component mounts
+  useEffect(() => {
+    console.log("Creator component mounted - refreshing products");
+    // Small delay to ensure the hook is fully initialized
+    const timer = setTimeout(() => {
+      refreshProducts().then((result) => {
+        console.log('Products refreshed, count:', result?.length || 0);
+      });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Helper function to normalize product types - MOVED UP to avoid initialization error
+  const normalizeProductType = (type: string | undefined): WorkflowType => {
+    if (!type) return 'ebook'; // Default to ebook if no type
+    
+    // Convert to lowercase and remove spaces/special chars
+    const normalized = type.toLowerCase().trim();
+    
+    // Handle common variations
+    if (normalized.includes('ebook') || normalized.includes('e-book') || normalized === 'book') {
+      return 'ebook';
+    }
+    if (normalized.includes('blog') || normalized.includes('post') || normalized.includes('article')) {
+      return 'blog';
+    }
+    if (normalized.includes('social') || normalized.includes('media') || normalized.includes('post')) {
+      return 'social';
+    }
+    if (normalized.includes('video') || normalized.includes('script')) {
+      return 'video';
+    }
+    if (normalized.includes('course') || normalized.includes('lesson') || normalized.includes('class')) {
+      return 'course';
+    }
+    
+    // Log unrecognized types so we can add them in future
+    console.log(`Unrecognized product type: "${type}" (normalized: "${normalized}")`);
+    return 'ebook'; // Default to ebook for unknown types
+  };
+  
+  // Get recent products - sort by updated_at and take the most recent 3
+  const recentProducts = products.length > 0 
+    ? products
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 3)
+    : process.env.NODE_ENV === 'development' 
+      ? [
+          // Mock product for development if no real products exist
+          {
+            id: "mock-product-1",
+            title: "Sample E-Book",
+            type: "ebook",
+            status: "draft",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user_id: "current-user",
+            metadata: { 
+              summary: "This is a sample product to show how the UI works. Create real content to replace this." 
+            }
+          } as Product
+        ]
+      : [];
+    
+  // Add debugging to check what products we're getting
+  console.log("Products from useProducts:", products.map(p => ({
+    id: p.id, 
+    title: p.title,
+    type: p.type,
+    normalizedType: normalizeProductType(p.type)
+  })));
+  
   // Sample templates for the gallery
   const templates = [
     {
@@ -104,33 +189,81 @@ const Creator = () => {
     },
   ];
 
-  // Recent creations data
-  const recentCreations = [
-    {
-      id: "c1",
-      title: "Marketing E-Book",
-      type: "E-Book",
-      date: "2 days ago",
-      progress: 75,
-      icon: <BookOpen className="h-4 w-4 text-accent-yellow" />,
-    },
-    {
-      id: "c2",
-      title: "Weekly Newsletter",
-      type: "Newsletter",
-      date: "1 week ago",
-      progress: 100,
-      icon: <FileText className="h-4 w-4 text-accent-yellow" />,
-    },
-    {
-      id: "c3",
-      title: "Product Launch Posts",
-      type: "Social Media",
-      date: "3 days ago",
-      progress: 90,
-      icon: <Share2 className="h-4 w-4 text-accent-yellow" />,
-    },
-  ];
+  // Calculate progress for a product based on its status
+  const getProductProgress = (product: Product): number => {
+    switch (product.status) {
+      case 'completed':
+        return 100;
+      case 'in_progress':
+        return 75;
+      case 'draft':
+        return 25;
+      default:
+        // Get progress from metadata if available
+        return product.metadata?.progress as number || 50;
+    }
+  };
+  
+  // Get appropriate icon for a product based on its type
+  const getProductIcon = (product: Product) => {
+    const normalizedType = normalizeProductType(product.type);
+    
+    switch (normalizedType) {
+      case 'ebook':
+        return <BookOpen className="h-4 w-4 text-accent-yellow" />;
+      case 'blog':
+        return <FileText className="h-4 w-4 text-accent-yellow" />;
+      case 'social':
+        return <Share2 className="h-4 w-4 text-accent-yellow" />;
+      case 'video':
+        return <Video className="h-4 w-4 text-accent-yellow" />;
+      case 'course':
+        return <BookCopy className="h-4 w-4 text-accent-yellow" />;
+      default:
+        return <FileText className="h-4 w-4 text-accent-yellow" />;
+    }
+  };
+  
+  // Format the date in a relative "time ago" format
+  const formatTimeAgo = (dateString: string): string => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch (e) {
+      return "recently";
+    }
+  };
+  
+  // Handle clicking on a product in the recent creations list
+  const handleContinueProduct = (product: Product) => {
+    console.log('Continuing product:', product.id, product.type);
+    
+    // Check product status to determine if we should view or continue editing
+    if (product.status === 'completed') {
+      // For completed products, navigate to the product viewer page
+      console.log(`Navigating to view completed product: ${product.id}`);
+      navigate(`/products/${product.id}`);
+    } else if (product.status === 'draft' || product.status === 'in_progress') {
+      // For drafts or in-progress products, continue the workflow
+      console.log(`Continuing workflow for in-progress product: ${product.id}`);
+      
+      const workflowType = normalizeProductType(product.type);
+      console.log(`Normalized product type from "${product.type}" to "${workflowType}"`);
+      
+      // If the product has a specific workflow step saved, pass it to resetWorkflow
+      if (product.workflow_step) {
+        // Navigate to the correct workflow with the specific step
+        console.log(`Resuming at workflow step: ${product.workflow_step}`);
+        navigate(`/workflow/${workflowType}/${product.id}?step=${product.workflow_step}`);
+      } else {
+        // Start the workflow for this product from the beginning
+        resetWorkflow(workflowType, product.id);
+      }
+    } else {
+      // For any other status, default to viewing the product
+      console.log(`Navigating to product with unknown status: ${product.id}`);
+      navigate(`/products/${product.id}`);
+    }
+  };
 
   const featuredTemplates = templates.filter(template => template.featured);
   
@@ -205,6 +338,92 @@ const Creator = () => {
     } catch (error) {
       console.error('Error starting workflow:', error);
       alert('There was an error starting the workflow. Please try again.');
+    }
+  };
+
+  // Check if there's a brain dump ID in the URL
+  useEffect(() => {
+    const loadBrainDump = async () => {
+      const params = new URLSearchParams(location.search);
+      const brainDumpId = params.get('brainDumpId');
+      
+      // Also check sessionStorage (in case we're coming from the brain-dumps page)
+      const sessionBrainDumpId = sessionStorage.getItem('use_brain_dump');
+      
+      // Clear the session storage value after reading it
+      if (sessionBrainDumpId) {
+        sessionStorage.removeItem('use_brain_dump');
+      }
+      
+      const id = brainDumpId || sessionBrainDumpId;
+      
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const brainDump = await getBrainDumpById(id);
+        
+        if (!brainDump) {
+          console.error('Brain dump not found:', id);
+          return;
+        }
+        
+        // Set brain dump content in workflow context
+        setBrainDump(brainDump.content || '');
+        
+        // Set files and links if available in metadata
+        if (brainDump.metadata) {
+          if (brainDump.metadata.files && Array.isArray(brainDump.metadata.files)) {
+            setBrainDumpFiles(brainDump.metadata.files);
+          }
+          
+          if (brainDump.metadata.links && Array.isArray(brainDump.metadata.links)) {
+            setBrainDumpLinks(brainDump.metadata.links);
+          }
+        }
+        
+        // Show success message
+        const successToast = document.createElement('div');
+        successToast.className = 'fixed bottom-4 right-4 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg shadow-md border border-emerald-100 z-50 animate-fade-in';
+        successToast.innerHTML = `<div class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><polyline points="20 6 9 17 4 12"></polyline></svg>Brain dump "${brainDump.title}" loaded successfully</div>`;
+        document.body.appendChild(successToast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+          successToast.classList.add('animate-fade-out');
+          setTimeout(() => successToast.remove(), 300);
+        }, 3000);
+        
+      } catch (err) {
+        console.error('Error loading brain dump:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadBrainDump();
+  }, [location.search]);
+
+  // Get a formatted display name for a product type
+  const getProductTypeLabel = (product: Product): string => {
+    const normalizedType = normalizeProductType(product.type);
+    
+    switch (normalizedType) {
+      case 'ebook':
+        return 'E-Book';
+      case 'blog':
+        return 'Blog Post';
+      case 'social':
+        return 'Social Media';
+      case 'video':
+        return 'Video Script';
+      case 'course':
+        return 'Online Course';
+      default:
+        // If we can't normalize it, return the original with proper capitalization
+        return product.type ? 
+          product.type.charAt(0).toUpperCase() + product.type.slice(1) : 
+          'Content';
     }
   };
 
@@ -308,42 +527,138 @@ const Creator = () => {
 
         {/* Recent creations section */}
         <section className="mb-8">
-          <h2 className="text-xl font-display text-ink-dark dark:text-ink-dark mb-4">Recent Creations</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-display text-ink-dark dark:text-ink-dark">Recent Creations</h2>
+            <Button 
+              onClick={refreshProducts}
+              variant="ghost" 
+              className="text-accent-primary dark:text-accent-primary hover:text-accent-secondary dark:hover:text-accent-secondary/90 font-serif text-[14px] flex items-center gap-1"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </Button>
+          </div>
           <div className="bg-white dark:bg-card rounded-lg border border-accent-tertiary/30 dark:border-accent-tertiary/40 shadow-sm dark:shadow-md overflow-hidden">
-            <div className="divide-y divide-accent-tertiary/20 dark:divide-accent-tertiary/30">
-              {recentCreations.map((item) => (
-                <div key={item.id} className="p-4 hover:bg-cream/30 dark:hover:bg-accent-tertiary/20 transition-colors duration-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-cream dark:bg-accent-tertiary/30 p-2 rounded-md">
-                        {item.icon}
-                      </div>
-                      <div>
-                        <h3 className="font-serif font-medium text-ink-dark dark:text-ink-dark text-[15px]">{item.title}</h3>
-                        <div className="flex items-center gap-2 text-xs text-ink-light dark:text-ink-light mt-1">
-                          <span>{item.type}</span>
-                          <span className="h-1 w-1 bg-ink-faded dark:bg-ink-faded rounded-full"></span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> {item.date}
-                          </span>
+            {isLoadingProducts ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-6 w-6 text-accent-primary animate-spin" />
+                  <p className="text-ink-light dark:text-ink-light/80 font-serif text-sm">Loading recent content...</p>
+                </div>
+              </div>
+            ) : productsError ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-3 max-w-md text-center px-4">
+                  <AlertTriangle className="h-6 w-6 text-amber-500" />
+                  <p className="text-ink-dark dark:text-ink-dark font-serif text-sm">{productsError}</p>
+                  <Button 
+                    onClick={refreshProducts}
+                    size="sm" 
+                    variant="outline" 
+                    className="mt-2 text-accent-primary dark:text-accent-primary border-accent-primary/30 dark:border-accent-primary/40 font-serif"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            ) : recentProducts.length === 0 ? (
+              <div className="py-8 text-center">
+                <div className="flex flex-col items-center gap-3 max-w-md mx-auto px-4">
+                  <div className="w-12 h-12 rounded-full bg-accent-tertiary/10 dark:bg-accent-tertiary/20 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-accent-tertiary/70 dark:text-accent-tertiary/80" />
+                  </div>
+                  <p className="text-ink-dark dark:text-ink-dark font-display text-lg">No content yet</p>
+                  <p className="text-ink-light dark:text-ink-light/80 font-serif text-sm">
+                    {productsError 
+                      ? "There was a problem loading your content. Please try refreshing."
+                      : "Create your first piece of content to see it here."}
+                  </p>
+                  {/* Add debug info for development - can be removed in production */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-left w-full">
+                      <p className="text-amber-800 text-xs font-medium mb-1">Debug Info:</p>
+                      <p className="text-amber-700 text-xs">Products found: {products.length}</p>
+                      <p className="text-amber-700 text-xs">Loading state: {isLoadingProducts ? 'true' : 'false'}</p>
+                      <p className="text-amber-700 text-xs">Error: {productsError || 'none'}</p>
+                      <p className="text-amber-700 text-xs">Auth check: {localStorage.getItem('supabase.auth.token') ? 'Auth token exists' : 'No auth token'}</p>
+                      <p className="text-amber-700 text-xs font-mono mt-1">
+                        Types: {products.map(p => p.type || 'unknown').join(', ')}
+                      </p>
+                    </div>
+                  )}
+                  {productsError ? (
+                    <div className="mt-3 mb-2 p-3 bg-red-50 border border-red-200 rounded-md text-left w-full">
+                      <p className="text-red-700 text-xs font-semibold">{productsError}</p>
+                      <p className="text-red-600 text-xs mt-1">Please try refreshing or signing out and back in.</p>
+                    </div>
+                  ) : null}
+                  <Button 
+                    onClick={() => setOpen(true)}
+                    className="mt-2 bg-accent-primary dark:bg-accent-primary text-white font-serif"
+                  >
+                    <Wand2 className="h-4 w-4 mr-1.5" />
+                    Create Content
+                  </Button>
+                  <Button 
+                    onClick={refreshProducts}
+                    variant="outline"
+                    size="sm" 
+                    className="mt-1 text-accent-primary dark:text-accent-primary border-accent-primary/30 dark:border-accent-primary/40 font-serif text-xs"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh Products
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-accent-tertiary/20 dark:divide-accent-tertiary/30">
+                {recentProducts.map((product) => (
+                  <div 
+                    key={product.id} 
+                    className="p-4 hover:bg-cream/30 dark:hover:bg-accent-tertiary/20 transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleContinueProduct(product)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-cream dark:bg-accent-tertiary/30 p-2 rounded-md">
+                          {getProductIcon(product)}
+                        </div>
+                        <div>
+                          <h3 className="font-serif font-medium text-ink-dark dark:text-ink-dark text-[15px]">{product.title}</h3>
+                          <div className="flex items-center gap-2 text-xs text-ink-light dark:text-ink-light mt-1">
+                            <span>{getProductTypeLabel(product)}</span>
+                            <span className="h-1 w-1 bg-ink-faded dark:bg-ink-faded rounded-full"></span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {formatTimeAgo(product.updated_at)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 bg-cream dark:bg-accent-tertiary/30 rounded-full h-2">
-                        <div 
-                          className="bg-accent-primary dark:bg-accent-primary h-2 rounded-full" 
-                          style={{ width: `${item.progress}%` }}
-                        ></div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-cream dark:bg-accent-tertiary/30 rounded-full h-2">
+                          <div 
+                            className="bg-accent-primary dark:bg-accent-primary h-2 rounded-full" 
+                            style={{ width: `${getProductProgress(product)}%` }}
+                          ></div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-accent-primary dark:text-accent-primary hover:bg-accent-primary/10 dark:hover:bg-accent-primary/20 text-[14px]"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the parent div's onClick
+                            handleContinueProduct(product);
+                          }}
+                        >
+                          Continue
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-accent-primary dark:text-accent-primary hover:bg-accent-primary/10 dark:hover:bg-accent-primary/20 text-[14px]">
-                        Continue
-                      </Button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

@@ -4,7 +4,8 @@ import { AnalysisResult } from '../types/BrainDumpTypes';
 type AnalysisContextType = {
   analysisResult: AnalysisResult | null;
   isAnalysisComplete: boolean;
-  setAnalysisResult: (result: AnalysisResult | null) => void;
+  generatedTitle?: string;
+  setAnalysisResult: (result: AnalysisResult | null, title?: string) => void;
   setIsAnalysisComplete: (complete: boolean) => void;
   resetAnalysis: () => void;
 };
@@ -12,12 +13,19 @@ type AnalysisContextType = {
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
 
 export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResultInternal] = useState<AnalysisResult | null>(null);
   const [isAnalysisComplete, setIsAnalysisComplete] = useState<boolean>(false);
+  const [generatedTitle, setGeneratedTitle] = useState<string | undefined>(undefined);
+
+  const setAnalysisResult = (result: AnalysisResult | null, title?: string) => {
+    setAnalysisResultInternal(result);
+    setGeneratedTitle(title);
+  };
 
   const resetAnalysis = () => {
-    setAnalysisResult(null);
+    setAnalysisResultInternal(null);
     setIsAnalysisComplete(false);
+    setGeneratedTitle(undefined);
   };
 
   return (
@@ -25,7 +33,8 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{ 
         analysisResult, 
         isAnalysisComplete, 
-        setAnalysisResult, 
+        generatedTitle,
+        setAnalysisResult,
         setIsAnalysisComplete,
         resetAnalysis
       }}

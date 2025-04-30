@@ -34,6 +34,7 @@ export function useBrainDumps() {
   const [brainDumps, setBrainDumps] = useState<SavedBrainDump[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Function to fetch all brain dumps for the current user
   const fetchBrainDumps = useCallback(async () => {
@@ -46,6 +47,7 @@ export function useBrainDumps() {
       const { data, error } = await supabase
         .from('saved_brain_dumps')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -329,27 +331,27 @@ export function useBrainDumps() {
   // This allows brain-dump.tsx to use the workflow functionalities
   const analyzeBrainDumpContentForStandalone = async (content: string, files?: any[], links?: any[], progressCallback?: (message: string) => void) => {
     try {
-      console.log("analyzeBrainDumpContentForStandalone called with:", { 
-        contentLength: content?.length, 
-        filesCount: files?.length, 
-        linksCount: links?.length 
-      });
+      // console.log("analyzeBrainDumpContentForStandalone called with:", { 
+      //   contentLength: content?.length, 
+      //   filesCount: files?.length, 
+      //   linksCount: links?.length 
+      // });
       
       // Convert files and links to the format expected by the analyzer
       const formattedFiles = files ? convertFilesToWorkflowFormat(files) : [];
       const formattedLinks = links ? convertLinksToWorkflowFormat(links) : [];
       
-      console.log("Formatted objects:", { 
-        formattedFiles: formattedFiles.length, 
-        formattedLinks: formattedLinks.length 
-      });
+      // console.log("Formatted objects:", { 
+      //   formattedFiles: formattedFiles.length, 
+      //   formattedLinks: formattedLinks.length 
+      // });
       
       // Use the imported analyzeBrainDumpContent from the top of the file
       const result = await analyzeBrainDumpContent(
         content, 
         formattedFiles, 
         formattedLinks, 
-        progressCallback || (msg => console.log("Analysis progress:", msg))
+        progressCallback || (msg => console.log("Analysis progress:", msg)) // Keep progress log
       );
       
       // Generate a structured document from the analysis results
@@ -362,13 +364,82 @@ export function useBrainDumps() {
         structuredDocument
       };
       
-      console.log("Analysis result:", enhancedResult);
+      // console.log("Analysis result:", enhancedResult);
       return enhancedResult;
     } catch (err) {
-      console.error("Error in analyzeBrainDumpContentForStandalone:", err);
+      console.error("Error in analyzeBrainDumpContentForStandalone:", err); // Keep error log
       throw err;
     }
   };
+
+  /**
+   * Get or Create Brain Dump For Project
+   * Finds an existing brain dump associated with a project ID, 
+   * or creates a new one if none exists.
+   */
+  const getOrCreateBrainDumpForProject = useCallback(async (projectId: string): Promise<SavedBrainDump | null> => {
+    if (!user) return null;
+    setIsLoading(true);
+    setError(null);
+    try {
+      // 1. Try to find existing brain dump by project_id
+      const { data: existingDumps, error: findError } = await supabase
+        .from('brain_dumps')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }) // Get the most recent one if multiple exist
+        .limit(1);
+
+      if (findError) {
+        console.error('Error finding brain dump for project:', findError);
+        throw findError;
+      }
+
+      if (existingDumps && existingDumps.length > 0) {
+        console.log(`Found existing brain dump ${existingDumps[0].id} for project ${projectId}`);
+        setIsLoading(false);
+        return existingDumps[0];
+      }
+
+      // 2. If not found, create a new one
+      console.log(`No existing brain dump found for project ${projectId}, creating new...`);
+      const newBrainDumpData: Omit<SavedBrainDump, 'id' | 'created_at' | 'updated_at' | 'user_id'> = {
+        title: 'New Brain Dump (Workflow)',
+        content: '', // Start empty
+        project_id: projectId,
+        metadata: { 
+          createdAt: new Date().toISOString(),
+          status: 'new',
+          wordCount: 0,
+          fileCount: 0,
+          linkCount: 0
+        }
+      };
+
+      const { data: newDump, error: createError } = await supabase
+        .from('brain_dumps')
+        .insert({ ...newBrainDumpData, user_id: user.id })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating new brain dump for project:', createError);
+        throw createError;
+      }
+
+      console.log(`Created new brain dump ${newDump.id} for project ${projectId}`);
+      setIsLoading(false);
+      // Optional: Add to local state? Depends on how state is managed.
+      // setBrainDumps(prev => [newDump, ...prev]); 
+      return newDump;
+
+    } catch (err: any) {
+      setError(err.message || 'Failed to get or create brain dump for project');
+      setIsLoading(false);
+      return null;
+    }
+  }, [user, supabase]);
 
   return {
     brainDumps,
@@ -380,7 +451,9 @@ export function useBrainDumps() {
     deleteBrainDump,
     saveBrainDumpFromWorkflow,
     analyzeBrainDump,
+    getOrCreateBrainDumpForProject,
     refreshBrainDumps,
-    analyzeBrainDumpContent: analyzeBrainDumpContentForStandalone
+    analyzeBrainDumpContent: analyzeBrainDumpContentForStandalone,
+    isDeleting
   };
 } 

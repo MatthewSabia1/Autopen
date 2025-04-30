@@ -6,7 +6,7 @@ import { useBrainDump } from '../hooks/useBrainDump';
 import { useAuth } from '../contexts/AuthContext';
 
 const ResultsDisplay: React.FC = () => {
-  const { analysisResult, isAnalysisComplete } = useAnalysis();
+  const { analysisResult, isAnalysisComplete, generatedTitle } = useAnalysis();
   const { saveBrainDump, convertToCreatorContent } = useBrainDump();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -116,6 +116,14 @@ const ResultsDisplay: React.FC = () => {
   // Note: If we have mock data, we still want to show it even with an error
   const hasError = !!analysisResult.error && 
     (!analysisResult.error.includes('Using mock data:') || !analysisResult.ebookIdeas?.length);
+
+  // Handler for showing the save form and pre-filling the title
+  const handleShowSaveForm = () => {
+    // Pre-fill title state with generated title if available, otherwise keep current state or empty
+    // If the user has already typed something, maybe preserve it? For now, prioritizing generated title.
+    setTitle(generatedTitle || 'Untitled Analysis'); // Use generated title or default
+    setShowSaveForm(true);
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-paper dark:bg-gray-800 rounded-lg shadow-sm border border-accent-tertiary/20 dark:border-gray-700 p-6 mt-8 mb-12">
@@ -315,7 +323,7 @@ const ResultsDisplay: React.FC = () => {
         <div className="flex space-x-3">
           {!showSaveForm && !saveSuccess && (
             <button 
-              onClick={() => setShowSaveForm(true)}
+              onClick={handleShowSaveForm}
               className="px-4 py-2 font-serif text-sm flex items-center bg-accent-secondary/10 dark:bg-accent-secondary/20 text-accent-secondary dark:text-accent-secondary/90 border border-accent-secondary/20 dark:border-accent-secondary/30 rounded hover:bg-accent-secondary/20 dark:hover:bg-accent-secondary/30 transition-colors"
             >
               <Save className="w-3.5 h-3.5 mr-1.5" />

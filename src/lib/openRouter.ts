@@ -12,55 +12,26 @@ const OPENROUTER_API_URL = import.meta.env.VITE_OPENROUTER_API_URL || 'https://o
 const API_KEY_IS_VALID = OPENROUTER_KEY && OPENROUTER_KEY.length > 30;
 
 // Default model to use from environment
-const DEFAULT_MODEL = import.meta.env.VITE_OPENROUTER_MODEL || 'deepseek/deepseek-r1:free';
+const DEFAULT_MODEL = 'google/gemini-2.5-pro-preview-03-25';
 
 // Specific models to use per user request
-// Only use deepseek models by default
+// Prioritize the new model, then others
 const MODELS = [
-  DEFAULT_MODEL,                           // Primary model from env or default
-  'deepseek/deepseek-chat-v3-0324:free'    // Fallback model
+  DEFAULT_MODEL                          // Only use the default model
 ];
 
 // Fallback models if the primary models are unavailable
-const BACKUP_MODELS = [
-  'gryphe/mythomist-7b:free',              // Backup model 1
-  'nousresearch/nous-hermes-2-mistral-7b:free', // Backup model 2
-  'anthropic/claude-instant-1:free'        // Last resort
+const BACKUP_MODELS: string[] = [ // Empty the backup models array
 ];
 
-// Start with the primary model
+// Start with the primary model (which is now the default flash model)
 let OPENROUTER_MODEL = MODELS[0];
 
 // Add a flag to indicate if we're using fallback models
-let usingFallbackModels = false;
+let usingFallbackModels = false; // This flag is no longer strictly necessary but harmless to leave
 
 // Expose a function to switch models in case of failures
-const switchToNextModel = () => {
-  const currentIndex = MODELS.indexOf(OPENROUTER_MODEL);
-  
-  if (currentIndex < MODELS.length - 1) {
-    // Switch to next model in primary list
-    OPENROUTER_MODEL = MODELS[currentIndex + 1];
-    console.log(`Switched to model: ${OPENROUTER_MODEL}`);
-    return true;
-  } else if (!usingFallbackModels) {
-    // Switch to fallback models if we've exhausted primary models
-    usingFallbackModels = true;
-    OPENROUTER_MODEL = BACKUP_MODELS[0];
-    console.log(`Switched to backup model: ${OPENROUTER_MODEL}`);
-    return true;
-  } else {
-    // Try next fallback model
-    const fallbackIndex = BACKUP_MODELS.indexOf(OPENROUTER_MODEL);
-    if (fallbackIndex < BACKUP_MODELS.length - 1) {
-      OPENROUTER_MODEL = BACKUP_MODELS[fallbackIndex + 1];
-      console.log(`Switched to backup model: ${OPENROUTER_MODEL}`);
-      return true;
-    }
-  }
-  
-  return false; // No more models to try
-};
+// REMOVED switchToNextModel function as fallback is disabled
 
 // Add this new function to handle API timeouts with a proper AbortController
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
@@ -118,6 +89,11 @@ interface OpenRouterRequestParams {
   }[];
   temperature?: number;
   max_tokens?: number;
+  plugins?: Array<{
+    id: string;
+    max_results?: number;
+    search_prompt?: string;
+  }>;
 }
 
 /**
@@ -156,8 +132,6 @@ export async function generateOpenRouterResponse(
   const maxRetries = options.maxRetries || 3; // Reduced from 5 to 3 for faster failure
   let retries = 0;
   let lastError: Error | null = null;
-  let modelRetries = 0; // Track model changes
-  const maxModelRetries = MODELS.length - 1;
   
   // Enable debugging
   const debug = true;
@@ -204,8 +178,20 @@ export async function generateOpenRouterResponse(
       const params: OpenRouterRequestParams = {
         model: OPENROUTER_MODEL,
         messages,
-        temperature: 1.0,
+        temperature: options.temperature || 0.7,
+        max_tokens: options.maxTokens || 8192
       };
+
+      // Add web plugin if using the :online model variant
+      if (OPENROUTER_MODEL.includes(':online')) {
+        params.plugins = [
+          { 
+            id: "web",
+            max_results: 8,  // Increase from default 5 to get more context
+            search_prompt: "A web search was conducted. Incorporate the following web search results into your response where appropriate and helpful."
+          }
+        ];
+      }
 
       // Debug the request
       notifyProgress(`Calling OpenRouter API with model: ${OPENROUTER_MODEL}`);
@@ -213,7 +199,8 @@ export async function generateOpenRouterResponse(
         model: params.model,
         temperature: params.temperature,
         messageCount: params.messages.length,
-        url: OPENROUTER_API_URL
+        url: OPENROUTER_API_URL,
+        hasWebPlugin: params.plugins ? true : false
       });
 
       // IMPORTANT: Actually use the fetchWithTimeout method we defined (was previously unused)
@@ -276,6 +263,7 @@ export async function generateOpenRouterResponse(
         let data: OpenRouterResponse;
         try {
           data = await response.json() as OpenRouterResponse;
+          console.log("DEBUG: Received API response data:", JSON.stringify(data, null, 2)); 
         } catch (jsonError) {
           throw new Error(`Failed to parse API response: ${jsonError.message}`);
         }
@@ -336,18 +324,7 @@ export async function generateOpenRouterResponse(
         error.message?.includes('parse'); // JSON parsing issues
       
       // Try a different model if we encounter model-specific errors
-      if (isModelError && modelRetries < maxModelRetries) {
-        modelRetries++;
-        if (switchToNextModel()) {
-          const modelMessage = `Switching to model: ${OPENROUTER_MODEL} (attempt ${modelRetries}/${maxModelRetries})`;
-          notifyProgress(modelMessage);
-          // Reset regular retries when switching models
-          retries = 0;
-          // Small pause before trying with new model
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue;
-        }
-      }
+      // REMOVED block that called switchToNextModel
         
       if (shouldRetry && retries < maxRetries) {
         const retryMessage = `API call failed, retrying (${retries}/${maxRetries})...`;
@@ -398,6 +375,10 @@ export async function generateIdeasFromBrainDump(
   title: string;
   description: string;
   source_data: string;
+  target_audience?: string;
+  format_approach?: string;
+  unique_value?: string;
+  commercial_potential?: string;
 }[]> {
   // Debugging information
   console.log("generateIdeasFromBrainDump called with:", { 
@@ -425,68 +406,62 @@ export async function generateIdeasFromBrainDump(
     throw new Error("Content is too short or empty. Please provide more substantial content for analysis.");
   }
 
-  const systemPrompt = `You are an expert content strategist and creative idea generator helping to create diverse, unique eBook ideas from unstructured content.
-Analyze the content, identify key themes, topics, subtopics, and angles. Think deeply about different target audiences, perspectives, and formats.
+  const systemPrompt = `You are an expert content strategist specializing in extracting *unique, publishable concepts* from focused, factual source material. Your PRIMARY GOAL is to synthesize compelling, commercially viable eBook ideas that are *strictly and demonstrably derived from the specific details, contrasts, evolutions, and nuances found ONLY within the user's provided input data*. Absolutely avoid generic concepts or reliance on external knowledge about the general topic (e.g., general Scottish culture) unless it directly supports a point *explicitly mentioned in the text*.
 
-Your goal is to generate 4-6 HIGHLY DIVERSE, NON-REPETITIVE eBook ideas with DIFFERENT STRUCTURES, FORMATS, and APPROACHES.
+You excel at identifying subtle angles, comparative perspectives, and niche narratives within descriptive or historical text.
 
 CRITICAL REQUIREMENTS:
-1. NO TWO TITLES may follow the same pattern or format (e.g., avoid repetitive patterns like "X: A Complete Guide" for multiple ideas)
-2. Each description MUST use different language patterns and sentence structures
-3. Target audiences MUST be highly specific and different demographics
-4. Each idea MUST use a completely different approach: how-to guide, case study collection, workbook, framework explanation, etc.
-5. AVOID generic, broad ideas - be specific, focused, and unique
-
-Here are EXAMPLES of diverse eBook types (use these for inspiration, but create your own):
-- A tactical how-to manual with step-by-step instructions for beginners
-- A deep analysis of case studies with lessons for industry veterans
-- A provocative manifesto challenging conventional wisdom
-- A practical workbook with exercises and templates
-- A focused deep-dive on a specific niche application
-- A collection of interviews and perspectives from diverse experts
-- A problem-solving framework with decision trees and flowcharts`;
+1.  STRICT CONTEXT ADHERENCE: Every idea MUST originate from and be justified by specific elements (facts, dates, locations, names, contrasts, sequences) within the provided 'CONTENT', 'FILES', or 'LINKS'. The 'source_data' field MUST provide precise textual evidence (quotes or specific references like 'the mention of Kiltwalk in Aberdeen').
+2.  NICHE FOCUS & DIFFERENTIATION: Ideas should target specific micro-niches or explore unique comparative angles suggested *only* by the input text. Examples of angles to look for *within the text*: geographical comparisons (e.g., Canada vs US origin/adoption), date/reason contrasts (Apr 6/Arbroath vs Jul 1/Dress Act), evolutionary paths (local -> global, celebration -> charity), specific historical figures/groups mentioned, legal/political recognition differences.
+3.  VIABILITY FROM CONTEXT: Ensure the proposed ideas, while niche, have a plausible scope for an eBook that could be developed *primarily* using the angles and facts presented in the input as a foundation.
+4.  DIMENSIONAL DIVERSITY: The final set must show significant variation across: (a) Specific Niche/Angle Explored, (b) Core Question Answered, (c) Narrative Structure, (d) Target Reader (e.g., historian vs event organizer vs diaspora member implied by the text).
+5.  NO EXTERNAL KNOWLEDGE INJECTION: Do not introduce concepts, historical details, or cultural aspects *not present* in the input text.`;
 
   const prompt = `
-CONTENT:
-${content.substring(0, 10000)}
+Analyze the following focused input data meticulously. The text is primarily factual and descriptive. Your challenge is to generate 5-7 *highly distinct, niche eBook ideas* grounded *exclusively* in the specific details provided.
 
-${files.length > 0 ? `FILES: ${files.join(', ')}` : ''}
-${links.length > 0 ? `LINKS: ${links.join(', ')}` : ''}
+# INPUT DATA:
 
-Process:
-1) First, identify 10+ distinct themes, topics, or angles from the input data
-2) For each theme, identify 3-4 completely different ways it could be approached
-3) Select the most promising combinations that would make excellent, diverse eBooks
-4) Ensure each idea uses a COMPLETELY DIFFERENT title format and structure
+## CONTENT:
+${content.substring(0, 250000)} # Increased context limit
 
-Based on this, generate 4-6 high-quality, EXTREMELY DIVERSE eBook ideas. 
+## FILES:
+${files.length > 0 ? files.join(', ') : 'N/A'}
 
-IMPORTANT FORMAT REQUIREMENTS:
-- DO NOT use the same title structure for any two ideas (avoid patterns like "The X Guide to Y" repeatedly)
-- EVERY title must have a unique structure and approach
-- NO GENERIC TITLES like "A Complete Guide" or "The Ultimate Guide" - be specific and creative
-- NO REPETITIVE DESCRIPTIONS - each description should have a unique structure and focus
+## LINKS:
+${links.length > 0 ? links.join(', ') : 'N/A'}
 
-For each idea, provide:
-1. Title: A catchy, marketable title with a unique structure
-2. Description: A brief description of what the eBook would cover (2-3 sentences)
-3. Target Audience: The specific audience this eBook serves (be very specific about demographics, experience level, etc.)
-4. Format/Approach: The specific format or approach this eBook will take (e.g., workbook, case studies, how-to guide)
-5. Unique Value: What makes this idea stand out from the others
-6. Source: Which part of the input data inspired this idea
+# INSTRUCTIONS:
 
-Format each idea as:
-{
-  "title": "Title Here",
-  "description": "Description here...",
-  "target_audience": "Specific audience description...",
-  "format_approach": "Specific format/approach...", 
-  "unique_value": "What makes this idea stand out...",
-  "source_data": "Inspired by..."
-}
+1.  **DEEP NICHE ANALYSIS:** Read the CONTENT, FILES, and LINKS specifically looking for:
+    *   Contrasts and Comparisons (e.g., different dates, reasons, locations, levels of recognition).
+    *   Evolutionary Paths (e.g., origins in one place spreading, event types changing).
+    *   Specific Geographic Narratives (e.g., the Nova Scotia story, the US legislative path).
+    *   Key Dates/Events and their stated significance (Arbroath, Dress Act repeal).
+    *   Mentioned Groups/Organizations (Federation of Scottish Clans).
 
-Return the ideas as a valid JSON array.
-`;
+2.  **STRICTLY CONTEXT-DRIVEN IDEA GENERATION:** For *each* idea:
+    *   Identify a *unique micro-niche or specific angle* found *only* in the input data.
+    *   Define the core question this niche idea answers based *only* on the text.
+    *   Propose a structure/approach suited to exploring *that specific angle* using the text's facts.
+    *   Define the target reader *implied* by the focus on this specific textual detail.
+    *   Base the title *only* on the specific niche/angle identified in the text.
+
+3.  **OUTPUT SPECIFICATION (Per Idea):** Format EACH idea as a JSON object:
+    *   \`title\`: Niche, specific title reflecting the angle derived *only* from the input.
+    *   \`description\`: 2-3 sentences explaining the specific focus and value derived *only* from the input's details.
+    *   \`target_audience\`: Specific reader group interested in *this precise angle* implied by the text.
+    *   \`format_approach\`: Format suited to exploring the niche angle (e.g., comparative analysis, specific timeline, legislative history, case study of one location).
+    *   \`unique_value\`: What specific detail, comparison, or evolution *from the text* makes this idea distinct?
+    *   \`source_data\`: **CRITICAL:** Quote the specific phrase(s) or precisely reference the textual detail (e.g., 'the sentence comparing Apr 6 and Jul 1 dates', 'details on US Senate Resolution') that justifies this *specific* angle.
+    *   \`commercial_potential\`: Briefly explain viability based on the uniqueness of the *text-derived* angle.
+
+4.  **DIVERSITY AND SELF-CRITIQUE:** Generate 5-7 ideas. Before outputting, REVIEW the list. 
+    *   Ensure significant diversity across the 4 dimensions mentioned in the system prompt (Niche/Angle, Core Question, Structure, Target Reader).
+    *   **Critically check:** Does any idea rely on general knowledge *not* explicitly present or directly implied by the input text? If so, revise or replace it.
+    *   If ideas are too similar (e.g., multiple general histories), replace duplicates with ideas focusing on *different specific details* or *contrasts* from the text.
+
+Return ONLY a valid JSON array containing these 5-7 idea objects. Adherence to the input text is paramount.`;
 
   // Set a strict timeout for the entire operation
   let hasTimedOut = false;
@@ -501,7 +476,7 @@ Return the ideas as a valid JSON array.
       });
     }
     throw new Error("Idea generation timed out. The OpenRouter API is taking too long to respond.");
-  }, 40000); // 40 seconds timeout - longer to allow for API delays
+  }, 60000); // 60 seconds timeout - longer to allow for more complex analysis
 
   try {
     // Notify that we're starting the process
@@ -513,17 +488,18 @@ Return the ideas as a valid JSON array.
       });
     }
 
-    // Initialize API call
+    // Initialize API call with appropriate temperature
     const responsePromise = generateOpenRouterResponse(prompt, {
       systemPrompt,
-      temperature: 1.0,
-      maxRetries: 2, // Allow more retries
+      temperature: 0.7, // Lowered temperature for more focus
+      maxTokens: 12000, // Kept max tokens
+      maxRetries: 2, 
       onProgress
     });
     
     // Wait for the response with a timeout
     const apiTimeoutPromise = new Promise<string>((_, reject) => {
-      setTimeout(() => reject(new Error("API request timed out")), 35000); // 35 seconds
+      setTimeout(() => reject(new Error("API request timed out")), 55000); // 55 seconds
     });
     
     // Wait for either the response or timeout
@@ -602,59 +578,98 @@ export async function generateEbookStructure(idea: {
   description: string;
   target_audience?: string;
   unique_value?: string;
+  format_approach?: string; 
 }, brainDumpContent: string): Promise<{
   title: string;
   description: string;
   chapters: { title: string; description: string; order_index: number }[];
 }> {
-  const systemPrompt = `You are an expert eBook writer and editor with deep expertise in creating engaging, targeted content. 
-Your task is to create a compelling title and detailed table of contents for an eBook based on the provided idea, 
-target audience, unique value proposition, and content.
+  const systemPrompt = `You are a senior publishing strategist and bestselling non-fiction author with decades of experience in book development, structure, and publishing.
 
-The eBook should be substantial, with enough chapters to reach 30,000+ words when fully developed.
-You should tailor the structure and content approach specifically to the target audience's needs, interests, and knowledge level.
-Emphasize the unique value throughout the chapter structure, ensuring the eBook delivers on its core promise.`;
+Your expertise is in transforming book concepts into comprehensive, market-ready outlines that deliver exceptional value to readers while maintaining commercial appeal.
+
+Your task is to create a compelling, professionally structured eBook outline based on the provided concept and supporting content. This should include:
+
+1. A refined, marketable title that clearly communicates the book's value proposition
+2. An enhanced description that positions the book effectively in the marketplace
+3. A comprehensive chapter structure that delivers on the book's core promise
+
+The eBook should be substantial, with enough chapters to reach 40,000+ words when fully developed, making it comparable to professional trade non-fiction books.
+
+Critical elements for success:
+- Craft a narrative arc that takes readers on a transformative journey
+- Ensure the structure builds progressively with appropriate knowledge scaffolding
+- Create chapter descriptions that clearly communicate the value of each section
+- Maintain focus on practical application and reader outcomes throughout
+- Include appropriate front matter and back matter elements for a complete book`;
 
   const prompt = `
-IDEA TITLE: ${idea.title}
-IDEA DESCRIPTION: ${idea.description}
+# EBOOK OUTLINE DEVELOPMENT PROJECT
+
+## BOOK CONCEPT
+WORKING TITLE: ${idea.title}
+INITIAL DESCRIPTION: ${idea.description}
 ${idea.target_audience ? `TARGET AUDIENCE: ${idea.target_audience}` : ''}
-${idea.unique_value ? `UNIQUE VALUE: ${idea.unique_value}` : ''}
+${idea.unique_value ? `UNIQUE VALUE PROPOSITION: ${idea.unique_value}` : ''}
+${idea.format_approach ? `FORMAT/APPROACH: ${idea.format_approach}` : ''}
 
-BRAIN DUMP CONTENT:
-${brainDumpContent.substring(0, 10000)}
+## CONTENT ANALYSIS
+${brainDumpContent.substring(0, 20000)}
 
-Based on this information, create a refined eBook title and a detailed table of contents with 10-15 chapters. 
-Each chapter should have a descriptive title and a brief description of what it will cover. The chapters should 
-flow logically and build upon each other to create a comprehensive narrative.
+## OUTLINE DEVELOPMENT TASKS
 
-Return your response as a valid JSON object with the following structure:
+1. TITLE REFINEMENT
+   - Evaluate the working title against marketplace standards
+   - Ensure the title clearly communicates the core value proposition
+   - Consider adding a compelling subtitle that expands on the main title
+   - Test against competitors for distinctiveness and market appeal
+
+2. DESCRIPTION ENHANCEMENT
+   - Craft a compelling 3-5 sentence description that:
+     * Identifies the core problem or opportunity
+     * Explains the unique approach or solution
+     * Highlights key benefits/transformation
+     * Establishes credibility and authority
+     * Includes a clear call to action
+
+3. CHAPTER STRUCTURE DEVELOPMENT
+   - Create a comprehensive 12-15 chapter outline including:
+     * An engaging introduction that hooks readers
+     * A logical progression of core concepts
+     * Appropriate knowledge scaffolding
+     * Practical application sections
+     * A compelling conclusion
+     * Any necessary appendices or resources
+
+Please create a complete, publication-ready eBook structure following professional publishing standards. Include detailed chapter descriptions that explain what each chapter will cover and how it contributes to the reader's journey. 
+
+Return your outline as a structured JSON object with the following format:
 {
   "title": "Final Refined eBook Title",
-  "description": "An enhanced 2-3 sentence description of the eBook",
+  "description": "An enhanced 3-5 sentence description of the eBook that effectively positions it in the marketplace",
   "chapters": [
     {
       "title": "Chapter 1 Title",
-      "description": "Brief description of what this chapter covers",
+      "description": "Detailed description of what this chapter covers and its value to readers",
       "order_index": 0
     },
     {
       "title": "Chapter 2 Title",
-      "description": "Brief description of what this chapter covers", 
+      "description": "Detailed description of what this chapter covers and its value to readers", 
       "order_index": 1
     },
     ...and so on
   ]
 }
 
-The first chapter (index 0) should always be an Introduction, and the last chapter should be a Conclusion.
-Plan for a substantial book that will total approximately 30,000-40,000 words when complete.
+The first chapter (index 0) should be the Introduction, and the last chapter should be the Conclusion.
 `;
 
   try {
     const response = await generateOpenRouterResponse(prompt, {
       systemPrompt,
-      temperature: 1.0
+      temperature: 0.7,
+      maxTokens: 8000 // Increased to allow for more detailed chapter descriptions
     });
 
     // Extract the JSON from the response - handle different response formats
@@ -737,96 +752,133 @@ export async function generateChapterContent(
   if (isConclusion) chapterType = "conclusion";
 
   // Create a dynamic system prompt based on chapter type
-  const systemPrompt = `You are an award-winning professional author with expertise in the subject matter.
-Write a ${chapterType} for an eBook titled "${bookTitle}" with the quality and depth expected from a bestselling author.
-Your writing should be engaging, informative, and substantial. Use clear language, relevant examples, and insightful analysis.
-Each chapter should be approximately 2,500-3,000 words in length to ensure the complete book reaches 30,000+ words total.
-${targetAudience ? `\nTARGET AUDIENCE: ${targetAudience}\nTailor your writing style, examples, and content specifically for this audience.` : ''}
-${formatApproach ? `\nFORMAT/APPROACH: ${formatApproach}\nFollow this specific format and approach consistently throughout your writing.` : ''}
-${uniqueValue ? `\nUNIQUE VALUE: ${uniqueValue}\nEmphasize this unique perspective or value throughout your writing.` : ''}`;
+  const systemPrompt = `You are a world-class professional author, publisher, and subject matter expert with deep expertise in creating bestselling non-fiction books.
+
+Your task is to write an exceptional ${chapterType} for the eBook titled "${bookTitle}". Your writing should be at the caliber of a New York Times bestselling author - engaging, insightful, and transformative for the reader.
+
+Core principles for this writing:
+1. DEPTH: Provide comprehensive coverage with meaningful insights, not surface-level content
+2. ENGAGEMENT: Use storytelling, examples, case studies, and varied writing techniques to maintain interest
+3. STRUCTURE: Create a clear, logical flow with effective use of headings, subheadings, lists, and other elements
+4. PRACTICALITY: Include actionable takeaways, frameworks, templates, or exercises when appropriate
+5. EXPERTISE: Demonstrate authoritative knowledge while remaining accessible to the target audience
+6. COHERENCE: Maintain strong narrative connections to previous chapters and the book's central thesis
+
+${targetAudience ? `\nTARGET AUDIENCE: ${targetAudience}\nTailor your tone, terminology, examples, and content depth specifically for this audience. Address their particular pain points, knowledge level, and goals.` : ''}
+${formatApproach ? `\nFORMAT/APPROACH: ${formatApproach}\nMaintain this specific format and approach consistently throughout your writing. This is the chosen methodology for delivering value to readers.` : ''}
+${uniqueValue ? `\nUNIQUE VALUE PROPOSITION: ${uniqueValue}\nEmphasize and reinforce this unique perspective or value proposition throughout your writing. This is what differentiates this book in the marketplace.` : ''}
+
+Each chapter should be substantial (approximately 3,000-4,000 words) to ensure the complete book reaches 40,000+ words total. The writing should reflect current best practices and trends in the subject area.`;
 
   // Create context from previous chapters if available
-  // For continuity, we summarize previous chapters and provide their key points
   let previousChapterContexts = '';
-  
-  // Process previous chapters carefully
-  if (previousChapters && previousChapters.length > 0) {
-    // First validate that we have valid chapter content to work with
-    const validPreviousChapters = previousChapters
-      .filter(ch => ch && ch.title && ch.content);
+  if (previousChapters && previousChapters.length > 0 && !isIntroduction) {
+    previousChapterContexts = "PREVIOUS CHAPTERS SUMMARY:\n";
     
-    if (validPreviousChapters.length > 0) {
-      previousChapterContexts = validPreviousChapters
-        .map((ch, idx) => {
-          const content = ch.content || "";
-          // Extract first paragraph and any headings to create a summary
-          const firstParagraph = content.split('\n\n')[0] || "";
-          const headings = content.match(/##\s.+/g) || [];
-          return `Chapter ${idx + 1}: "${ch.title}"\n${firstParagraph}\nKey sections: ${headings.join(', ')}`;
-        })
-        .join('\n\n');
-    }
+    // For introductions, we don't need previous chapters
+    // For other chapters, include summaries of previous chapters
+    const chaptersToInclude = previousChapters
+      .filter(ch => ch.content && ch.content.trim().length > 0)
+      .slice(0, isConclusion ? previousChapters.length : Math.min(3, previousChapters.length));
+    
+    chaptersToInclude.forEach((chapter, idx) => {
+      const content = chapter.content || "";
+      
+      // Get first paragraph as a quick overview
+      const firstParagraph = content.split('\n\n')[0] || "";
+      
+      // Extract headings for structure understanding
+      const headings = content.match(/##\s.+/g) || [];
+      const headingsText = headings.length > 0 ? `Key sections: ${headings.slice(0, 5).join(', ')}${headings.length > 5 ? '...' : ''}` : '';
+      
+      // Extract key points
+      const bulletPoints = content.match(/- .+/g) || [];
+      const keyPoints = bulletPoints.length > 0 
+        ? `Key points: ${bulletPoints.slice(0, 3).join(', ')}${bulletPoints.length > 3 ? '...' : ''}`
+        : '';
+      
+      previousChapterContexts += `Chapter ${idx + 1}: "${chapter.title}"\n${firstParagraph}\n${headingsText}\n${keyPoints}\n\n`;
+    });
   }
 
   const prompt = `
-WRITE ${chapterType.toUpperCase()} FOR EBOOK: "${bookTitle}"
+# WRITING ASSIGNMENT: ${chapterType.toUpperCase()} FOR "${bookTitle}"
 
-BOOK DESCRIPTION: "${bookDescription}"
-${targetAudience ? `TARGET AUDIENCE: ${targetAudience}` : ''}
-${formatApproach ? `FORMAT/APPROACH: ${formatApproach}` : ''}
-${uniqueValue ? `UNIQUE VALUE: ${uniqueValue}` : ''}
+## BOOK OVERVIEW
+- TITLE: "${bookTitle}"
+- DESCRIPTION: "${bookDescription}"
+${targetAudience ? `- TARGET AUDIENCE: ${targetAudience}` : ''}
+${formatApproach ? `- FORMAT/APPROACH: ${formatApproach}` : ''}
+${uniqueValue ? `- UNIQUE VALUE: ${uniqueValue}` : ''}
 
-CHAPTER TITLE: "${chapterTitle}"
-CHAPTER DESCRIPTION: "${chapterDescription || ''}"
-CHAPTER NUMBER: ${chapterIndex + 1} of ${totalChapters}
+## CHAPTER DETAILS
+- TITLE: "${chapterTitle}"
+- DESCRIPTION: "${chapterDescription}"
+- CHAPTER NUMBER: ${chapterIndex + 1} of ${totalChapters}
+- TYPE: ${chapterType}
 
-${previousChapterContexts ? `PREVIOUS CHAPTERS SUMMARY:\n${previousChapterContexts}\n\n` : ''}
+${previousChapterContexts ? previousChapterContexts : ''}
 
-BRAIN DUMP CONTENT (USE AS REFERENCE MATERIAL):
-${brainDumpContent.substring(0, 8000)}
+## CONTENT RESEARCH MATERIAL
+${brainDumpContent.substring(0, 25000)}
+
+## CHAPTER BLUEPRINT
 
 ${isIntroduction ? `
-For the introduction:
-- Start with a compelling hook that grabs the reader's attention
-- Clearly state the purpose and value of the book
-- Provide context for why this topic matters now
-- Outline what readers will learn and how it will benefit them
-- Briefly summarize the key themes or concepts that will be covered
-- End with a roadmap of what's to come in the following chapters
+### Introduction Blueprint:
+1. Begin with a powerful hook that immediately captures reader attention (story, statistic, question, scenario)
+2. Establish the core problem or opportunity that this book addresses
+3. Build credibility by demonstrating understanding of reader challenges
+4. Present a clear value proposition - what readers will gain from this book
+5. Introduce the book's unique approach or framework
+6. Preview the transformation journey readers will experience
+7. Provide a roadmap of chapters with brief descriptions
+8. End with a compelling transition to the first content chapter
 ` : isConclusion ? `
-For the conclusion:
-- Summarize the key points covered throughout the book
-- Synthesize the main lessons and insights
-- Connect back to the introduction's promises and show how they've been fulfilled
-- Provide final thoughts, recommendations, and forward-looking perspectives
-- Include practical next steps or a call to action for the reader
-- End on an inspiring note that leaves the reader satisfied and motivated
+### Conclusion Blueprint:
+1. Begin by acknowledging the journey readers have completed
+2. Synthesize the key insights and lessons from all previous chapters
+3. Revisit the core transformation the book promised and delivered
+4. Provide a framework for implementing the book's teachings in real life
+5. Address potential obstacles and how to overcome them
+6. Share inspirational success stories or examples
+7. Offer clear next steps or a specific call to action
+8. End with a powerful closing thought that resonates emotionally
 ` : `
-For this main chapter:
-- Begin with an engaging introduction to the chapter's specific topic
-- Divide the content into 4-6 distinct sections with clear subheadings
-- Include practical examples, case studies, or stories to illustrate key points
-- Provide actionable insights, frameworks, or step-by-step guidance where appropriate
-- Include expert perspectives and evidence-based information
-- Anticipate and address common questions or challenges related to the topic
-- End with a summary of key takeaways and a smooth transition to the next chapter
+### Main Chapter Blueprint:
+1. Begin with a compelling opening that sets context and generates interest
+2. Clearly establish this chapter's core purpose and promise
+3. Outline the key questions or problems this chapter addresses
+4. Present 4-6 major sections with clear subheadings
+5. For each section:
+   - Present the core concept clearly
+   - Provide evidence or reasoning to support it
+   - Include relevant examples, case studies, or stories
+   - Offer practical application or implementation guidance
+6. Include visual elements where helpful (tables, diagrams, charts)
+7. Address common questions or objections related to the topic
+8. Summarize key takeaways from the chapter
+9. End with a strong transition to the next chapter
 `}
 
-Important guidelines:
-- Write approximately 2,500-3,000 words of substantial content
-- Use markdown formatting (## for main headings, ### for subheadings)
-- Include bullet points, numbered lists, and other formatting to enhance readability
-- Maintain consistent tone and style with previous chapters (if any)
-- Ensure the content flows logically and builds on previous information
-- Write with authority and expertise on the subject matter
+## WRITING SPECIFICATIONS
+- LENGTH: Approximately 3,000-4,000 words
+- STYLE: Professional, authoritative yet conversational and engaging
+- FORMATTING: Use markdown for structure (## for major headings, ### for subheadings)
+- ELEMENTS: Include varied elements like stories, examples, analogies, frameworks, checklists, bullet points, etc.
+- TONE: Confident, empathetic, and solution-focused
 
-Make this chapter substantial and valuable. It should stand on its own while contributing to the complete narrative of the book.
+Please write the complete ${chapterType} now, delivering exceptional quality content that would meet publishing industry standards.
 `;
 
   try {
+    // Use appropriate temperature based on chapter type
+    const temperature = isIntroduction || isConclusion ? 0.7 : 0.75;
+    
     return await generateOpenRouterResponse(prompt, {
       systemPrompt,
-      temperature: 1.0,
+      temperature,
+      maxTokens: 8000, // Increased from 4096 to allow for more comprehensive chapters
     });
   } catch (error: any) {
     logError('generateChapterContent', error);
@@ -841,9 +893,11 @@ export function generateTableOfContents(
   title: string,
   chapters: { title: string; order_index: number }[]
 ): string {
-  let toc = `# ${title}\n\n## Table of Contents\n\n`;
+  // Only include "Table of Contents" as the heading, not the book title
+  let toc = `## Table of Contents\n\n`;
   
   chapters.sort((a, b) => a.order_index - b.order_index).forEach((chapter, index) => {
+    // Use standardized format for chapter links
     toc += `${index + 1}. [${chapter.title}](#chapter-${index + 1})\n`;
   });
   
@@ -858,14 +912,19 @@ export function formatEbookForExport(
   description: string,
   chapters: { title: string; content?: string; order_index: number }[]
 ): string {
+  // Ensure we have a valid title
+  const bookTitle = title && title.trim() ? title.trim() : "Untitled eBook";
+  
   // Sort chapters by order_index
   const sortedChapters = [...chapters].sort((a, b) => a.order_index - b.order_index);
   
-  // Generate TOC
-  const toc = generateTableOfContents(title, sortedChapters);
+  // Generate TOC (using a separate helper or within this function)
+  // Note: The previous generateTableOfContents was defined elsewhere, let's keep it separate
+  // Assuming generateTableOfContents exists and works correctly
+  const toc = generateTableOfContents(bookTitle, sortedChapters);
   
-  // Compile full ebook content
-  let ebookContent = `# ${title}\n\n`;
+  // Compile full ebook content with proper metadata and formatting
+  let ebookContent = `# ${bookTitle}\n\n`;
   
   // Add description if available
   if (description && description.trim()) {
@@ -875,19 +934,52 @@ export function formatEbookForExport(
   // Add table of contents
   ebookContent += `${toc}\n\n`;
   
-  // Add each chapter
+  // Add each chapter with consistent formatting
   sortedChapters.forEach((chapter, index) => {
     if (chapter.content) {
       // Clean up potential issues in chapter content
       let chapterContent = chapter.content.trim();
       
-      // Ensure chapter title is formatted as a heading if not already
-      ebookContent += `\n\n# Chapter ${index + 1}: ${chapter.title}\n\n`;
+      // Clean the incoming title: remove potential "Chapter X: " prefix
+      let cleanTitle = chapter.title.replace(/^Chapter\s*\d+\s*:\s*/i, '').trim();
+      if (!cleanTitle) {
+        cleanTitle = `Chapter ${index + 1}`; // Fallback if title becomes empty
+      }
+
+      // Create standardized chapter heading with proper spacing
+      ebookContent += `\n\n# Chapter ${index + 1}: ${cleanTitle}\n\n`;
       
-      // Add chapter content, ensuring there's proper spacing
+      // If chapter content already contains the title as a heading, try to remove it to avoid duplication
+      // Make this check more robust
+      const potentialHeading = `# ${cleanTitle}`;
+      const potentialHeadingL2 = `## ${cleanTitle}`;
+      const contentStartsWithHeading = 
+        chapterContent.startsWith(potentialHeading) || 
+        chapterContent.startsWith(potentialHeadingL2) ||
+        // Also check for the numbered format we just created
+        chapterContent.startsWith(`# Chapter ${index + 1}: ${cleanTitle}`) ||
+        chapterContent.startsWith(`## Chapter ${index + 1}: ${cleanTitle}`);
+
+      if (contentStartsWithHeading) {
+        // Remove the first line and any following empty lines more carefully
+        const lines = chapterContent.split('\n');
+        let firstContentLine = 1;
+        while (lines[firstContentLine]?.trim() === '' && firstContentLine < lines.length) {
+          firstContentLine++;
+        }
+        chapterContent = lines.slice(firstContentLine).join('\n').trim();
+      }
+      
+      // Add chapter content with proper spacing
       ebookContent += `${chapterContent}\n\n`;
+    } else {
+      // Handle chapters with no content gracefully (e.g., add a placeholder or skip)
+      console.warn(`Chapter ${index + 1} ("${chapter.title}") has no content.`);
     }
   });
+  
+  // For debugging - log content size to help diagnose issues
+  console.log(`Generated eBook content: ${ebookContent.length} characters, ${ebookContent.split('\n').length} lines`);
   
   return ebookContent;
 }

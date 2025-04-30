@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserNavDropdown from "./UserNavDropdown";
+import NotificationBell from '../notifications/NotificationBell';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -136,13 +137,8 @@ const DashboardLayout = ({
           {/* Theme toggle button */}
           <ThemeToggle variant="ghost" iconClassName="text-white" />
           
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white/90 hover:text-white hover:bg-white/15 rounded-md p-2.5 transition-all duration-200"
-          >
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationBell />
+
           <div className="hidden lg:block">
             <UserNavDropdown />
           </div>

@@ -57,7 +57,7 @@ export const analyzeBrainDumpContent = async (
     const sourceStats = {
       main: { chars: content?.length || 0, words: content?.split(/\s+/).length || 0 },
       files: { count: files?.length || 0, chars: 0, words: 0 },
-      links: { count: links?.length || 0, chars: 0, transcripts: 0, chars: 0, words: 0 }
+      links: { count: links?.length || 0, chars: 0, transcripts: 0, words: 0 }
     };
     
     // Combine content with better source tracking

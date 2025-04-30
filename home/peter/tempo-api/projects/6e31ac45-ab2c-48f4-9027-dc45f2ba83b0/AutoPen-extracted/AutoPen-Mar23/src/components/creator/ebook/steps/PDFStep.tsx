@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { FileText, RefreshCw, Download, Info, BookOpen, Eye } from 'lucide-react';
+import { FileText, RefreshCw, Download, Info, BookOpen, Eye, Layout } from 'lucide-react';
 import { EbookContent } from '../../../../types/ebook.types';
+import { RadioGroup, RadioGroupItem } from '../../../ui/radio-group';
+import { Label } from '../../../ui/label';
+import { Checkbox } from '../../../ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface PDFStepProps {
   contentData: EbookContent;
-  onGenerate: () => Promise<{ pdfUrl?: string; error: string | null }>;
-  onDownload: () => void;
+  onGenerate: (options?: {
+    paperSize?: 'a4' | 'letter';
+    withCover?: boolean;
+    includeTableOfContents?: boolean;
+    template?: 'modern' | 'classic' | 'minimal' | 'academic';
+    author?: string;
+  }) => Promise<{ pdfUrl?: string; error: string | null }>;
+  onDownload: (options?: any) => void;
   generating: boolean;
   previewUrl: string | null;
 }
@@ -20,13 +30,28 @@ const PDFStep: React.FC<PDFStepProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  // PDF generation options
+  const [template, setTemplate] = useState<'modern' | 'classic' | 'minimal' | 'academic'>('modern');
+  const [paperSize, setPaperSize] = useState<'a4' | 'letter'>('a4');
+  const [includeTableOfContents, setIncludeTableOfContents] = useState(true);
+  const [includeCover, setIncludeCover] = useState(true);
 
   const handleGenerate = async () => {
     try {
       setIsGenerating(true);
       setError(null);
       
-      const { error: generateError } = await onGenerate();
+      // Pass the custom options to the generate function
+      const options = {
+        template,
+        paperSize,
+        includeTableOfContents,
+        withCover: includeCover,
+        author: contentData.author || 'Created with AutoPen'
+      };
+      
+      const { error: generateError } = await onGenerate(options);
       
       if (generateError) {
         throw new Error(generateError);
@@ -36,6 +61,27 @@ const PDFStep: React.FC<PDFStepProps> = ({
     } finally {
       setIsGenerating(false);
     }
+  };
+  
+  // Handle download with the current options
+  const handleDownload = () => {
+    const options = {
+      template,
+      paperSize,
+      includeTableOfContents,
+      withCover: includeCover,
+      author: contentData.author || 'Created with AutoPen'
+    };
+    
+    onDownload(options);
+  };
+
+  // Template descriptions for the UI
+  const templateDescriptions = {
+    modern: "Clean, contemporary design with modern typography and spacing",
+    classic: "Traditional book layout with serif fonts and elegant spacing",
+    minimal: "Minimalist design with ample whitespace and clean lines",
+    academic: "Formal layout suitable for academic or scholarly works"
   };
 
   return (
@@ -77,7 +123,7 @@ const PDFStep: React.FC<PDFStepProps> = ({
                   {contentData.title || 'Your eBook'}
                 </h4>
                 <p className="text-ink-light dark:text-gray-400 font-serif text-sm">
-                  {contentData.chapters?.length || 0} chapters • PDF format
+                  {contentData.chapters?.length || 0} chapters • PDF format • {template} template
                 </p>
               </div>
               
@@ -102,7 +148,7 @@ const PDFStep: React.FC<PDFStepProps> = ({
                 
                 <button
                   type="button"
-                  onClick={onDownload}
+                  onClick={handleDownload}
                   className="px-4 py-2 bg-accent-primary text-white rounded hover:bg-accent-primary/90 transition-colors flex items-center"
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -120,35 +166,188 @@ const PDFStep: React.FC<PDFStepProps> = ({
                 ></iframe>
               </div>
             )}
+            
+            <div className="mt-6 pt-6 border-t border-accent-tertiary/20 dark:border-gray-700">
+              <h4 className="text-ink-dark dark:text-gray-200 font-medium mb-4 flex items-center">
+                <Layout className="w-4 h-4 mr-2 text-accent-primary" />
+                Regenerate with Different Options
+              </h4>
+              
+              {/* Regeneration options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                  <Label className="text-ink-dark dark:text-gray-300 mb-2 block">Design Template</Label>
+                  <RadioGroup value={template} onValueChange={(value: any) => setTemplate(value)} className="space-y-2">
+                    {(['modern', 'classic', 'minimal', 'academic'] as const).map((tmpl) => (
+                      <div key={tmpl} className="flex items-start space-x-2">
+                        <RadioGroupItem value={tmpl} id={`template-${tmpl}`} />
+                        <div className="grid gap-1">
+                          <Label htmlFor={`template-${tmpl}`} className="font-medium">
+                            {tmpl.charAt(0).toUpperCase() + tmpl.slice(1)}
+                          </Label>
+                          <p className="text-xs text-ink-light dark:text-gray-400">
+                            {templateDescriptions[tmpl]}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="paper-size" className="text-ink-dark dark:text-gray-300 mb-2 block">Paper Size</Label>
+                    <Select value={paperSize} onValueChange={(value: any) => setPaperSize(value)}>
+                      <SelectTrigger id="paper-size" className="w-full">
+                        <SelectValue placeholder="Select paper size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="a4">A4 (210 × 297 mm)</SelectItem>
+                        <SelectItem value="letter">US Letter (8.5 × 11 in)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="include-toc" 
+                        checked={includeTableOfContents}
+                        onCheckedChange={(checked) => setIncludeTableOfContents(checked as boolean)}
+                      />
+                      <Label htmlFor="include-toc" className="text-ink-dark dark:text-gray-300">
+                        Include Table of Contents
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="include-cover" 
+                        checked={includeCover}
+                        onCheckedChange={(checked) => setIncludeCover(checked as boolean)}
+                      />
+                      <Label htmlFor="include-cover" className="text-ink-dark dark:text-gray-300">
+                        Include Cover Page
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isGenerating || generating}
+                className={`px-5 py-2 rounded flex items-center ${
+                  isGenerating || generating
+                    ? 'bg-accent-primary/50 cursor-not-allowed text-white/80'
+                    : 'bg-accent-primary text-white hover:bg-accent-primary/90'
+                } transition-colors`}
+              >
+                {isGenerating || generating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Regenerating PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Regenerate PDF
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="text-center p-8 border border-dashed border-accent-tertiary/30 dark:border-gray-700 rounded-md">
-            <BookOpen className="w-12 h-12 text-accent-primary/50 mx-auto mb-4" />
-            <p className="text-ink-light dark:text-gray-400 font-serif mb-4">
-              Generate your eBook as a professionally formatted PDF document.
-            </p>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={isGenerating || generating}
-              className={`px-5 py-2 rounded mx-auto flex items-center ${
-                isGenerating || generating
-                  ? 'bg-accent-primary/50 cursor-not-allowed text-white/80'
-                  : 'bg-accent-primary text-white hover:bg-accent-primary/90'
-              } transition-colors`}
-            >
-              {isGenerating || generating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Generating PDF...
-                </>
-              ) : (
-                <>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Generate PDF
-                </>
-              )}
-            </button>
+          <div>
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label className="text-ink-dark dark:text-gray-300 mb-2 block">Design Template</Label>
+                <RadioGroup value={template} onValueChange={(value: any) => setTemplate(value)} className="space-y-2">
+                  {(['modern', 'classic', 'minimal', 'academic'] as const).map((tmpl) => (
+                    <div key={tmpl} className="flex items-start space-x-2">
+                      <RadioGroupItem value={tmpl} id={`template-${tmpl}`} />
+                      <div className="grid gap-1">
+                        <Label htmlFor={`template-${tmpl}`} className="font-medium">
+                          {tmpl.charAt(0).toUpperCase() + tmpl.slice(1)}
+                        </Label>
+                        <p className="text-xs text-ink-light dark:text-gray-400">
+                          {templateDescriptions[tmpl]}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="paper-size" className="text-ink-dark dark:text-gray-300 mb-2 block">Paper Size</Label>
+                  <Select value={paperSize} onValueChange={(value: any) => setPaperSize(value)}>
+                    <SelectTrigger id="paper-size" className="w-full">
+                      <SelectValue placeholder="Select paper size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="a4">A4 (210 × 297 mm)</SelectItem>
+                      <SelectItem value="letter">US Letter (8.5 × 11 in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="include-toc" 
+                      checked={includeTableOfContents}
+                      onCheckedChange={(checked) => setIncludeTableOfContents(checked as boolean)}
+                    />
+                    <Label htmlFor="include-toc" className="text-ink-dark dark:text-gray-300">
+                      Include Table of Contents
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="include-cover" 
+                      checked={includeCover}
+                      onCheckedChange={(checked) => setIncludeCover(checked as boolean)}
+                    />
+                    <Label htmlFor="include-cover" className="text-ink-dark dark:text-gray-300">
+                      Include Cover Page
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center p-8 border border-dashed border-accent-tertiary/30 dark:border-gray-700 rounded-md">
+              <BookOpen className="w-12 h-12 text-accent-primary/50 mx-auto mb-4" />
+              <p className="text-ink-light dark:text-gray-400 font-serif mb-4">
+                Generate your eBook as a professionally formatted PDF document with your selected options.
+              </p>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isGenerating || generating}
+                className={`px-5 py-2 rounded mx-auto flex items-center ${
+                  isGenerating || generating
+                    ? 'bg-accent-primary/50 cursor-not-allowed text-white/80'
+                    : 'bg-accent-primary text-white hover:bg-accent-primary/90'
+                } transition-colors`}
+              >
+                {isGenerating || generating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Generate PDF
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -163,7 +362,7 @@ const PDFStep: React.FC<PDFStepProps> = ({
             <div className="mt-2 text-sm text-blue-700 dark:text-blue-400 font-serif">
               <p>
                 The PDF generator creates a professionally formatted document with proper page layouts, headings, and styling.
-                You can preview the document and download it to your device.
+                You can select from different design templates and customize options like page size and content structure.
               </p>
             </div>
           </div>

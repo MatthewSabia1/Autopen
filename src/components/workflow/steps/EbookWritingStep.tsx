@@ -30,6 +30,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { supabase } from '../../../../supabase/supabase';
+import ReactMarkdown from 'react-markdown';
 
 /**
  * The eBook writing step in the workflow.
@@ -42,19 +44,22 @@ const EbookWritingStep = () => {
     generateEbookChapter,
     setCurrentStep,
     project,
-    updateEbookChapters
+    updateEbookChapters,
+    addEbookChapter,
+    updateEbookChapter,
+    deleteEbookChapter
   } = useWorkflow();
   const { createProduct, updateProduct } = useProducts();
 
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generatingChapter, setGeneratingChapter] = useState<string | null>(null);
-  const [draftId, setDraftId] = useState<string | null>(null);
   const [editingChapter, setEditingChapter] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>('');
   const [savingChapter, setSavingChapter] = useState<string | null>(null);
   // Keep a local copy of chapters that we can update directly for UI purposes
   const [localChapters, setLocalChapters] = useState<any[]>([]);
+  const [notification, setNotification] = useState<Notification | null>(null);
   
   // State for chapter deletion and addition
   const [deletingChapter, setDeletingChapter] = useState<string | null>(null);
@@ -76,49 +81,36 @@ const EbookWritingStep = () => {
     const saveDraftProduct = async () => {
       if (!ebook || !project || !ebookChapters.length) return;
       
+      // Find existing draft product ID
+      let existingProductId: string | null = null;
+      try {
+        const { data: existingProduct, error: findError } = await supabase
+          .from('products')
+          .select('id')
+          .eq('project_id', project.id)
+          .eq('type', 'ebook')
+          .in('status', ['draft', 'in_progress']) // Check for existing draft or in-progress
+          .maybeSingle(); // Expect 0 or 1 result
+
+        if (findError) {
+          console.error('Error finding existing product:', findError);
+          // Decide if we should proceed or throw/notify
+        } else if (existingProduct) {
+          existingProductId = existingProduct.id;
+          console.log('Found existing product ID:', existingProductId);
+        }
+      } catch (err) {
+        console.error('Exception while finding existing product:', err);
+      }
+
       try {
         // Count completed chapters
         const completedChapters = ebookChapters.filter(c => c.status === 'generated').length;
         const totalChapters = ebookChapters.length;
         const progress = Math.round((completedChapters / totalChapters) * 100);
         
-        // Sort chapters for metadata
-        const sortedChapters = [...ebookChapters].sort((a, b) => a.order_index - b.order_index);
-        
-        // Create metadata with current progress, optimizing storage
-        // Only store full content for completed chapters, store summary for others
+        // Create metadata with current progress
         const metadata = {
-          ebookData: {
-            id: ebook.id,
-            title: ebook.title,
-            description: ebook.description || '',
-            // Optimized chapter storage - only keep full content for generated chapters
-            chapters: sortedChapters.map(chapter => {
-              const baseChapter = {
-                id: chapter.id,
-                title: chapter.title,
-                order_index: chapter.order_index,
-                status: chapter.status
-              };
-              
-              // Only include content for generated chapters
-              if (chapter.status === 'generated' && chapter.content) {
-                // For very large chapters, we might want to truncate
-                if (chapter.content.length > 30000) {
-                  return {
-                    ...baseChapter,
-                    content: `${chapter.content.substring(0, 30000)}... (truncated)`,
-                    contentTruncated: true,
-                    contentLength: chapter.content.length
-                  };
-                }
-                return { ...baseChapter, content: chapter.content };
-              }
-              
-              // For pending chapters, just store the base info without content
-              return baseChapter;
-            })
-          },
           progress,
           completedChapters,
           totalChapters,
@@ -126,14 +118,14 @@ const EbookWritingStep = () => {
           workflow_step: 'ebook-writing' as WorkflowStep
         };
         
-        if (draftId) {
+        if (existingProductId) {
           // Update existing draft
-          await updateProduct(draftId, {
+          await updateProduct(existingProductId, {
             metadata,
             workflow_step: 'ebook-writing' as WorkflowStep,
             status: 'in_progress'
           });
-          console.log('Updated draft product');
+          console.log('Created new draft product:', existingProductId);
         } else {
           // Create new draft
           const result = await createProduct({
@@ -147,8 +139,7 @@ const EbookWritingStep = () => {
           });
           
           if (result?.id) {
-            setDraftId(result.id);
-            console.log('Created draft product:', result.id);
+            console.log('Created new draft product:', result.id);
           }
         }
       } catch (err) {
@@ -161,7 +152,7 @@ const EbookWritingStep = () => {
     if (ebookChapters.some(c => c.status === 'generated')) {
       saveDraftProduct();
     }
-  }, [ebookChapters, ebook, project, draftId]);
+  }, [ebookChapters, ebook, project]);
 
   // Calculate progress percentage
   const completedChapters = localChapters.filter(c => c.status === 'generated').length;
@@ -202,74 +193,15 @@ const EbookWritingStep = () => {
     try {
       setSavingChapter(chapterId);
       setError(null);
+      setNotification(null);
       
-      // Find the chapter to update
-      const chapterToUpdate = ebookChapters.find(c => c.id === chapterId);
-      if (!chapterToUpdate) throw new Error('Chapter not found');
+      // Call the context function to update the chapter
+      const updatedChapter = await updateEbookChapter(chapterId, editContent);
       
-      // Update chapter in database using the Supabase client
-      const { supabase } = await import('../../../../supabase/supabase');
-      
-      const { error, data } = await supabase
-        .from('ebook_chapters')
-        .update({ 
-          content: editContent,
-          status: 'generated'
-        })
-        .eq('id', chapterId)
-        .select();
-      
-      if (error) throw error;
-      
-      // Create updated chapter object with new content
-      const updatedChapter = {
-        ...chapterToUpdate,
-        content: editContent,
-        status: 'generated' as const
-      };
-      
-      // Update the local state directly with React useState setter pattern
-      const updatedChapters = localChapters.map(c => 
-        c.id === chapterId ? updatedChapter : c
+      // Update local state based on the returned chapter from context
+      setLocalChapters(prevChapters => 
+        prevChapters.map(c => (c.id === chapterId ? updatedChapter : c))
       );
-      
-      // Update local state
-      setLocalChapters(updatedChapters);
-      
-      // CRITICAL FIX: Update the global context state
-      if (updateEbookChapters) {
-        updateEbookChapters(updatedChapters);
-      }
-      
-      // Update the draft product with the new chapter content
-      if (draftId) {
-        try {
-          const chapterMetadata = {
-            id: chapterId,
-            title: chapterToUpdate.title,
-            status: 'generated',
-            updatedAt: new Date().toISOString()
-          };
-          
-          if (editContent.length > 30000) {
-            (chapterMetadata as any).contentPreview = editContent.substring(0, 500) + '... (truncated)';
-            (chapterMetadata as any).contentLength = editContent.length;
-          } else {
-            (chapterMetadata as any).content = editContent;
-          }
-          
-          await updateProduct(draftId, {
-            metadata: {
-              lastUpdatedChapter: chapterMetadata,
-              updatedAt: new Date().toISOString()
-            }
-          });
-          
-          console.log('Successfully updated chapter content in product metadata');
-        } catch (updateErr) {
-          console.error('Error updating draft product with chapter content:', updateErr);
-        }
-      }
       
       // Exit edit mode
       setEditingChapter(null);
@@ -279,8 +211,8 @@ const EbookWritingStep = () => {
       setExpandedChapter(null);
       
       // Show success message as a non-error notification
-      setError('✓ Chapter content updated successfully');
-      setTimeout(() => setError(null), 3000);
+      setNotification({ message: 'Chapter content updated successfully', type: 'success' });
+      setTimeout(() => setNotification(null), 3000);
       
     } catch (err) {
       setError(err.message || 'Failed to save chapter');
@@ -297,6 +229,7 @@ const EbookWritingStep = () => {
     try {
       setError(null);
       setGeneratingChapter(chapterId);
+      setNotification(null);
       
       // Find the chapter to generate
       const chapterToGenerate = localChapters.find(c => c.id === chapterId);
@@ -312,62 +245,6 @@ const EbookWritingStep = () => {
       // Start generation with optimistic UI update
       await generateEbookChapter(chapterId);
       
-      // Update the draft product with the new chapter content
-      if (draftId) {
-        try {
-          // Get the updated chapter content after generation
-          const updatedChapter = localChapters.find(c => c.id === chapterId);
-          
-          if (updatedChapter && updatedChapter.status === 'generated') {
-            // Count completed chapters after this generation
-            const updatedCompletedChapters = localChapters.filter(c => 
-              c.status === 'generated' || c.id === chapterId
-            ).length;
-            
-            // Calculate updated progress
-            const totalChapters = localChapters.length;
-            const updatedProgress = Math.round((updatedCompletedChapters / totalChapters) * 100);
-            
-            // Only store essential information about the updated chapter
-            // This is a more efficient approach than storing all chapter data
-            const chapterUpdate = {
-              id: chapterId,
-              title: updatedChapter.title,
-              status: 'generated',
-              updatedAt: new Date().toISOString()
-            };
-            
-            // For very large content, truncate to avoid DB limitations
-            if (updatedChapter.content) {
-              if (updatedChapter.content.length > 30000) {
-                // Store a truncated version to avoid DB issues
-                (chapterUpdate as any).contentPreview = updatedChapter.content.substring(0, 500) + '... (truncated)';
-                (chapterUpdate as any).contentLength = updatedChapter.content.length;
-              } else {
-                // Store full content since it's a reasonable size
-                (chapterUpdate as any).content = updatedChapter.content;
-              }
-            }
-            
-            // Update the product with new progress and minimal chapter info
-            await updateProduct(draftId, {
-              metadata: {
-                lastUpdatedChapter: chapterUpdate,
-                progress: updatedProgress,
-                completedChapters: updatedCompletedChapters,
-                totalChapters,
-                updatedAt: new Date().toISOString()
-              }
-            });
-            
-            console.log(`Updated draft product with new chapter content for: ${updatedChapter.title}`);
-          }
-        } catch (updateErr) {
-          // Don't block the UI flow if updating the product fails
-          console.error('Error updating draft product with chapter content:', updateErr);
-        }
-      }
-      
       // Show success feedback
       // Check if all chapters are now generated
       const allGenerated = localChapters.every(c => 
@@ -382,6 +259,7 @@ const EbookWritingStep = () => {
       }
     } catch (err: any) {
       setError(err.message || 'Failed to generate chapter');
+      setNotification({ message: err.message || 'Failed to generate chapter', type: 'error' });
     } finally {
       setGeneratingChapter(null);
     }
@@ -416,68 +294,24 @@ const EbookWritingStep = () => {
     
     try {
       setError(null);
+      setNotification(null);
       
-      // Find the chapter to delete
-      const chapterToDelete = localChapters.find(c => c.id === deletingChapter);
-      if (!chapterToDelete) throw new Error('Chapter not found');
+      // Call context function to delete the chapter
+      await deleteEbookChapter(deletingChapter);
       
-      // Update chapter in database using the Supabase client
-      const { supabase } = await import('../../../../supabase/supabase');
-      
-      const { error } = await supabase
-        .from('ebook_chapters')
-        .delete()
-        .eq('id', deletingChapter);
-      
-      if (error) throw error;
-      
-      // Create a new array without the deleted chapter to update local state
-      const updatedChapters = localChapters.filter(c => c.id !== deletingChapter);
-      
-      // Update the local state to remove the deleted chapter
-      setLocalChapters(updatedChapters);
-      
-      // CRITICAL FIX: Update the global context state to reflect the deletion
-      // This ensures that auto-generate and other operations use the correct chapter list
-      if (updateEbookChapters) {
-        updateEbookChapters(updatedChapters);
-      }
+      // Update local state (context already updated)
+      setLocalChapters(prevChapters => 
+        prevChapters.filter(c => c.id !== deletingChapter)
+      );
       
       // Close any expanded chapter if it was the deleted one
       if (expandedChapter === deletingChapter) {
         setExpandedChapter(null);
       }
       
-      // Update the draft product metadata
-      if (draftId) {
-        try {
-          // Recalculate progress after deletion
-          const completedChapters = updatedChapters.filter(c => c.status === 'generated').length;
-          const totalRemainingChapters = updatedChapters.length;
-          const progress = totalRemainingChapters > 0 
-            ? Math.round((completedChapters / totalRemainingChapters) * 100) 
-            : 0;
-          
-          await updateProduct(draftId, {
-            metadata: {
-              progress,
-              completedChapters,
-              totalChapters: totalRemainingChapters,
-              updatedAt: new Date().toISOString(),
-              deletedChapter: deletingChapter,
-              remainingChapterIds: updatedChapters.map(c => c.id),
-            }
-          });
-          
-          console.log('Successfully updated product metadata after chapter deletion');
-        } catch (updateErr) {
-          console.error('Error updating draft product after chapter deletion:', updateErr);
-        }
-      }
-      
       // Show success message
-      setError('✓ Chapter deleted successfully');
-      setTimeout(() => setError(null), 3000);
+      setNotification({ message: 'Chapter deleted successfully', type: 'success' });
+      setTimeout(() => setNotification(null), 3000);
       
     } catch (err) {
       setError(err.message || 'Failed to delete chapter');
@@ -486,37 +320,6 @@ const EbookWritingStep = () => {
       setDeletingChapter(null);
       setDeleteConfirmOpen(false);
     }
-  };
-
-  /**
-   * Formats markdown content for display as HTML
-   */
-  const formatContent = (content: string | null): string => {
-    if (!content) return '';
-    
-    // More comprehensive markdown formatting with dark mode support
-    return content
-      // Headers
-      .replace(/# (.*)/g, '<h1 class="text-xl font-bold mt-4 mb-2 text-ink-dark dark:text-ink-dark">$1</h1>')
-      .replace(/## (.*)/g, '<h2 class="text-lg font-bold mt-3 mb-2 text-ink-dark dark:text-ink-dark">$1</h2>')
-      .replace(/### (.*)/g, '<h3 class="text-base font-bold mt-2 mb-1 text-ink-dark dark:text-ink-dark">$1</h3>')
-      .replace(/#### (.*)/g, '<h4 class="text-sm font-bold mt-2 mb-1 text-ink-dark dark:text-ink-dark">$1</h4>')
-      // Bold and italic
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Lists
-      .replace(/^\s*\d+\.\s*(.*)/gm, '<li class="ml-6 list-decimal text-ink-dark dark:text-ink-light">$1</li>')
-      .replace(/^\s*-\s*(.*)/gm, '<li class="ml-4 list-disc text-ink-dark dark:text-ink-light">$1</li>')
-      // Code blocks
-      .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded font-mono text-sm overflow-x-auto my-2 text-ink-dark dark:text-ink-light">$1</pre>')
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono text-sm text-ink-dark dark:text-ink-light">$1</code>')
-      // Blockquotes
-      .replace(/^>\s*(.*)/gm, '<blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-2 text-ink-light dark:text-ink-light/80">$1</blockquote>')
-      // Horizontal rule
-      .replace(/^---$/gm, '<hr class="my-4 border-t border-gray-300 dark:border-gray-600">')
-      // Paragraphs and line breaks
-      .replace(/\n\n/g, '<p class="mb-4 text-ink-dark dark:text-ink-light"></p>')
-      .replace(/\n/g, '<br />');
   };
 
   /**
@@ -533,50 +336,21 @@ const EbookWritingStep = () => {
    */
   const handleAddChapter = async () => {
     if (!newChapterTitle.trim()) {
+      // Use setError for validation failures
       setError('Chapter title cannot be empty');
       return;
     }
 
     setAddingChapter(true);
     setError(null);
+    setNotification(null);
 
     try {
-      const { supabase } = await import('../../../../supabase/supabase');
+      // Call context function to add the chapter
+      const newChapter = await addEbookChapter(newChapterTitle, newChapterCreationType);
       
-      // Determine the highest order_index to place the new chapter at the end
-      const highestOrderIndex = localChapters.length > 0
-        ? Math.max(...localChapters.map(c => c.order_index))
-        : -1;
-      
-      // Create the new chapter in the database
-      const { data: newChapter, error } = await supabase
-        .from('ebook_chapters')
-        .insert({
-          ebook_id: ebook?.id,
-          title: newChapterTitle,
-          order_index: highestOrderIndex + 1,
-          status: newChapterCreationType === 'manual' ? 'generated' : 'pending',
-          content: newChapterCreationType === 'manual' ? 'Edit this chapter to add your content.' : null,
-        })
-        .select('*')
-        .single();
-      
-      if (error) throw error;
-      
-      if (!newChapter) {
-        throw new Error('Failed to create new chapter');
-      }
-
-      // Create a new array with the added chapter
-      const updatedChapters = [...localChapters, newChapter];
-      
-      // Add the new chapter to the local state
-      setLocalChapters(updatedChapters);
-      
-      // CRITICAL FIX: Update the global context state
-      if (updateEbookChapters) {
-        updateEbookChapters(updatedChapters);
-      }
+      // Local state (`localChapters`) will be updated automatically 
+      // by the useEffect hook listening to `ebookChapters` from the context.
       
       // If it's a manual chapter, immediately open it for editing
       if (newChapterCreationType === 'manual') {
@@ -588,35 +362,12 @@ const EbookWritingStep = () => {
         await handleGenerateChapter(newChapter.id);
       }
       
-      // Update the product metadata
-      if (draftId) {
-        try {
-          const completedChapters = updatedChapters.filter(c => c.status === 'generated').length;
-          const totalChapters = updatedChapters.length;
-          const progress = Math.round((completedChapters / totalChapters) * 100);
-          
-          await updateProduct(draftId, {
-            metadata: {
-              totalChapters,
-              completedChapters,
-              progress,
-              updatedAt: new Date().toISOString(),
-              addedChapter: {
-                id: newChapter.id,
-                title: newChapter.title,
-                creationType: newChapterCreationType,
-              }
-            }
-          });
-          
-          console.log('Successfully updated product metadata after adding a chapter');
-        } catch (updateErr) {
-          console.error('Error updating draft product after adding a chapter:', updateErr);
-        }
-      }
-      
-      setError(`✓ New chapter ${newChapterCreationType === 'manual' ? 'added' : 'added and generating'}`);
-      setTimeout(() => setError(null), 3000);
+      // Show success message
+      setNotification({
+        message: `New chapter ${newChapterCreationType === 'manual' ? 'added' : 'added and generating'}`,
+        type: 'success' 
+      });
+      setTimeout(() => setNotification(null), 3000);
       
       // Close the dialog
       setAddChapterDialogOpen(false);
@@ -645,6 +396,7 @@ const EbookWritingStep = () => {
     // Start with the first chapter
     if (pendingChapters.length > 0) {
       setError(null);
+      setNotification(null);
       
       try {
         // Show a message notifying about batch generation
@@ -658,9 +410,7 @@ const EbookWritingStep = () => {
           // Update progress message - use non-error status messaging
           const statusMessage = `Generating chapter ${i+1} of ${totalChapters}: "${chapter.title}"...`;
           console.log(statusMessage);
-          // We shouldn't use error state for status messages, but since we don't have
-          // a separate status state, we'll use a visually different style
-          setError(`✨ ${statusMessage}`);
+          setNotification({ message: statusMessage, type: 'info' });
           
           // Expand the current chapter
           setExpandedChapter(chapter.id);
@@ -673,7 +423,7 @@ const EbookWritingStep = () => {
         }
         
         // When all done, clear error message (which was being used as a status)
-        setError(null);
+        setNotification(null);
         
         // When all done, proceed to preview
         setTimeout(() => {
@@ -681,6 +431,7 @@ const EbookWritingStep = () => {
         }, 1000);
       } catch (err: any) {
         setError(err.message || 'Failed to generate chapters');
+        setNotification({ message: err.message || 'Failed to generate chapters', type: 'error' });
       } finally {
         setGeneratingChapter(null);
       }
@@ -699,7 +450,8 @@ const EbookWritingStep = () => {
         </p>
       </div>
 
-      {error && (
+      {/* Notification Area */}
+      {notification && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -707,23 +459,17 @@ const EbookWritingStep = () => {
           transition={{ duration: 0.3 }}
           className={cn(
             "border rounded-md p-4 flex items-start",
-            error.startsWith('✓') || error.startsWith('✨')
-              ? "bg-accent-primary/5 border-accent-primary/20 text-accent-primary"
-              : "bg-red-50 border-red-200 text-red-700"
+            notification.type === 'success' && "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/30 text-green-700 dark:text-green-400",
+            notification.type === 'info' && "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/30 text-blue-700 dark:text-blue-400",
+            notification.type === 'warning' && "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/30 text-yellow-700 dark:text-yellow-500",
+            notification.type === 'error' && "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/30 text-red-700 dark:text-red-400"
           )}
         >
-          {error.startsWith('✓') ? (
-            <div className="bg-accent-primary/10 p-1 rounded-full mr-3 flex-shrink-0">
-              <CheckCircle className="h-4 w-4 text-accent-primary" />
-            </div>
-          ) : error.startsWith('✨') ? (
-            <div className="bg-[#ccb595]/10 p-1 rounded-full mr-3 flex-shrink-0">
-              <Sparkles className="h-4 w-4 text-[#ccb595]" />
-            </div>
-          ) : (
-            <AlertCircle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
-          )}
-          <p className="text-sm font-serif">{error}</p>
+          {notification.type === 'success' && <CheckCircle className="h-5 w-5 mr-3 flex-shrink-0 mt-0.5" />}
+          {notification.type === 'info' && <Sparkles className="h-5 w-5 mr-3 flex-shrink-0 mt-0.5" />}
+          {notification.type === 'warning' && <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0 mt-0.5" />}
+          {notification.type === 'error' && <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0 mt-0.5" />}
+          <p className="text-sm font-serif">{notification.message}</p>
         </motion.div>
       )}
       
@@ -773,6 +519,62 @@ const EbookWritingStep = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* === MOVED Action Buttons Section === */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="flex flex-wrap items-center justify-between gap-4 mt-6 pt-6 border-t border-accent-tertiary/20 dark:border-accent-tertiary/30"
+      >
+        <div className="flex gap-3">
+          {/* Add Chapter Button */}
+          <Button
+            className="gap-2 border border-[#738996]/20 dark:border-accent-primary/30 text-[#738996] dark:text-accent-primary hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 hover:border-[#738996]/40 dark:hover:border-accent-primary/50 transition-all duration-300"
+            variant="outline"
+            size="sm"
+            onClick={handleAddChapterClick}
+            disabled={!!editingChapter || !!generatingChapter}
+          >
+            <Plus className="h-4 w-4" />
+            Add Chapter
+          </Button>
+
+          {/* Auto-Generate All Button (conditional) */}
+          {localChapters.some(c => c.status === 'pending') && !editingChapter && (
+            <Button
+              className="gap-2 bg-gradient-to-r from-[#738996] to-[#738996]/90 dark:from-accent-primary dark:to-accent-primary/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 dark:hover:from-accent-primary/90 dark:hover:to-accent-primary/80 transition-all duration-300 shadow-sm dark:shadow-md hover:shadow"
+              size="sm"
+              onClick={handleAutoGenerateAllChapters}
+              disabled={!!generatingChapter || !!editingChapter}
+            >
+              <Sparkles className="h-4 w-4" />
+              Auto-Generate All
+            </Button>
+          )}
+        </div>
+
+        {/* Proceed Button */}
+        <Button
+          className={cn(
+            "gap-2 text-white transition-all duration-300 shadow-sm dark:shadow-md hover:shadow px-5",
+            allChaptersGenerated 
+              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 dark:from-accent-yellow dark:to-accent-yellow/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 dark:hover:from-accent-yellow/90 dark:hover:to-accent-yellow/80" 
+              : "bg-[#738996] dark:bg-accent-primary hover:bg-[#738996]/90 dark:hover:bg-accent-primary/90"
+          )}
+          size="sm"
+          onClick={handleProceed}
+          disabled={!allChaptersGenerated || !!editingChapter}
+        >
+          {allChaptersGenerated ? (
+            <>
+              Preview eBook
+              <ArrowRight className="h-4 w-4" />
+            </>
+          ) : 'Generate All Chapters First'}
+        </Button>
+      </motion.div>
+      {/* ==================================== */}
 
       {/* Chapter list */}
       <div className="space-y-5">
@@ -857,10 +659,14 @@ const EbookWritingStep = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Consolidated Action Buttons */} 
                 {chapter.status === 'pending' && (
                   <Button
                     className="gap-1.5 bg-[#738996] dark:bg-accent-primary hover:bg-[#637885] dark:hover:bg-accent-primary/90 text-white"
-                    onClick={() => handleGenerateChapter(chapter.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleGenerateChapter(chapter.id);
+                    }}
                     disabled={!!generatingChapter}
                   >
                     {generatingChapter === chapter.id ? (
@@ -877,10 +683,12 @@ const EbookWritingStep = () => {
                   </Button>
                 )}
                 {chapter.status === 'generated' && !editingChapter && (
-                  <>
+                  <> { /* Use Fragment */}
+                    {/* Edit Button */}
                     <Button
                       variant="outline"
-                      className="gap-1.5 text-[#738996] dark:text-accent-primary border-[#738996]/30 dark:border-accent-primary/30 hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10"
+                      size="sm"
+                      className="gap-1.5 text-[#738996] dark:text-accent-primary border-[#738996]/30 dark:border-accent-primary/30 hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 h-9 px-3"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStartEditing(chapter);
@@ -889,11 +697,13 @@ const EbookWritingStep = () => {
                       disabled={!!generatingChapter || !!editingChapter}
                     >
                       <Edit className="h-4 w-4" />
-                      Edit Content
+                      Edit
                     </Button>
+                    {/* Regenerate Button */}
                     <Button
                       variant="outline"
-                      className="gap-1.5 text-ink-light dark:text-ink-light/80 border-accent-tertiary/30 dark:border-accent-tertiary/40 hover:bg-accent-tertiary/5 dark:hover:bg-accent-tertiary/10"
+                      size="sm"
+                      className="gap-1.5 text-ink-light dark:text-ink-light/80 border-accent-tertiary/30 dark:border-accent-tertiary/40 hover:bg-accent-tertiary/5 dark:hover:bg-accent-tertiary/10 h-9 px-3"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleGenerateChapter(chapter.id);
@@ -901,32 +711,30 @@ const EbookWritingStep = () => {
                       disabled={!!generatingChapter || !!editingChapter}
                     >
                       <RotateCcw className="h-4 w-4" />
-                      Regenerate
+                       Regenerate
+                    </Button>
+                    {/* Delete Button (Moved Here) */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={cn(
+                        "transition-all duration-200 h-9 w-9 p-0", // Match size
+                        localChapters.length > 1
+                          ? "text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-400"
+                          : "text-red-300 dark:text-red-700/50 cursor-not-allowed"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (localChapters.length > 1) {
+                          handleDeleteChapterClick(chapter.id, e);
+                        }
+                      }}
+                      disabled={!!generatingChapter || !!editingChapter || deletingChapter === chapter.id || localChapters.length <= 1}
+                      title={localChapters.length > 1 ? "Delete chapter" : "Cannot delete the only chapter"}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </>
-                )}
-                {/* Delete button - Only show if not editing and not the only chapter */}
-                {!editingChapter && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={cn(
-                      "transition-all duration-200 h-9 w-9 p-0",
-                      localChapters.length > 1
-                        ? "text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-400"
-                        : "text-red-300 dark:text-red-700/50 cursor-not-allowed"
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (localChapters.length > 1) {
-                        handleDeleteChapterClick(chapter.id, e);
-                      }
-                    }}
-                    disabled={!!generatingChapter || !!editingChapter || deletingChapter === chapter.id || localChapters.length <= 1}
-                    title={localChapters.length > 1 ? "Delete chapter" : "Cannot delete the only chapter"}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 )}
                 <motion.div 
                   animate={{ rotate: expandedChapter === chapter.id ? 180 : 0 }}
@@ -959,42 +767,11 @@ const EbookWritingStep = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5 }}
-                        className="prose prose-sm max-w-none font-serif text-ink-dark prose-headings:font-display prose-headings:text-ink-dark prose-p:text-ink-light prose-p:leading-relaxed prose-headings:mb-3 prose-li:text-ink-light prose-li:leading-relaxed"
+                        className="prose prose-sm dark:prose-invert max-w-none font-serif text-ink-dark"
                       >
-                        <div
-                          dangerouslySetInnerHTML={{ __html: formatContent(chapter.content) }}
-                          className="text-ink-dark dark:text-ink-light"
-                        />
-                        
-                        {/* Add action buttons at the bottom of displayed content */}
-                        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#E8E8E8] dark:border-accent-tertiary/30">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 px-3.5 h-9 border-accent-tertiary/30 dark:border-accent-tertiary/40 text-ink-dark dark:text-ink-light hover:border-[#738996]/30 dark:hover:border-accent-primary/30 hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartEditing(chapter);
-                            }}
-                            disabled={!!generatingChapter || !!editingChapter}
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                            Edit Chapter
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="gap-1.5 px-3.5 h-9 text-ink-light hover:bg-accent-tertiary/20 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleGenerateChapter(chapter.id);
-                            }}
-                            disabled={!!generatingChapter || !!editingChapter}
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            Regenerate
-                          </Button>
-                        </div>
+                        <ReactMarkdown>
+                          {chapter.content}
+                        </ReactMarkdown>
                       </motion.div>
                     ) : chapter.status === 'generating' ? (
                       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -1122,61 +899,6 @@ const EbookWritingStep = () => {
         ))}
       </div>
 
-      {/* Add New Chapter Button */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-      >
-        <Button
-          className="gap-2 w-full border border-[#738996]/20 dark:border-accent-primary/30 text-[#738996] dark:text-accent-primary hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 hover:border-[#738996]/40 dark:hover:border-accent-primary/50 transition-all duration-300 py-6"
-          variant="outline"
-          onClick={handleAddChapterClick}
-          disabled={!!editingChapter || !!generatingChapter}
-        >
-          <Plus className="h-5 w-5" />
-          Add New Chapter
-        </Button>
-      </motion.div>
-
-      {/* Generation control buttons */}
-      {localChapters.some(c => c.status === 'pending') && !editingChapter && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="space-y-4"
-        >
-          <Button
-            className="gap-2 w-full border border-[#738996]/30 dark:border-accent-primary/30 text-[#738996] dark:text-accent-primary hover:bg-[#738996]/5 dark:hover:bg-accent-primary/10 hover:border-[#738996]/50 dark:hover:border-accent-primary/50 transition-all duration-300 shadow-sm h-12"
-            variant="outline"
-            onClick={() => {
-              const nextPendingChapter = localChapters.find(c => c.status === 'pending');
-              if (nextPendingChapter) {
-                handleGenerateChapter(nextPendingChapter.id);
-              }
-            }}
-            disabled={!!generatingChapter || !!editingChapter}
-          >
-            <Sparkles className="h-4 w-4" />
-            Generate Next Chapter
-          </Button>
-          
-          <Button
-            className="gap-2 w-full bg-gradient-to-r from-[#738996] to-[#738996]/90 dark:from-accent-primary dark:to-accent-primary/90 text-white hover:from-[#738996]/90 hover:to-[#738996]/80 dark:hover:from-accent-primary/90 dark:hover:to-accent-primary/80 transition-all duration-300 shadow-sm dark:shadow-md hover:shadow h-12"
-            onClick={handleAutoGenerateAllChapters}
-            disabled={!!generatingChapter || !!editingChapter}
-          >
-            <Sparkles className="h-4 w-4" />
-            Auto-Generate All Chapters
-          </Button>
-          
-          <p className="text-xs text-ink-faded dark:text-ink-light/60 text-center font-serif">
-            Each chapter builds on previous ones. For best results, generate chapters in order from beginning to end.
-          </p>
-        </motion.div>
-      )}
-
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1190,23 +912,6 @@ const EbookWritingStep = () => {
           disabled={!!editingChapter}
         >
           Back
-        </Button>
-        <Button
-          className={cn(
-            "gap-2 text-white transition-all duration-300 shadow-sm dark:shadow-md hover:shadow px-6",
-            allChaptersGenerated 
-              ? "bg-gradient-to-r from-[#ccb595] to-[#ccb595]/90 dark:from-accent-yellow dark:to-accent-yellow/90 hover:from-[#ccb595]/90 hover:to-[#ccb595]/80 dark:hover:from-accent-yellow/90 dark:hover:to-accent-yellow/80" 
-              : "bg-[#738996] dark:bg-accent-primary hover:bg-[#738996]/90 dark:hover:bg-accent-primary/90"
-          )}
-          onClick={handleProceed}
-          disabled={!allChaptersGenerated || !!editingChapter}
-        >
-          {allChaptersGenerated ? (
-            <>
-              Preview eBook
-              <ArrowRight className="h-4 w-4" />
-            </>
-          ) : 'Generate All Chapters First'}
         </Button>
       </motion.div>
 

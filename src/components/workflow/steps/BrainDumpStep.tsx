@@ -18,11 +18,17 @@ import {
   AlertCircle,
   Youtube,
   ArrowRight,
-  Brain
+  Brain,
+  Save,
+  Check,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useBrainDumps } from '@/hooks/useBrainDumps';
+// Import YouTube transcript functions
+import { isYoutubeUrl, extractYoutubeVideoId, fetchYoutubeTranscript, youtubeUrlRegex } from '@/lib/youtubeTranscript';
 
 // Loading overlay component with fancy animations
 const LoadingOverlay = ({ 
@@ -229,6 +235,64 @@ const LoadingOverlay = ({
 };
 
 /**
+ * YouTube Transcript Progress Indicator component
+ * Shows transcript processing status in the UI
+ */
+const YouTubeTranscriptIndicator = () => {
+  const [visibleLinks, setVisibleLinks] = useState<{loading: number, total: number, completed: number}>({
+    loading: 0,
+    total: 0,
+    completed: 0
+  });
+  
+  // Track and update status of YouTube links
+  useEffect(() => {
+    const updateStatus = () => {
+      // Find all YouTube links with transcripts in the page
+      const links = document.querySelectorAll('[data-youtube-link="true"]');
+      const loadingLinks = document.querySelectorAll('[data-youtube-loading="true"]');
+      const completedLinks = document.querySelectorAll('[data-youtube-completed="true"]');
+      
+      setVisibleLinks({
+        loading: loadingLinks.length,
+        total: links.length,
+        completed: completedLinks.length
+      });
+    };
+    
+    // Update status initially and every 2 seconds
+    updateStatus();
+    const interval = setInterval(updateStatus, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Only show if there are YouTube links being processed
+  if (visibleLinks.loading === 0) return null;
+  
+  return (
+    <div className="fixed bottom-4 right-4 z-50 bg-accent-primary/95 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in flex items-center gap-3">
+      <div className="relative h-6 w-6">
+        <Youtube className="h-6 w-6 z-10 relative" />
+        <div className="absolute inset-0 bg-accent-primary rounded-full animate-ping opacity-30"></div>
+      </div>
+      <div className="text-sm">
+        <p className="font-medium">Processing YouTube Transcripts</p>
+        <p className="text-xs opacity-80">
+          {visibleLinks.completed} of {visibleLinks.total} completed
+        </p>
+      </div>
+      <div className="w-20 h-1.5 bg-white/30 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-white rounded-full transition-all duration-300"
+          style={{ width: `${(visibleLinks.completed / visibleLinks.total) * 100}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
+/**
  * The second step in the eBook creation workflow.
  * Users can paste text, upload files, or add links to compile
  * unstructured content for the AI to analyze.
@@ -248,12 +312,22 @@ const BrainDumpStep = () => {
     setCurrentStep,
     loading
   } = useWorkflow();
+  
+  // Add the hook for saving brain dumps independently
+  const { saveBrainDumpFromWorkflow } = useBrainDumps();
 
   const [content, setContent] = useState(brainDump?.raw_content || '');
   const [title, setTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isYouTube, setIsYouTube] = useState(false);
+  
+  // State for save for later dialog
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
+  const [saveDescription, setSaveDescription] = useState('');
+  const [isSavingForLater, setIsSavingForLater] = useState(false);
+  const [savingSuccess, setSavingSuccess] = useState(false);
   
   // Local loading states for better UX control
   const [isSaving, setIsSaving] = useState(false);
@@ -264,12 +338,22 @@ const BrainDumpStep = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Track active transcript fetching operations to prevent race conditions
+  const activeTranscriptFetches = useRef<Set<string>>(new Set());
+
   // Load brain dump data when available
   useEffect(() => {
     if (brainDump?.raw_content) {
       setContent(brainDump.raw_content);
     }
   }, [brainDump]);
+  
+  // Set default save title when project title is available
+  useEffect(() => {
+    if (project?.title) {
+      setSaveTitle(`${project.title} - Brain Dump`);
+    }
+  }, [project]);
   
   // Check if URL is YouTube when linkUrl changes
   useEffect(() => {
@@ -306,11 +390,282 @@ const BrainDumpStep = () => {
   }, [loading]);
 
   /**
-   * Handles text content changes
+   * Handles scanning content for YouTube URLs and extracting transcripts
+   */
+  const scanContentForYouTubeLinks = async (content: string) => {
+    if (!content || typeof content !== 'string') return;
+    
+    // Use the enhanced regex from the library
+    const matches = [...content.matchAll(youtubeUrlRegex)];
+    
+    if (matches.length === 0) return;
+    
+    // Show a subtle notification if YouTube URLs are found
+    const newLinks = matches.length;
+    if (newLinks > 0) {
+      // Show a temporary "toast" notification (if we had a toast component)
+      // For now, we'll just use the error state with a positive message
+      const message = `Found ${newLinks} YouTube URL${newLinks > 1 ? 's' : ''}. Transcripts will be automatically extracted.`;
+      console.log(message);
+      // Only set this as a non-error status message if we don't already have an error
+      if (!error) {
+        setError(null);
+        setTimeout(() => {
+          // Add a small UI indicator that shows YouTube links are being processed
+          const youtubeElement = document.createElement('div');
+          youtubeElement.className = 'youtube-processing-indicator';
+          youtubeElement.style.cssText = 'position: fixed; bottom: 8px; left: 8px; background-color: rgba(255,0,0,0.1); color: #cc0000; padding: 4px 12px; border-radius: 4px; font-size: 12px; z-index: 1000; font-family: sans-serif;';
+          youtubeElement.textContent = 'YouTube Transcripts: Processing...';
+          document.body.appendChild(youtubeElement);
+          
+          // Remove it after a short while
+          setTimeout(() => {
+            if (document.body.contains(youtubeElement)) {
+              document.body.removeChild(youtubeElement);
+            }
+          }, 3000);
+        }, 100);
+      }
+    }
+    
+    // Process each unique YouTube URL
+    const processedVideoIds = new Set();
+    
+    for (const match of matches) {
+      const fullUrl = match[0];
+      // Use the improved extraction function for reliability
+      const videoId = extractYoutubeVideoId(fullUrl);
+      
+      // Skip if no video ID or already processed
+      if (!videoId || processedVideoIds.has(videoId)) continue;
+      
+      // Check if we're already fetching this transcript
+      if (activeTranscriptFetches.current.has(videoId)) {
+        console.log(`Skipping duplicate fetch for video ${videoId}`);
+        continue;
+      }
+      
+      // Add to processed set and active fetches
+      processedVideoIds.add(videoId);
+      activeTranscriptFetches.current.add(videoId);
+      
+      // Check if this video is already in brainDumpLinks
+      const existingLink = brainDumpLinks.find(link => 
+        link.link_type === 'youtube' && (
+          link.url.includes(videoId) || 
+          (link.url.includes('youtube') && extractYoutubeVideoId(link.url) === videoId)
+        )
+      );
+      
+      // If it's already been added with a transcript or is loading, skip
+      if (existingLink && (existingLink.transcript || existingLink.isLoadingTranscript)) {
+        activeTranscriptFetches.current.delete(videoId);
+        continue;
+      }
+      
+      // If it exists but doesn't have a transcript, update it
+      if (existingLink) {
+        try {
+          // Update to loading state
+          await addBrainDumpLink(
+            existingLink.url,
+            existingLink.title,
+            'youtube',
+            existingLink.id,
+            existingLink.thumbnail,
+            undefined,
+            true,
+            undefined
+          );
+          
+          // Set a timeout for fetch operations
+          let hasCompleted = false;
+          const timeoutId = setTimeout(() => {
+            if (!hasCompleted) {
+              console.warn(`Transcript fetch timeout for video ${videoId}`);
+              addBrainDumpLink(
+                existingLink.url,
+                existingLink.title,
+                'youtube',
+                existingLink.id,
+                existingLink.thumbnail,
+                undefined,
+                false,
+                "Transcript fetch timed out. Try again later."
+              );
+              activeTranscriptFetches.current.delete(videoId);
+            }
+          }, 30000); // 30 second timeout
+          
+          try {
+            // Fetch transcript
+            const transcriptResult = await fetchYoutubeTranscript(videoId);
+            hasCompleted = true;
+            clearTimeout(timeoutId);
+            
+            if (transcriptResult.error) {
+              await addBrainDumpLink(
+                existingLink.url,
+                existingLink.title,
+                'youtube',
+                existingLink.id,
+                existingLink.thumbnail,
+                undefined,
+                false,
+                transcriptResult.error
+              );
+            } else if (transcriptResult.transcript) {
+              await addBrainDumpLink(
+                existingLink.url,
+                existingLink.title,
+                'youtube',
+                existingLink.id,
+                existingLink.thumbnail,
+                transcriptResult.transcript,
+                false,
+                undefined
+              );
+            }
+          } catch (fetchErr) {
+            hasCompleted = true;
+            clearTimeout(timeoutId);
+            console.error("Error fetching transcript:", fetchErr);
+            await addBrainDumpLink(
+              existingLink.url,
+              existingLink.title,
+              'youtube',
+              existingLink.id,
+              existingLink.thumbnail,
+              undefined,
+              false,
+              `Failed to fetch transcript: ${fetchErr.message || "Unknown error"}`
+            );
+          }
+        } catch (err: any) {
+          console.error("Error updating transcript for existing link:", err);
+          await addBrainDumpLink(
+            existingLink.url,
+            existingLink.title,
+            'youtube',
+            existingLink.id,
+            existingLink.thumbnail,
+            undefined,
+            false,
+            `Failed to extract transcript: ${err.message || "Unknown error"}`
+          );
+        } finally {
+          // Always remove from active fetches
+          activeTranscriptFetches.current.delete(videoId);
+        }
+      } else {
+        // Create a new link
+        try {
+          const title = `YouTube Video: ${videoId}`;
+          const thumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+          
+          // First add link without transcript (loading state)
+          const linkId = await addBrainDumpLink(
+            fullUrl,
+            title,
+            'youtube',
+            undefined,
+            thumbnail,
+            undefined,
+            true
+          );
+          
+          // Set a timeout for fetch operations
+          let hasCompleted = false;
+          const timeoutId = setTimeout(() => {
+            if (!hasCompleted) {
+              console.warn(`Transcript fetch timeout for video ${videoId}`);
+              addBrainDumpLink(
+                fullUrl,
+                title,
+                'youtube',
+                linkId,
+                thumbnail,
+                undefined,
+                false,
+                "Transcript fetch timed out. Try again later."
+              );
+              activeTranscriptFetches.current.delete(videoId);
+            }
+          }, 30000); // 30 second timeout
+          
+          try {
+            // Fetch transcript
+            const transcriptResult = await fetchYoutubeTranscript(videoId);
+            hasCompleted = true;
+            clearTimeout(timeoutId);
+            
+            if (transcriptResult.error) {
+              await addBrainDumpLink(
+                fullUrl,
+                title,
+                'youtube',
+                linkId,
+                thumbnail,
+                undefined,
+                false,
+                transcriptResult.error
+              );
+            } else if (transcriptResult.transcript) {
+              await addBrainDumpLink(
+                fullUrl,
+                title,
+                'youtube',
+                linkId,
+                thumbnail,
+                transcriptResult.transcript,
+                false,
+                undefined
+              );
+            }
+          } catch (fetchErr) {
+            hasCompleted = true;
+            clearTimeout(timeoutId);
+            console.error("Error fetching transcript:", fetchErr);
+            await addBrainDumpLink(
+              fullUrl,
+              title,
+              'youtube',
+              linkId,
+              thumbnail,
+              undefined,
+              false,
+              `Failed to fetch transcript: ${fetchErr.message || "Unknown error"}`
+            );
+          }
+        } catch (err: any) {
+          console.error("Error creating new link with transcript:", err);
+          // Let the error pass without creating a partial link
+        } finally {
+          // Always remove from active fetches
+          activeTranscriptFetches.current.delete(videoId);
+        }
+      }
+    }
+  };
+
+  /**
+   * Handles content changes
    */
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+    const newContent = e.target.value;
+    setContent(newContent);
   };
+
+  /**
+   * Debounced function to scan for YouTube links when content changes
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scanContentForYouTubeLinks(content);
+    }, 3000); // Delay to avoid too many API calls while typing
+    
+    return () => clearTimeout(timer);
+  }, [content, brainDumpLinks, addBrainDumpLink]);
 
   /**
    * Handles saving the brain dump to the database
@@ -327,11 +682,72 @@ const BrainDumpStep = () => {
 
     try {
       await saveBrainDump(content);
+      
+      // Scan content for YouTube links after saving
+      await scanContentForYouTubeLinks(content);
+      
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to save content');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  /**
+   * Handles opening the save for later dialog
+   */
+  const handleOpenSaveDialog = () => {
+    if (!content.trim() && brainDumpFiles.length === 0 && brainDumpLinks.length === 0) {
+      setError('Please add some content before saving. You can paste text, upload files, or add links.');
+      return;
+    }
+    
+    // Set default title if not already set
+    if (!saveTitle) {
+      setSaveTitle(project?.title ? `${project.title} - Brain Dump` : 'Brain Dump');
+    }
+    
+    setSaveDialogOpen(true);
+  };
+  
+  /**
+   * Handles saving brain dump for later use
+   */
+  const handleSaveForLater = async () => {
+    setIsSavingForLater(true);
+    setSavingSuccess(false);
+    setError(null);
+    
+    try {
+      // First save to the workflow context if we have unsaved changes
+      if (content !== brainDump?.raw_content) {
+        await saveBrainDump(content);
+      }
+      
+      // Then save as a standalone brain dump
+      const result = await saveBrainDumpFromWorkflow(
+        saveTitle || 'Brain Dump',
+        content,
+        brainDump?.analyzed_content,
+        brainDumpFiles,
+        brainDumpLinks
+      );
+      
+      if (result) {
+        setSavingSuccess(true);
+        // Auto-close after 2 seconds
+        setTimeout(() => {
+          setSaveDialogOpen(false);
+          setSavingSuccess(false);
+        }, 2000);
+      } else {
+        throw new Error('Failed to save brain dump for later use');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to save brain dump for later use');
+    } finally {
+      setIsSavingForLater(false);
     }
   };
 
@@ -413,6 +829,26 @@ const BrainDumpStep = () => {
       for (const file of files) {
         try {
           await addBrainDumpFile(file);
+          
+          // For text-based files, read the content to scan for YouTube URLs
+          if (file.type === 'text/plain' || 
+              file.type === 'text/markdown' || 
+              file.type === 'application/rtf' ||
+              file.name.endsWith('.txt') || 
+              file.name.endsWith('.md') || 
+              file.name.endsWith('.rtf')) {
+            
+            const reader = new FileReader();
+            
+            reader.onload = async (event) => {
+              const fileContent = event.target?.result as string;
+              if (fileContent) {
+                await scanContentForYouTubeLinks(fileContent);
+              }
+            };
+            
+            reader.readAsText(file);
+          }
         } catch (err: any) {
           setError(err.message || 'Failed to add file');
           break;
@@ -431,26 +867,146 @@ const BrainDumpStep = () => {
     if (!linkUrl) return;
     
     // Simple URL validation
+    let validatedUrl = linkUrl;
     try {
-      new URL(linkUrl);
+      // Attempt to create a URL (this will throw if invalid)
+      new URL(validatedUrl);
     } catch (e) {
-      setError('Please enter a valid URL');
-      return;
+      // If it fails, try adding https:// prefix and try again
+      try {
+        validatedUrl = 'https://' + validatedUrl;
+        new URL(validatedUrl); // This will throw if still invalid
+      } catch (e2) {
+        setError('Please enter a valid URL');
+        return;
+      }
     }
     
     setError(null);
     
+    // Check if the link is a YouTube URL
+    const youtubeUrl = isYoutubeUrl(validatedUrl);
+    
+    // Extract YouTube video ID if applicable
+    const videoId = youtubeUrl ? extractYoutubeVideoId(validatedUrl) : null;
+    
+    // If it's a YouTube URL but we couldn't extract a video ID, show an error
+    if (youtubeUrl && !videoId) {
+      setError('Could not extract video ID from YouTube URL. Please check the URL format.');
+      return;
+    }
+    
     // Create title based on URL type
-    const title = isYouTube 
-      ? `YouTube Video: ${extractYoutubeVideoId(linkUrl) || 'Unknown'}`
-      : `Web Page: ${new URL(linkUrl).hostname}`;
+    const title = youtubeUrl 
+      ? `YouTube Video: ${videoId || 'Unknown'}`
+      : `Web Page: ${new URL(validatedUrl).hostname}`;
+    
+    const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : undefined;
     
     try {
-      await addBrainDumpLink(
-        linkUrl, 
+      // First add the link with initial properties
+      const linkId = await addBrainDumpLink(
+        validatedUrl, 
         title, 
-        isYouTube ? 'youtube' : 'webpage'
+        youtubeUrl ? 'youtube' : 'webpage',
+        undefined,
+        thumbnail
       );
+      
+      // For YouTube links, automatically extract transcript
+      if (youtubeUrl && videoId) {
+        // Check if this video is already being fetched
+        if (activeTranscriptFetches.current.has(videoId)) {
+          console.log(`Skipping duplicate fetch for video ${videoId}`);
+          return;
+        }
+        
+        // Update the link to show loading state
+        await addBrainDumpLink(
+          validatedUrl,
+          title,
+          'youtube',
+          linkId,
+          thumbnail,
+          undefined,
+          true,
+          undefined
+        );
+        
+        // Mark as currently fetching to prevent duplicates
+        activeTranscriptFetches.current.add(videoId);
+        
+        // Set a timeout for fetch operation
+        let hasCompleted = false;
+        const timeoutId = setTimeout(() => {
+          if (!hasCompleted) {
+            console.warn(`Transcript fetch timeout for video ${videoId}`);
+            addBrainDumpLink(
+              validatedUrl,
+              title,
+              'youtube',
+              linkId,
+              thumbnail,
+              undefined,
+              false,
+              "Transcript fetch timed out. Try again later."
+            );
+            activeTranscriptFetches.current.delete(videoId);
+          }
+        }, 30000); // 30 second timeout
+        
+        try {
+          // Fetch the transcript
+          const transcriptResult = await fetchYoutubeTranscript(videoId);
+          hasCompleted = true;
+          clearTimeout(timeoutId);
+          
+          if (transcriptResult.error) {
+            // Update with error
+            await addBrainDumpLink(
+              validatedUrl,
+              title,
+              'youtube',
+              linkId,
+              thumbnail,
+              undefined,
+              false,
+              transcriptResult.error
+            );
+          } else if (transcriptResult.transcript) {
+            // Update with transcript
+            await addBrainDumpLink(
+              validatedUrl,
+              title,
+              'youtube',
+              linkId,
+              thumbnail,
+              transcriptResult.transcript,
+              false,
+              undefined
+            );
+          }
+        } catch (transcriptErr: any) {
+          // Handle any unexpected errors
+          hasCompleted = true;
+          clearTimeout(timeoutId);
+          
+          console.error("Error extracting transcript:", transcriptErr);
+          await addBrainDumpLink(
+            validatedUrl,
+            title,
+            'youtube',
+            linkId,
+            thumbnail,
+            undefined,
+            false,
+            "Failed to extract transcript: " + (transcriptErr.message || "Unknown error")
+          );
+        } finally {
+          // Always remove from active fetches
+          activeTranscriptFetches.current.delete(videoId);
+        }
+      }
       
       // Reset form
       setLinkUrl('');
@@ -458,36 +1014,6 @@ const BrainDumpStep = () => {
     } catch (err: any) {
       setError(err.message || 'Failed to add link');
     }
-  };
-
-  /**
-   * Helper function to check if URL is a YouTube URL
-   */
-  const isYoutubeUrl = (url: string): boolean => {
-    try {
-      const parsedUrl = new URL(url);
-      const hostname = parsedUrl.hostname;
-      return hostname.includes('youtube.com') || hostname.includes('youtu.be');
-    } catch {
-      return false;
-    }
-  };
-
-  /**
-   * Helper function to extract YouTube video ID
-   */
-  const extractYoutubeVideoId = (url: string): string | null => {
-    try {
-      const parsedUrl = new URL(url);
-      if (parsedUrl.hostname.includes('youtube.com')) {
-        return parsedUrl.searchParams.get('v');
-      } else if (parsedUrl.hostname.includes('youtu.be')) {
-        return parsedUrl.pathname.slice(1);
-      }
-    } catch {
-      // Invalid URL
-    }
-    return null;
   };
 
   /**
@@ -616,6 +1142,88 @@ const BrainDumpStep = () => {
         lastProgressUpdate = Date.now();
       }
 
+      // Ensure all YouTube transcripts are processed before analysis
+      if (brainDumpLinks.some(link => link.link_type === 'youtube' && link.isLoadingTranscript)) {
+        try {
+          // Check for any YouTube links that are still loading transcripts
+          const loadingLinks = brainDumpLinks.filter(link => 
+            link.link_type === 'youtube' && link.isLoadingTranscript
+          );
+          
+          if (loadingLinks.length > 0) {
+            setLoadingMessage(`Waiting for ${loadingLinks.length} YouTube transcript${loadingLinks.length > 1 ? 's' : ''} to complete...`);
+            
+            // Wait for a reasonable time for transcripts to complete (max 15 seconds)
+            let waitTime = 0;
+            const MAX_WAIT = 15000; // 15 seconds max wait (increased from 10)
+            const WAIT_INTERVAL = 500; // Check every 500ms
+            
+            // To track progress changes
+            let previousLoadingCount = loadingLinks.length;
+            
+            while (waitTime < MAX_WAIT) {
+              // Check if any links are still loading
+              const currentlyLoadingLinks = brainDumpLinks.filter(link => 
+                link.link_type === 'youtube' && link.isLoadingTranscript
+              );
+              
+              const stillLoadingCount = currentlyLoadingLinks.length;
+              
+              // Update message if progress has been made
+              if (stillLoadingCount < previousLoadingCount) {
+                previousLoadingCount = stillLoadingCount;
+                setLoadingMessage(`Processing YouTube transcripts: ${stillLoadingCount} remaining...`);
+                lastProgressUpdate = Date.now(); // Update progress timestamp
+              }
+              
+              if (stillLoadingCount === 0) {
+                break; // All transcripts are loaded
+              }
+              
+              // Wait a bit before checking again
+              await new Promise(resolve => setTimeout(resolve, WAIT_INTERVAL));
+              waitTime += WAIT_INTERVAL;
+            }
+            
+            // If some transcripts are still loading after timeout, proceed anyway
+            const remainingLoading = brainDumpLinks.filter(link => 
+              link.link_type === 'youtube' && link.isLoadingTranscript
+            );
+            
+            if (remainingLoading.length > 0) {
+              console.warn(`Proceeding with analysis with ${remainingLoading.length} incomplete transcripts`);
+              setLoadingMessage(`Proceeding with analysis (${remainingLoading.length} transcript${remainingLoading.length > 1 ? 's' : ''} still processing)...`);
+              
+              // Cancel any remaining fetches to avoid race conditions during analysis
+              remainingLoading.forEach(link => {
+                const videoId = extractYoutubeVideoId(link.url);
+                if (videoId && activeTranscriptFetches.current.has(videoId)) {
+                  console.log(`Cancelling transcript fetch for ${videoId} due to analysis starting`);
+                  activeTranscriptFetches.current.delete(videoId);
+                  
+                  // Update link to not be in loading state
+                  addBrainDumpLink(
+                    link.url,
+                    link.title,
+                    'youtube',
+                    link.id,
+                    link.thumbnail,
+                    undefined,
+                    false,
+                    "Cancelled due to analysis starting"
+                  ).catch(err => console.error("Error updating cancelled transcript link:", err));
+                }
+              });
+            } else {
+              setLoadingMessage('All transcripts processed, starting analysis...');
+            }
+          }
+        } catch (transcriptErr) {
+          // Log but continue even if there's an issue with transcript processing
+          console.error("Error handling transcripts before analysis:", transcriptErr);
+        }
+      }
+
       // Step 2: Analyze content
       setLoadingStep(3);
       setLoadingMessage('Analyzing your content...');
@@ -630,6 +1238,9 @@ const BrainDumpStep = () => {
             lastProgressUpdate = Date.now();
           }
         };
+        
+        // Capture the current content to avoid race conditions if content changes during analysis
+        const contentToAnalyze = content;
         
         // Call analyzeBrainDump with progress callback
         await analyzeBrainDump(progressCallback);
@@ -687,6 +1298,27 @@ const BrainDumpStep = () => {
     }
   };
 
+  // Ensure proper cleanup of object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up object URLs to prevent memory leaks
+      brainDumpFiles.forEach(file => {
+        if (file.preview) {
+          URL.revokeObjectURL(file.preview);
+        }
+      });
+      
+      // Clear the active transcript fetches set
+      activeTranscriptFetches.current.clear();
+      
+      // Clear any pending timeouts
+      const currentTimeoutId = window.setTimeout(() => {}, 0);
+      for (let i = currentTimeoutId; i > currentTimeoutId - 100; i--) {
+        window.clearTimeout(i);
+      }
+    };
+  }, [brainDumpFiles]);
+
   return (
     <div className="space-y-8">
       {/* Loading overlay */}
@@ -717,6 +1349,9 @@ const BrainDumpStep = () => {
           }
         }}
       />
+      
+      {/* YouTube transcript processing indicator */}
+      <YouTubeTranscriptIndicator />
       
       {/* Word count indicator */}
       {content.trim() && !isAnalyzing && !isSaving && (
@@ -874,26 +1509,38 @@ const BrainDumpStep = () => {
           </TabsContent>
         </Tabs>
 
-        <Button 
-          variant={isSaving ? "secondary" : "outline"}
-          className={cn(
-            "w-full font-serif transition-all duration-200",
-            isSaving 
-              ? "bg-accent-primary/10 text-accent-primary" 
-              : "border-accent-primary/20 text-accent-primary hover:bg-accent-primary/5"
-          )}
-          onClick={handleSave}
-          disabled={isSaving || isAnalyzing}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Saving...
-            </>
-          ) : (
-            <>Save Content</>
-          )}
-        </Button>
+        <div className="flex gap-4">
+          <Button 
+            variant={isSaving ? "secondary" : "outline"}
+            className={cn(
+              "flex-1 font-serif transition-all duration-200",
+              isSaving 
+                ? "bg-accent-primary/10 text-accent-primary" 
+                : "border-accent-primary/20 text-accent-primary hover:bg-accent-primary/5"
+            )}
+            onClick={handleSave}
+            disabled={isSaving || isAnalyzing}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>Save Content</>
+            )}
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className="flex-1 font-serif transition-all duration-200 border-accent-tertiary/40 text-ink-dark hover:bg-accent-tertiary/5"
+            onClick={handleOpenSaveDialog}
+            disabled={isSaving || isAnalyzing || !content.trim()}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save for Later
+          </Button>
+        </div>
       </div>
 
       {/* Display added content */}
@@ -952,6 +1599,9 @@ const BrainDumpStep = () => {
                   <div 
                     key={link.id} 
                     className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-start"
+                    data-youtube-link={link.link_type === 'youtube' ? 'true' : 'false'}
+                    data-youtube-loading={link.link_type === 'youtube' && link.isLoadingTranscript ? 'true' : 'false'}
+                    data-youtube-completed={link.link_type === 'youtube' && link.transcript ? 'true' : 'false'}
                   >
                     {link.link_type === 'youtube' && link.thumbnail ? (
                       <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
@@ -984,6 +1634,111 @@ const BrainDumpStep = () => {
                       <p className="font-serif text-ink-faded text-xs truncate mb-1" title={link.url}>
                         {link.url}
                       </p>
+                      
+                      {/* Transcript status for YouTube links */}
+                      {link.link_type === 'youtube' && (
+                        <div className="mt-1">
+                          {link.isLoadingTranscript ? (
+                            <p className="text-xs text-amber-600 flex items-center">
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Extracting transcript...
+                            </p>
+                          ) : link.transcriptError ? (
+                            <p className="text-xs text-red-600 flex items-center" title={link.transcriptError}>
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              {link.transcriptError.slice(0, 50)}{link.transcriptError.length > 50 ? '...' : ''}
+                            </p>
+                          ) : link.transcript ? (
+                            <div>
+                              <div 
+                                className="text-xs text-green-600 flex items-center cursor-pointer hover:underline"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  // Toggle transcript preview
+                                  const transcriptPreview = document.getElementById(`transcript-preview-${link.id}`);
+                                  if (transcriptPreview) {
+                                    const isHidden = transcriptPreview.classList.contains('hidden');
+                                    if (isHidden) {
+                                      transcriptPreview.classList.remove('hidden');
+                                    } else {
+                                      transcriptPreview.classList.add('hidden');
+                                    }
+                                  }
+                                }}
+                              >
+                                <Check className="h-3 w-3 mr-1" />
+                                Transcript extracted ({(link.transcript.length / 1000).toFixed(1)}k characters)
+                                <ChevronRight className="h-3 w-3 ml-1" />
+                              </div>
+                              <div 
+                                id={`transcript-preview-${link.id}`} 
+                                className="hidden mt-2 p-2 bg-cream/50 border border-accent-tertiary/20 rounded-sm text-xs text-ink-dark max-h-40 overflow-y-auto break-words font-serif whitespace-pre-line"
+                              >
+                                {link.transcript.slice(0, 1000)}
+                                {link.transcript.length > 1000 && (
+                                  <>
+                                    <span>...</span>
+                                    <button 
+                                      className="ml-1 text-accent-primary hover:underline"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        
+                                        // Create and show a modal with the full transcript
+                                        const modalOverlay = document.createElement('div');
+                                        modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+                                        modalOverlay.id = 'transcript-modal-overlay';
+                                        
+                                        const modalContent = document.createElement('div');
+                                        modalContent.className = 'bg-paper rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] flex flex-col';
+                                        
+                                        const modalHeader = document.createElement('div');
+                                        modalHeader.className = 'flex justify-between items-center mb-4';
+                                        
+                                        const modalTitle = document.createElement('h3');
+                                        modalTitle.className = 'font-display text-lg text-ink-dark';
+                                        modalTitle.textContent = 'YouTube Transcript';
+                                        
+                                        const closeButton = document.createElement('button');
+                                        closeButton.className = 'text-ink-faded hover:text-red-500 transition-colors';
+                                        closeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                                        closeButton.onclick = () => {
+                                          document.body.removeChild(modalOverlay);
+                                        };
+                                        
+                                        modalHeader.appendChild(modalTitle);
+                                        modalHeader.appendChild(closeButton);
+                                        
+                                        const transcriptText = document.createElement('div');
+                                        transcriptText.className = 'overflow-y-auto flex-1 font-serif text-sm whitespace-pre-line text-ink-dark bg-cream/30 p-4 rounded';
+                                        transcriptText.textContent = link.transcript || '';
+                                        
+                                        modalContent.appendChild(modalHeader);
+                                        modalContent.appendChild(transcriptText);
+                                        
+                                        modalOverlay.appendChild(modalContent);
+                                        document.body.appendChild(modalOverlay);
+                                        
+                                        // Add click outside to close
+                                        modalOverlay.addEventListener('click', (e) => {
+                                          if (e.target === modalOverlay) {
+                                            document.body.removeChild(modalOverlay);
+                                          }
+                                        });
+                                      }}
+                                    >
+                                      View full transcript
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-ink-faded">No transcript available</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1022,6 +1777,104 @@ const BrainDumpStep = () => {
           )}
         </Button>
       </div>
+      
+      {/* Save for later dialog */}
+      <Dialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+      >
+        <DialogContent className="bg-paper rounded-xl p-6 max-w-md w-full shadow-textera border border-accent-tertiary/20">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display text-ink-dark">Save Brain Dump for Later</DialogTitle>
+            <DialogDescription className="text-ink-light font-serif">
+              Save this brain dump to use later in other projects or review independently.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 my-4">
+            <div className="space-y-2">
+              <Label htmlFor="save-title" className="font-medium text-ink-dark">Title</Label>
+              <Input
+                id="save-title"
+                placeholder="Enter a title for your brain dump"
+                value={saveTitle}
+                onChange={(e) => setSaveTitle(e.target.value)}
+                className="font-serif"
+                disabled={isSavingForLater}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="save-description" className="font-medium text-ink-dark">Description (Optional)</Label>
+              <Textarea
+                id="save-description"
+                placeholder="Add a description to help you find this later"
+                value={saveDescription}
+                onChange={(e) => setSaveDescription(e.target.value)}
+                className="font-serif"
+                disabled={isSavingForLater}
+              />
+            </div>
+            
+            <div className="text-sm text-ink-light font-serif">
+              <p className="flex items-center gap-1">
+                <FileText className="h-3.5 w-3.5" />
+                <span>{content.trim().split(/\s+/).length.toLocaleString()} words</span>
+              </p>
+              {brainDumpFiles.length > 0 && (
+                <p className="flex items-center gap-1 mt-1">
+                  <File className="h-3.5 w-3.5" />
+                  <span>{brainDumpFiles.length} files</span>
+                </p>
+              )}
+              {brainDumpLinks.length > 0 && (
+                <p className="flex items-center gap-1 mt-1">
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  <span>{brainDumpLinks.length} links</span>
+                </p>
+              )}
+            </div>
+          </div>
+          
+          {savingSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md flex items-center text-emerald-700 mb-4">
+              <div className="bg-emerald-100 rounded-full p-1 mr-2">
+                <Check className="h-4 w-4" />
+              </div>
+              <p className="font-serif text-sm">Brain dump saved successfully!</p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setSaveDialogOpen(false)}
+              disabled={isSavingForLater}
+              className="font-serif"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveForLater}
+              disabled={isSavingForLater || !saveTitle.trim()}
+              variant="workflow"
+              className="gap-2 text-white font-serif"
+            >
+              {isSavingForLater ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Brain Dump
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

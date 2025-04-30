@@ -35,10 +35,7 @@ export const uploadProfileImage = async (userId: string, file: File): Promise<st
       .from(BUCKET_NAME)
       .getPublicUrl(data.path);
     
-    // Add a cache-busting parameter to ensure the image refreshes
-    const urlWithCacheBuster = `${publicUrl}?t=${new Date().getTime()}`;
-    
-    return urlWithCacheBuster;
+    return publicUrl;
   } catch (error) {
     console.error('Error uploading profile image:', error);
     throw error;

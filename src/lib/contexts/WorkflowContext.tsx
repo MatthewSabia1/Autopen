@@ -106,6 +106,9 @@ export interface Ebook {
     target_audience?: string;
     format_approach?: string;
     unique_value?: string;
+    exportUrls?: {
+      markdown?: string;
+    };
   };
 }
 
@@ -174,10 +177,23 @@ interface WorkflowContextFunctions {
   // Future workflow-specific functions will be added here
   // createCourse?: (title: string, description: string) => Promise<string>;
   // createVideoScript?: (title: string, description: string) => Promise<string>;
+
+  // Chapter management functions
+  addEbookChapter: (title: string, creationType: 'ai' | 'manual') => Promise<EbookChapter>;
+  updateEbookChapter: (chapterId: string, content: string) => Promise<EbookChapter>;
+  deleteEbookChapter: (chapterId: string) => Promise<void>;
+
+  // Brain dump setters (used in creator page legacy code)
+  setBrainDump?: (content: string | null) => void;
+  setBrainDumpFiles?: (files: BrainDumpFile[]) => void;
+  setBrainDumpLinks?: (links: BrainDumpLink[]) => void;
 }
 
 // Combined workflow context type
-type WorkflowContextType = WorkflowContextState & WorkflowContextFunctions;
+type WorkflowContextType = WorkflowContextState & WorkflowContextFunctions & {
+  /** Alias for `loading` to keep backward compatibility */
+  isLoading: boolean;
+};
 
 // Create the context
 const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
@@ -1183,10 +1199,15 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
    * Creates a new e-book based on the selected idea
    */
   const createEbook = async (title: string, description: string, targetAudience?: string, formatApproach?: string, uniqueValue?: string): Promise<string> => {
-    if (!state.project?.id) throw new Error('No active project');
-    if (!state.selectedIdeaId && !title) throw new Error('No idea selected or title provided');
-    
     setState(prevState => ({ ...prevState, loading: true, error: null }));
+
+    if (!state.project) {
+      logError('createEbook', new Error('Project not loaded'));
+      setState(prevState => ({ ...prevState, error: 'Project not found', loading: false }));
+      throw new Error('Project not found');
+    }
+
+    if (!state.selectedIdeaId && !title) throw new Error('No idea selected or title provided');
     
     try {
       // Get selected idea if we have one
@@ -1295,7 +1316,8 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         ...prevState, 
         ebook,
         ebookChapters: chapters,
-        loading: false
+        loading: false,
+        currentStep: 'ebook-writing'
       }));
       
       return ebook.id;
@@ -1454,25 +1476,39 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         loading: false
       }));
     } catch (error: any) {
-      logError('generateEbookChapter', error, { chapterId });
-      
-      // Create user-friendly error message
-      let errorMessage = 'Failed to generate chapter';
-      if (error.message?.includes('rate limit')) {
-        errorMessage = 'API rate limit reached. Please try again in a few minutes.';
-      } else if (error.message?.includes('token')) {
-        errorMessage = 'Content is too large. Try splitting into smaller chunks.';
+      logError('generateEbookChapter', error);
+      // CRITICAL: Reset chapter status to pending on error
+      try {
+        const { error: updateError } = await supabase
+          .from('ebook_chapters')
+          .update({ status: 'pending' })
+          .eq('id', chapterId);
+        
+        if (updateError) {
+          logError('generateEbookChapter:resetStatus', updateError);
+        }
+      } catch (resetErr) {
+        logError('generateEbookChapter:resetStatusCatch', resetErr);
       }
       
-      setState(prevState => ({ 
-        ...prevState, 
-        loading: false, 
-        error: errorMessage,
-        ebookChapters: prevState.ebookChapters.map(c => 
-          c.id === chapterId ? { ...c, status: 'pending' as const } : c
-        )
+      // Update state to reflect the reset status
+      setState(prevState => ({
+        ...prevState,
+        ebookChapters: prevState.ebookChapters.map(ch =>
+          ch.id === chapterId ? { ...ch, status: 'pending' } : ch
+        ),
+        loading: false,
+        error: `Failed to generate chapter ${chapter.title}: ${error.message}`
       }));
+      
+      // Rethrow the original error to signal failure
       throw error;
+    } finally {
+      // Ensure loading is always set to false
+      setState(prevState => ({
+        ...prevState,
+        loading: false
+      }));
     }
   };
 
@@ -1542,11 +1578,20 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         // We'll just not have a public URL for the ebook
       }
       
-      // Update e-book status and add download URL if available
-      const updateData: any = { status: 'finalized' };
-      if (publicUrl) {
-        updateData.cover_image_url = publicUrl; // Use this field to store markdown URL
-      }
+      // Update e-book status and add export URL to metadata if available
+      const currentMetadata = state.ebook?.metadata || {};
+      const updateData: any = {
+        status: 'finalized',
+        metadata: {
+          ...currentMetadata,
+          ...(publicUrl && {
+            exportUrls: {
+              ...(currentMetadata.exportUrls || {}),
+              markdown: publicUrl
+            }
+          })
+        }
+      };
       
       const { error: ebookError } = await supabase
         .from('ebooks')
@@ -1563,7 +1608,15 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
         ebook: { 
           ...prevState.ebook!, 
           status: 'finalized',
-          ...(publicUrl && { cover_image_url: publicUrl })
+          metadata: {
+            ...prevState.ebook!.metadata,
+            ...(publicUrl && {
+              exportUrls: {
+                ...(prevState.ebook!.metadata?.exportUrls || {}),
+                markdown: publicUrl
+              }
+            })
+          }
         },
         project: { ...prevState.project!, status: 'completed' },
         loading: false
@@ -1591,86 +1644,153 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   /**
+   * Adds a new chapter to the current eBook
+   */
+  const addEbookChapter = async (title: string, creationType: 'ai' | 'manual'): Promise<EbookChapter> => {
+    if (!state.ebook?.id) throw new Error('No active e-book');
+    if (!title.trim()) throw new Error('Chapter title cannot be empty');
+
+    setState(prevState => ({ ...prevState, loading: true, error: null }));
+
+    try {
+      // Determine the highest order_index
+      const highestOrderIndex = state.ebookChapters.length > 0
+        ? Math.max(...state.ebookChapters.map(c => c.order_index))
+        : -1;
+
+      // Create the new chapter in the database
+      const { data: newChapter, error } = await supabase
+        .from('ebook_chapters')
+        .insert({
+          ebook_id: state.ebook.id,
+          title,
+          order_index: highestOrderIndex + 1,
+          status: creationType === 'manual' ? 'generated' : 'pending',
+          content: creationType === 'manual' ? 'Edit this chapter to add your content.' : null,
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      if (!newChapter) throw new Error('Failed to create new chapter in database');
+
+      // Update state
+      setState(prevState => ({
+        ...prevState,
+        ebookChapters: [...prevState.ebookChapters, newChapter],
+        loading: false
+      }));
+
+      return newChapter;
+    } catch (error: any) {
+      logError('addEbookChapter', error);
+      setState(prevState => ({
+        ...prevState,
+        loading: false,
+        error: error.message || 'Failed to add new chapter'
+      }));
+      throw error;
+    }
+  };
+
+  /**
+   * Updates the content of an existing eBook chapter
+   */
+  const updateEbookChapter = async (chapterId: string, content: string): Promise<EbookChapter> => {
+    if (!state.ebook?.id) throw new Error('No active e-book');
+
+    setState(prevState => ({ ...prevState, loading: true, error: null }));
+
+    try {
+      // Find the chapter to update in current state
+      const chapterToUpdate = state.ebookChapters.find(c => c.id === chapterId);
+      if (!chapterToUpdate) throw new Error('Chapter not found in context');
+
+      // Update chapter in database
+      const { data, error } = await supabase
+        .from('ebook_chapters')
+        .update({
+          content,
+          status: 'generated' // Assume saving means it's generated
+        })
+        .eq('id', chapterId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error('Failed to update chapter in database');
+
+      const updatedChapter = data;
+
+      // Update state
+      setState(prevState => ({
+        ...prevState,
+        ebookChapters: prevState.ebookChapters.map(c =>
+          c.id === chapterId ? updatedChapter : c
+        ),
+        loading: false
+      }));
+
+      return updatedChapter;
+    } catch (error: any) {
+      logError('updateEbookChapter', error);
+      setState(prevState => ({
+        ...prevState,
+        loading: false,
+        error: error.message || 'Failed to update chapter'
+      }));
+      throw error;
+    }
+  };
+
+  /**
+   * Deletes an eBook chapter
+   */
+  const deleteEbookChapter = async (chapterId: string): Promise<void> => {
+    if (!state.ebook?.id) throw new Error('No active e-book');
+    if (state.ebookChapters.length <= 1) throw new Error('Cannot delete the only chapter');
+
+    setState(prevState => ({ ...prevState, loading: true, error: null }));
+
+    try {
+      // Delete from database
+      const { error } = await supabase
+        .from('ebook_chapters')
+        .delete()
+        .eq('id', chapterId);
+
+      if (error) throw error;
+
+      // Update state
+      setState(prevState => ({
+        ...prevState,
+        ebookChapters: prevState.ebookChapters.filter(c => c.id !== chapterId),
+        loading: false
+      }));
+    } catch (error: any) {
+      logError('deleteEbookChapter', error);
+      setState(prevState => ({
+        ...prevState,
+        loading: false,
+        error: error.message || 'Failed to delete chapter'
+      }));
+      throw error;
+    }
+  };
+
+  /**
    * Resets the workflow state
    * Optionally can specify a specific workflow type to reset to
-   * Can also provide a productId to resume an existing workflow
    */
   const resetWorkflow = (newWorkflowType?: WorkflowType, productId?: string) => {
     console.log('resetWorkflow called with:', { newWorkflowType, productId });
     
-    // If we have a productId, load the product first
+    // Remove the unused productId parameter check
     if (productId) {
-      console.log(`Attempting to resume workflow for product: ${productId}`);
-      
-      // Set loading state while we fetch the product
-      setState(prevState => ({
-        ...prevState,
-        loading: true,
-        error: null
-      }));
-      
-      // Fetch the product data
-      (async () => {
-        try {
-          // Get product data - assume there's a supabase query or API call
-          const { data, error } = await supabase
-            .from('creator_contents')
-            .select('*')
-            .eq('id', productId)
-            .single();
-            
-          if (error) throw error;
-          if (!data) throw new Error('Product not found');
-          
-          console.log('Product data loaded:', data);
-          
-          // Use the product's type if newWorkflowType wasn't specified
-          const workflowType = newWorkflowType || (data.type as WorkflowType) || 'ebook';
-          
-          // Prepare the initial state with product data
-          // This is a simplified version - you'd need to adapt this based on your data model
-          const initialStateWithProduct = {
-            ...initialState,
-            workflowType,
-            project: {
-              id: data.id,
-              title: data.title,
-              description: data.description || '',
-              status: data.status,
-              user_id: data.user_id,
-              created_at: data.created_at,
-              updated_at: data.updated_at,
-              type: data.type
-            },
-            // If you have brain dump data in the product metadata, load it here
-            brainDump: data.metadata?.brainDump || null,
-            // Other properties based on your data model
-            loading: false
-          };
-          
-          setState(initialStateWithProduct);
-          
-          // Navigate to the appropriate workflow page
-          navigate(`/workflow/${workflowType}/${data.id}`);
-        } catch (error: any) {
-          console.error('Error loading product for workflow:', error);
-          setState(prevState => ({
-            ...prevState,
-            loading: false,
-            error: error.message || 'Failed to load product'
-          }));
-          
-          // Fall back to creating a new workflow
-          if (newWorkflowType) {
-            resetWorkflow(newWorkflowType);
-          }
-        }
-      })();
-      
-      return;
+      console.warn('The productId parameter in resetWorkflow is deprecated and not used.');
     }
     
-    // If no productId, proceed with normal workflow reset
+    // Proceed with normal workflow reset based on newWorkflowType
     if (newWorkflowType) {
       // Validate the workflow type to ensure it's a valid enum value
       const validWorkflowTypes: WorkflowType[] = ['ebook', 'course', 'video', 'blog', 'social'];
@@ -1697,6 +1817,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Context value
   const contextValue: WorkflowContextType = {
     ...state,
+    isLoading: state.loading,
     setWorkflowType,
     setCurrentStep,
     createProject,
@@ -1713,7 +1834,21 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
     generateEbookChapter,
     finalizeEbook,
     updateEbookChapters,
-    resetWorkflow
+    resetWorkflow,
+    // Add new chapter functions
+    addEbookChapter,
+    updateEbookChapter,
+    deleteEbookChapter,
+    // Legacy setters (no-ops or simple state update)
+    setBrainDump: (content) => {
+      setState(prev => ({...prev, brainDump: prev.brainDump ? {...prev.brainDump, raw_content: content } : prev.brainDump }));
+    },
+    setBrainDumpFiles: (files) => {
+      setState(prev => ({...prev, brainDumpFiles: files }));
+    },
+    setBrainDumpLinks: (links) => {
+      setState(prev => ({...prev, brainDumpLinks: links }));
+    },
   };
 
   return (

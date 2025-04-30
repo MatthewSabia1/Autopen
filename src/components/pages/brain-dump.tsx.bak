@@ -1,0 +1,1956 @@
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import DashboardLayout from "../layout/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  FileText,
+  Upload,
+  Link as LinkIcon,
+  Sparkles,
+  ArrowRight,
+  Loader2,
+  X,
+  File,
+  Image,
+  Trash2,
+  AlertCircle,
+  Check,
+  Youtube,
+  ChevronRight,
+  Save
+} from "lucide-react";
+import { useBrainDumps } from "@/hooks/useBrainDumps";
+import { isYoutubeUrl, extractYoutubeVideoId, fetchYoutubeTranscript, youtubeUrlRegex } from "@/lib/youtubeTranscript";
+import { generateStructuredDocument } from '@/lib/brainDumpAnalyzer';
+import ReactMarkdown from 'react-markdown';
+
+interface FileItem {
+  id: string;
+  file: File;
+  preview?: string;
+  type: 'image' | 'document';
+  name: string;
+  size: number;
+}
+
+interface LinkItem {
+  id: string;
+  url: string;
+  title: string;
+  type: 'youtube' | 'webpage';
+  thumbnail?: string;
+  transcript?: string;
+  isLoadingTranscript?: boolean;
+  transcriptError?: string;
+}
+
+/**
+ * YouTube Transcript Progress Indicator component
+ * Shows transcript processing status in the UI
+ */
+const YouTubeTranscriptIndicator = () => {
+  const [visibleLinks, setVisibleLinks] = useState<{loading: number, total: number, completed: number}>({
+    loading: 0,
+    total: 0,
+    completed: 0
+  });
+  
+  // Track and update status of YouTube links
+  useEffect(() => {
+    const updateStatus = () => {
+      // Find all YouTube links with transcripts in the page
+      const links = document.querySelectorAll('[data-youtube-link="true"]');
+      const loadingLinks = document.querySelectorAll('[data-youtube-loading="true"]');
+      const completedLinks = document.querySelectorAll('[data-youtube-completed="true"]');
+      
+      setVisibleLinks({
+        loading: loadingLinks.length,
+        total: links.length,
+        completed: completedLinks.length
+      });
+    };
+    
+    // Update status initially and every 2 seconds
+    updateStatus();
+    const interval = setInterval(updateStatus, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Only show if there are YouTube links being processed
+  if (visibleLinks.loading === 0) return null;
+  
+  return (
+    <div className="fixed bottom-4 right-4 z-50 bg-accent-primary/95 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in flex items-center gap-3">
+      <div className="relative h-6 w-6">
+        <Youtube className="h-6 w-6 z-10 relative" />
+        <div className="absolute inset-0 bg-accent-primary rounded-full animate-ping opacity-30"></div>
+      </div>
+      <div className="text-sm">
+        <p className="font-medium">Processing YouTube Transcripts</p>
+        <p className="text-xs opacity-80">
+          {visibleLinks.completed} of {visibleLinks.total} completed
+        </p>
+      </div>
+      <div className="w-20 h-1.5 bg-white/30 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-white rounded-full transition-all duration-300"
+          style={{ width: `${(visibleLinks.completed / visibleLinks.total) * 100}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
+const BrainDump = () => {
+  // Hooks
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
+  const { getBrainDumpById, updateBrainDump, saveBrainDumpFromWorkflow, analyzeBrainDumpContent } = useBrainDumps();
+  
+  // Get the brain dump ID from the URL if it exists
+  const brainDumpIdFromUrl = params.id;
+  
+  // State
+  const [brainDumpId, setBrainDumpId] = useState<string | null>(brainDumpIdFromUrl || null);
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [isMarkdownEditMode, setIsMarkdownEditMode] = useState<boolean>(false);
+  const [editableMarkdown, setEditableMarkdown] = useState<string>('');
+  const [brainDumpTitle, setBrainDumpTitle] = useState<string>('');
+  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
+  
+  // Content state
+  const [content, setContent] = useState<string>('');
+  
+  // Files & links
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [linkUrl, setLinkUrl] = useState<string>("");
+  const [isYouTube, setIsYouTube] = useState<boolean>(false);
+  const [isLoadingLink, setIsLoadingLink] = useState<boolean>(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [filePreview, setFilePreview] = useState<any | null>(null);
+  
+  // Analyze
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [analysisProgress, setAnalysisProgress] = useState<string | null>(null);
+  const [analyzedContent, setAnalyzedContent] = useState<any | null>(null);
+  
+  // Error state
+  const [error, setError] = useState<string | null>(null);
+  const [isInvalidLink, setIsInvalidLink] = useState<boolean>(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Track active transcript fetching operations to prevent race conditions
+  const activeTranscriptFetches = useRef<Set<string>>(new Set());
+
+  // Load brain dump data if ID is provided in the URL
+  useEffect(() => {
+    const loadBrainDump = async () => {
+      // Check for ID in path parameters
+      let id = brainDumpIdFromUrl;
+      
+      // If no ID in path, check query parameters
+      if (!id) {
+        const queryParams = new URLSearchParams(location.search);
+        id = queryParams.get('id');
+      }
+      
+      if (!id) return;
+      
+      try {
+        setIsLoadingLink(true);
+        setError(null);
+        setBrainDumpId(id);
+        
+        const brainDump = await getBrainDumpById(id);
+        
+        if (!brainDump) {
+          setError('Brain dump not found');
+          return;
+        }
+        
+        // Set the brain dump title
+        setBrainDumpTitle(brainDump.title || 'Brain Dump Analysis');
+        
+        // If there's existing content, set it directly as editable markdown
+        // Prioritize structuredDocument from metadata if available
+        if (brainDump.metadata && brainDump.metadata.structuredDocument) {
+          setEditableMarkdown(brainDump.metadata.structuredDocument);
+        } else if (brainDump.content) {
+          setEditableMarkdown(brainDump.content);
+        }
+        
+        // Set edit mode based on query param or default to false for existing brain dumps to view results
+        const editParam = new URLSearchParams(location.search).get('edit');
+        setIsEditMode(editParam === 'true');
+        
+        if (brainDump.metadata) {
+          // Load analyzed content if available
+          if (brainDump.metadata.analyzedContent) {
+            setAnalyzedContent(brainDump.metadata.analyzedContent);
+          }
+          
+          // Only populate input form data if in edit mode
+          if (editParam === 'true') {
+            // Populate the form with original input data if in edit mode
+            setContent(brainDump.metadata.originalContent?.mainContent || brainDump.content || '');
+            
+            if (brainDump.metadata.files && Array.isArray(brainDump.metadata.files)) {
+              setFiles(brainDump.metadata.files);
+            }
+            
+            if (brainDump.metadata.links && Array.isArray(brainDump.metadata.links)) {
+              setLinks(brainDump.metadata.links);
+            }
+          } else {
+            // For view mode, we still need the content in case user switches to edit mode
+            setContent(brainDump.metadata.originalContent?.mainContent || brainDump.content || '');
+            if (brainDump.metadata.files && Array.isArray(brainDump.metadata.files)) {
+              setFiles(brainDump.metadata.files);
+            }
+            if (brainDump.metadata.links && Array.isArray(brainDump.metadata.links)) {
+              setLinks(brainDump.metadata.links);
+            }
+          }
+        } else {
+          // Fallback to basic content if no metadata is available
+          setContent(brainDump.content || '');
+        }
+        
+      } catch (err: any) {
+        console.error('Error loading brain dump:', err);
+        setError(err.message || 'Failed to load brain dump');
+      } finally {
+        setIsLoadingLink(false);
+      }
+    };
+    
+    loadBrainDump();
+  }, [brainDumpIdFromUrl, location.search]);
+
+  const generateUniqueId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files).map(file => {
+        // Determine if it's an image or document
+        const isImage = file.type.startsWith('image/');
+        
+        return {
+          id: generateUniqueId(),
+          file,
+          preview: isImage ? URL.createObjectURL(file) : undefined,
+          type: isImage ? 'image' : 'document',
+          name: file.name,
+          size: file.size
+        } as FileItem;
+      });
+      
+      setFiles(prev => [...prev, ...newFiles]);
+      
+      // For text-based files, read the content to scan for YouTube URLs
+      newFiles.forEach(fileItem => {
+        const file = fileItem.file;
+        if (file.type === 'text/plain' || 
+            file.type === 'text/markdown' || 
+            file.type === 'application/rtf' ||
+            file.name.endsWith('.txt') || 
+            file.name.endsWith('.md') || 
+            file.name.endsWith('.rtf')) {
+          
+          const reader = new FileReader();
+          
+          reader.onload = async (event) => {
+            const fileContent = event.target?.result as string;
+            if (fileContent) {
+              await scanContentForYouTubeLinks(fileContent);
+            }
+          };
+          
+          reader.readAsText(file);
+        }
+      });
+      
+      // Reset the input value to allow selecting the same file again
+      e.target.value = '';
+    }
+  };
+
+  /**
+   * Handles text dropped into a container
+   */
+  const handleTextDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    
+    if (e.dataTransfer.items) {
+      const items = Array.from(e.dataTransfer.items);
+      
+      // Check for plain text
+      const textItem = items.find(item => item.kind === 'string' && item.type === 'text/plain');
+      if (textItem) {
+        textItem.getAsString((text) => {
+          setContent(prevText => prevText ? `${prevText}\n\n${text}` : text);
+        });
+        return;
+      }
+      
+      // Handle files
+      const fileItems = items.filter(item => item.kind === 'file');
+      if (fileItems.length > 0) {
+        const droppedFiles = fileItems.map(item => item.getAsFile()).filter(Boolean) as File[];
+        
+        const newFiles = droppedFiles.map(file => {
+          const isImage = file.type.startsWith('image/');
+          
+          return {
+            id: generateUniqueId(),
+            file,
+            preview: isImage ? URL.createObjectURL(file) : undefined,
+            type: isImage ? 'image' : 'document',
+            name: file.name,
+            size: file.size
+          } as FileItem;
+        });
+        
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    }
+  };
+
+  /**
+   * Handles text dropped into a textarea element
+   */
+  const handleTextAreaDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    
+    if (e.dataTransfer.items) {
+      const items = Array.from(e.dataTransfer.items);
+      
+      // Check for plain text
+      const textItem = items.find(item => item.kind === 'string' && item.type === 'text/plain');
+      if (textItem) {
+        textItem.getAsString((text) => {
+          setContent(prevText => prevText ? `${prevText}\n\n${text}` : text);
+        });
+        return;
+      }
+      
+      // Handle files
+      const fileItems = items.filter(item => item.kind === 'file');
+      if (fileItems.length > 0) {
+        const droppedFiles = fileItems.map(item => item.getAsFile()).filter(Boolean) as File[];
+        
+        const newFiles = droppedFiles.map(file => {
+          const isImage = file.type.startsWith('image/');
+          
+          return {
+            id: generateUniqueId(),
+            file,
+            preview: isImage ? URL.createObjectURL(file) : undefined,
+            type: isImage ? 'image' : 'document',
+            name: file.name,
+            size: file.size
+          } as FileItem;
+        });
+        
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    }
+  };
+
+  /**
+   * Handles scanning content for YouTube URLs and extracting transcripts
+   */
+  const scanContentForYouTubeLinks = async (content: string) => {
+    if (!content || typeof content !== 'string') return;
+    
+    // Use the enhanced regex from the library
+    const matches = [...content.matchAll(youtubeUrlRegex)];
+    
+    if (matches.length === 0) return;
+    
+    // Show a subtle notification if YouTube URLs are found
+    const newLinks = matches.length;
+    if (newLinks > 0) {
+      // Show a temporary "toast" notification
+      console.log(`Found ${newLinks} YouTube URL${newLinks > 1 ? 's' : ''}. Transcripts will be automatically extracted.`);
+      
+      // Add a small UI indicator
+      setTimeout(() => {
+        const youtubeElement = document.createElement('div');
+        youtubeElement.className = 'youtube-processing-indicator';
+        youtubeElement.style.cssText = 'position: fixed; bottom: 8px; left: 8px; background-color: rgba(255,0,0,0.1); color: #cc0000; padding: 4px 12px; border-radius: 4px; font-size: 12px; z-index: 1000; font-family: sans-serif;';
+        youtubeElement.textContent = 'YouTube Transcripts: Processing...';
+        document.body.appendChild(youtubeElement);
+        
+        // Remove it after a short while
+        setTimeout(() => {
+          if (document.body.contains(youtubeElement)) {
+            document.body.removeChild(youtubeElement);
+          }
+        }, 3000);
+      }, 100);
+    }
+    
+    // Process each unique YouTube URL
+    const processedVideoIds = new Set();
+    
+    for (const match of matches) {
+      const fullUrl = match[0];
+      // Use the improved extraction function for reliability
+      const videoId = extractYoutubeVideoId(fullUrl);
+      
+      // Skip if no video ID or already processed
+      if (!videoId || processedVideoIds.has(videoId)) continue;
+      
+      // Check if we're already fetching this transcript
+      if (activeTranscriptFetches.current.has(videoId)) {
+        console.log(`Skipping duplicate fetch for video ${videoId}`);
+        continue;
+      }
+      
+      // Add to processed set and active fetches
+      processedVideoIds.add(videoId);
+      activeTranscriptFetches.current.add(videoId);
+      
+      // Check if this video is already in links array
+      const existingLink = links.find(link => 
+        link.type === 'youtube' && (
+          link.url.includes(videoId) || 
+          (link.url.includes('youtube') && extractYoutubeVideoId(link.url) === videoId)
+        )
+      );
+      
+      // If it already exists, skip
+      if (existingLink) {
+        activeTranscriptFetches.current.delete(videoId);
+        continue;
+      }
+      
+      // Create a new link
+      try {
+        const title = `YouTube Video: ${videoId}`;
+        const newLinkId = generateUniqueId();
+        const thumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        
+        // First create the link with loading state
+        const newLink: LinkItem = {
+          id: newLinkId,
+          url: fullUrl,
+          title: title,
+          type: 'youtube',
+          thumbnail: thumbnail,
+          isLoadingTranscript: true
+        };
+        
+        // Add to links array
+        setLinks(prev => [...prev, newLink]);
+        
+        // Fetch transcript with timeout protection
+        let hasCompleted = false;
+        const timeoutId = setTimeout(() => {
+          if (!hasCompleted) {
+            console.warn(`Transcript fetch timeout for video ${videoId}`);
+            setLinks(prev => prev.map(link => {
+              if (link.id === newLinkId) {
+                return {
+                  ...link,
+                  isLoadingTranscript: false,
+                  transcriptError: "Transcript fetch timed out. Try again later."
+                };
+              }
+              return link;
+            }));
+            activeTranscriptFetches.current.delete(videoId);
+          }
+        }, 30000); // 30 second timeout
+        
+        try {
+          const transcriptResult = await fetchYoutubeTranscript(videoId);
+          hasCompleted = true;
+          clearTimeout(timeoutId);
+          
+          // Update the link with transcript or error
+          setLinks(prev => prev.map(link => {
+            if (link.id === newLinkId) {
+              if (transcriptResult.error) {
+                return {
+                  ...link,
+                  isLoadingTranscript: false,
+                  transcriptError: transcriptResult.error
+                };
+              } else if (transcriptResult.transcript) {
+                return {
+                  ...link,
+                  isLoadingTranscript: false,
+                  transcript: transcriptResult.transcript
+                };
+              }
+            }
+            return link;
+          }));
+        } catch (fetchErr) {
+          hasCompleted = true;
+          clearTimeout(timeoutId);
+          console.error("Error fetching transcript:", fetchErr);
+          setLinks(prev => prev.map(link => {
+            if (link.id === newLinkId) {
+              return {
+                ...link,
+                isLoadingTranscript: false,
+                transcriptError: "Failed to fetch transcript. Try again later."
+              };
+            }
+            return link;
+          }));
+        }
+      } catch (err) {
+        console.error("Error creating YouTube link:", err);
+      } finally {
+        // Always remove from active fetches
+        activeTranscriptFetches.current.delete(videoId);
+      }
+    }
+  };
+
+  // Scan for YouTube links when content changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scanContentForYouTubeLinks(content);
+    }, 3000); // Delay to avoid too many API calls while typing
+    
+    return () => clearTimeout(timer);
+  }, [content, links, setLinks]);
+
+  const handleLinkAdd = () => {
+    if (!linkUrl) return;
+    
+    // Simple URL validation
+    let validatedUrl = linkUrl;
+    try {
+      // Attempt to create a URL (this will throw if invalid)
+      new URL(validatedUrl);
+    } catch (e) {
+      // If it fails, try adding https:// prefix and try again
+      try {
+        validatedUrl = 'https://' + validatedUrl;
+        new URL(validatedUrl); // This will throw if still invalid
+      } catch (e2) {
+        setError('Please enter a valid URL');
+        return;
+      }
+    }
+    
+    setError(null);
+    
+    // Check if the link is a YouTube URL
+    const youtubeUrl = isYoutubeUrl(validatedUrl);
+    
+    // Extract YouTube video ID if applicable
+    const videoId = youtubeUrl ? extractYoutubeVideoId(validatedUrl) : null;
+    
+    // If it's a YouTube URL but we couldn't extract a video ID, show an error
+    if (youtubeUrl && !videoId) {
+      setError('Could not extract video ID from YouTube URL. Please check the URL format.');
+      return;
+    }
+    
+    // Create the new link item
+    const newLinkId = generateUniqueId();
+    const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : undefined;
+    
+    const newLink: LinkItem = {
+      id: newLinkId,
+      url: validatedUrl,
+      title: youtubeUrl 
+        ? `YouTube Video: ${videoId || 'Unknown'}`
+        : `Web Page: ${new URL(validatedUrl).hostname}`,
+      type: youtubeUrl ? 'youtube' : 'webpage',
+      thumbnail: thumbnail
+    };
+    
+    // Add the link to state
+    setLinks(prev => [...prev, newLink]);
+    
+    // For YouTube links, try to extract transcript
+    if (youtubeUrl && videoId) {
+      // Check if we're already fetching this transcript
+      if (activeTranscriptFetches.current.has(videoId)) {
+        console.log(`Skipping duplicate fetch for video ${videoId}`);
+      } else {
+        // Mark as currently fetching
+        activeTranscriptFetches.current.add(videoId);
+        
+        // First mark as loading
+        setLinks(prev => 
+          prev.map(link => 
+            link.id === newLinkId 
+              ? { ...link, isLoadingTranscript: true } 
+              : link
+          )
+        );
+        
+        // Set a timeout for fetch operation
+        let hasCompleted = false;
+        const timeoutId = setTimeout(() => {
+          if (!hasCompleted) {
+            console.warn(`Transcript fetch timeout for video ${videoId}`);
+            setLinks(prev => 
+              prev.map(link => 
+                link.id === newLinkId 
+                  ? { 
+                      ...link, 
+                      isLoadingTranscript: false,
+                      transcriptError: "Transcript fetch timed out. Try again later."
+                    } 
+                  : link
+              )
+            );
+            activeTranscriptFetches.current.delete(videoId);
+          }
+        }, 30000); // 30 second timeout
+        
+        // Fetch transcript
+        fetchYoutubeTranscript(videoId)
+          .then(result => {
+            hasCompleted = true;
+            clearTimeout(timeoutId);
+            
+            setLinks(prev => 
+              prev.map(link => {
+                if (link.id === newLinkId) {
+                  if (result.error) {
+                    return { 
+                      ...link, 
+                      isLoadingTranscript: false,
+                      transcriptError: result.error
+                    };
+                  } else if (result.transcript) {
+                    return { 
+                      ...link, 
+                      isLoadingTranscript: false,
+                      transcript: result.transcript
+                    };
+                  }
+                }
+                return link;
+              })
+            );
+          })
+          .catch(err => {
+            hasCompleted = true;
+            clearTimeout(timeoutId);
+            
+            console.error("Error fetching transcript:", err);
+            setLinks(prev => 
+              prev.map(link => 
+                link.id === newLinkId 
+                  ? { 
+                      ...link, 
+                      isLoadingTranscript: false,
+                      transcriptError: "Failed to fetch transcript: " + (err.message || "Unknown error")
+                    } 
+                  : link
+              )
+            );
+          })
+          .finally(() => {
+            // Always remove from active fetches
+            activeTranscriptFetches.current.delete(videoId);
+          });
+      }
+    }
+    
+    // Reset form
+    setLinkUrl('');
+    setIsYouTube(false);
+  };
+
+  const removeFile = (id: string) => {
+    // Don't allow removal in read-only mode
+    if (brainDumpId && !isEditMode) return;
+    
+    setFiles(prev => {
+      const fileToRemove = prev.find(f => f.id === id);
+      // Revoke object URL if it exists to avoid memory leaks
+      if (fileToRemove?.preview) {
+        URL.revokeObjectURL(fileToRemove.preview);
+      }
+      return prev.filter(f => f.id !== id);
+    });
+  };
+  
+  const removeLink = (id: string) => {
+    // Don't allow removal in read-only mode
+    if (brainDumpId && !isEditMode) return;
+    
+    setLinks(prev => prev.filter(l => l.id !== id));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleAnalyzeContent = async () => {
+    console.log("Starting analysis...");
+    console.log("Content length:", content.length);
+    console.log("Files:", files.length);
+    console.log("Links:", links.length);
+
+    if (!content.trim() && files.length === 0 && links.length === 0) {
+      setError('Please add some content to analyze. You can paste text, upload files, or add links.');
+      return;
+    }
+
+    const wordCount = content.trim().split(/\s+/).length;
+    console.log("Word count:", wordCount);
+    
+    if (wordCount < 50 && files.length === 0 && links.length === 0) {
+      setError('Please add more content to analyze. We need at least 50 words to generate meaningful ideas.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      console.log("Calling analyzeBrainDumpContent...");
+      
+      // Use the analyzeBrainDumpContent function from the component props
+      const result = await analyzeBrainDumpContent(
+        content,
+        files,
+        links,
+        (message) => {
+          console.log("Progress update:", message);
+          // Update progress UI
+          setAnalysisProgress(message);
+        }
+      );
+
+      console.log("Analysis complete!", result);
+      setAnalyzedContent(result);
+      
+      // Automatically save the results after analysis is complete
+      await autoSaveAnalysisResults(result);
+      
+    } catch (err: any) {
+      console.error('Error analyzing content:', err);
+      setError(err.message || 'Failed to analyze content. Please try again.');
+    } finally {
+      setIsProcessing(false);
+      setAnalysisProgress(null);
+    }
+  };
+  
+  /**
+   * Automatically save analysis results without user interaction
+   */
+  const autoSaveAnalysisResults = async (analysisResult: any) => {
+    try {
+      // Generate the structured document for storage without title and stats
+      const formattedContent = generateCustomStructuredDocument(analysisResult);
+      
+      // Create metadata object with original input preserved
+      const metadata = {
+        wordCount: content.trim().split(/\s+/).length,
+        fileCount: files.length,
+        linkCount: links.length,
+        summary: analysisResult.summary || content.substring(0, 150) + (content.length > 150 ? '...' : ''),
+        files,
+        links,
+        analyzedContent: analysisResult,
+        structuredDocument: formattedContent,
+        keywords: analysisResult.keywords || [],
+        // Save document statistics separately in metadata
+        documentStats: analysisResult.stats || {
+          wordCount: content.trim().split(/\s+/).length,
+          sentenceCount: content.split(/[.!?]+/).filter(s => s.trim().length > 0).length,
+          readingTimeMinutes: Math.ceil(content.trim().split(/\s+/).length / 225),
+          sectionCount: analysisResult.sections?.length || 1,
+          topicCount: analysisResult.topics?.length || 1,
+          fileCount: files.length,
+          linkCount: links.length
+        },
+        // Save the original input content to preserve it
+        originalContent: {
+          mainContent: content,
+          timestamp: new Date().toISOString()
+        },
+        autoSaved: true,
+        savedAt: new Date().toISOString()
+      };
+      
+      let result;
+      
+      if (brainDumpId) {
+        // Update existing brain dump
+        result = await updateBrainDump(brainDumpId, {
+          title: brainDumpTitle || 'Brain Dump Analysis', // Use existing title or default
+          content: formattedContent, // Store the formatted output as the main content
+          metadata
+        });
+      } else {
+        // Create new brain dump with auto-generated title
+        result = await saveBrainDumpFromWorkflow(
+          null, // Pass null to trigger auto-generation of title
+          formattedContent, // Store the formatted output as the main content
+          analysisResult,
+          files,
+          links
+        );
+      }
+      
+      if (result) {
+        // Set brain dump ID if this was a new save
+        if (!brainDumpId) {
+          setBrainDumpId(result.id || null);
+          if (result.title) {
+            setBrainDumpTitle(result.title);
+          }
+        }
+        
+        // Show a temporary success message
+        const tempMessage = `Analysis saved successfully!`;
+        setError(null);
+        
+        // Indicate success with a less intrusive message
+        // Create a toast-like element to show the success message
+        const toastElement = document.createElement('div');
+        toastElement.className = 'fixed bottom-4 left-4 z-50 bg-green-600/95 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in flex items-center gap-2';
+        toastElement.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Analysis saved to your Brain Dumps</span>
+        `;
+        document.body.appendChild(toastElement);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+          if (document.body.contains(toastElement)) {
+            document.body.removeChild(toastElement);
+          }
+        }, 5000);
+      } else {
+        console.error("Failed to save brain dump automatically");
+      }
+    } catch (err: any) {
+      console.error('Error auto-saving analysis results:', err);
+      // Don't show error to user as this is happening automatically
+      // We don't want to interrupt their flow
+    }
+  };
+
+  // Clean up active transcript fetches on component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up object URLs to prevent memory leaks
+      files.forEach(file => {
+        if (file.preview) {
+          URL.revokeObjectURL(file.preview);
+        }
+      });
+      
+      // Clear the active transcript fetches set
+      activeTranscriptFetches.current.clear();
+    };
+  }, [files]);
+
+  /**
+   * Generates a custom structured document without the title, document statistics, and footer
+   * @param analysisResult The analysis result to generate document from
+   * @returns A modified markdown document string
+   */
+  const generateCustomStructuredDocument = (analysisResult: any): string => {
+    if (!analysisResult) return '';
+    
+    // Generate the complete structured document first
+    const fullDocument = generateStructuredDocument(analysisResult);
+    
+    // Split the document into lines
+    const lines = fullDocument.split('\n');
+    
+    // Find the sections to remove
+    let documentStatsSectionStartIndex = -1;
+    let documentStatsSectionEndIndex = -1;
+    let footerStartIndex = -1;
+    
+    // Process lines to find sections to remove
+    const resultLines = [];
+    let skipLine = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Skip the title (first h1)
+      if (line.startsWith('# ') && i === 0) {
+        skipLine = true;
+        continue;
+      }
+      
+      // Detect Document Statistics section
+      if (line.startsWith('## Document Statistics')) {
+        documentStatsSectionStartIndex = i;
+        skipLine = true;
+        continue;
+      }
+      
+      // If we're in the Document Statistics section, check if we've reached the next section
+      if (documentStatsSectionStartIndex !== -1 && documentStatsSectionEndIndex === -1) {
+        if (line.startsWith('## ')) {
+          documentStatsSectionEndIndex = i;
+          skipLine = false;
+        } else {
+          skipLine = true;
+          continue;
+        }
+      }
+      
+      // Detect footer (horizontal rule followed by timestamp and word count)
+      if (line.startsWith('---')) {
+        footerStartIndex = i;
+        skipLine = true;
+        continue;
+      }
+      
+      // Skip any lines after the footer separator
+      if (footerStartIndex !== -1) {
+        skipLine = true;
+        continue;
+      }
+      
+      if (!skipLine) {
+        resultLines.push(line);
+      }
+    }
+    
+    return resultLines.join('\n');
+  };
+
+  if (isLoadingLink) {
+    return (
+      <DashboardLayout activeTab="Content Ideas">
+        <div className="flex h-[60vh] w-full items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 relative">
+              <div className="absolute inset-0 animate-spin h-16 w-16 rounded-full border-4 border-accent-primary/10 border-t-accent-primary"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <FileText className="h-7 w-7 text-accent-primary/70" />
+              </div>
+            </div>
+            <p className="text-ink-light font-serif text-base mt-4">Loading brain dump...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <>
+      {/* Render content based on state */}
+      {isMarkdownEditMode ? (
+        <DashboardLayout activeTab="Content Ideas">
+          <div className="mx-auto max-w-4xl">
+            <Card className="bg-paper dark:bg-card border border-accent-tertiary/20 dark:border-accent-tertiary/50 shadow-textera">
+              <CardHeader className="pb-4 pt-6 px-8 border-b border-accent-tertiary/20 dark:border-accent-tertiary/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-accent-primary" />
+                    <CardTitle className="text-2xl font-display text-ink-dark dark:text-ink-dark">
+                      Edit Content Ideas
+                    </CardTitle>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-ink-light hover:text-ink-dark border-accent-tertiary/20 hover:border-accent-tertiary/40 hover:bg-accent-primary/5"
+                      onClick={() => setIsMarkdownEditMode(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-accent-primary hover:bg-accent-primary/90 text-white"
+                      onClick={() => {
+                        // Save markdown content
+                        updateBrainDump(brainDumpId as string, { content: editableMarkdown });
+                        setIsMarkdownEditMode(false);
+                      }}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8">
+                <Textarea
+                  className="min-h-[500px] font-mono"
+                  value={editableMarkdown}
+                  onChange={(e) => setEditableMarkdown(e.target.value)}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </DashboardLayout>
+      ) : (
+        <DashboardLayout activeTab={brainDumpId && !isEditMode ? "Content Ideas" : "Content Ideas"}>
+          {/* YouTube transcript processing indicator */}
+          <YouTubeTranscriptIndicator />
+          
+          <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+            <div className="flex justify-between items-center">
+              <div>
+                {brainDumpId && isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={brainDumpTitle}
+                      onChange={(e) => setBrainDumpTitle(e.target.value)}
+                      className="text-xl font-display text-ink-dark w-full max-w-md"
+                      autoFocus
+                    />
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setIsEditingTitle(false);
+                        // Save the title change
+                        if (brainDumpId) {
+                          updateBrainDump(brainDumpId, { title: brainDumpTitle })
+                            .catch(err => {
+                              console.error('Error updating title:', err);
+                              setError('Failed to update title');
+                            });
+                        }
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Save
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setIsEditingTitle(false)}
+                      className="border-red-300 hover:bg-red-50 text-red-600"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <h1 
+                    className={`text-2xl font-display text-ink-dark ${brainDumpId ? 'group flex items-center gap-2' : ''}`}
+                  >
+                    {brainDumpId ? (
+                      <>
+                        <span>{brainDumpTitle}</span>
+                        <button 
+                          onClick={() => setIsEditingTitle(true)} 
+                          className="opacity-0 group-hover:opacity-100 text-accent-tertiary hover:text-accent-primary transition-opacity"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+                        </button>
+                      </>
+                    ) : 'New Brain Dump'}
+                  </h1>
+                )}
+                <p className="text-ink-light mt-1 font-serif text-[15px]">
+                  {brainDumpId 
+                    ? (isEditMode 
+                        ? 'Edit your brain dump content and analyze it again'
+                        : isMarkdownEditMode
+                          ? 'Edit the generated markdown content directly'
+                          : 'View the analysis results of your saved brain dump') 
+                    : 'Upload your thoughts, notes, or content in any format. Autopen will analyze and organize it into structured e-book ideas.'}
+                </p>
+              </div>
+              
+              {brainDumpId && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/brain-dumps')}
+                    className="border-accent-tertiary/20 hover:bg-accent-tertiary/5 text-ink-dark"
+                  >
+                    Back to List
+                  </Button>
+                  
+                  {!isEditMode && !isMarkdownEditMode ? (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          // Enter markdown edit mode
+                          setIsMarkdownEditMode(true);
+                          // Use either existing editable markdown or generate from analyzedContent
+                          if (!editableMarkdown && analyzedContent) {
+                            setEditableMarkdown(generateCustomStructuredDocument(analyzedContent));
+                          }
+                        }}
+                        className="bg-accent-tertiary/20 hover:bg-accent-tertiary/30 text-ink-dark"
+                      >
+                        Edit Content
+                      </Button>
+                      <Button
+                        onClick={() => setIsEditMode(true)}
+                        className="bg-accent-primary hover:bg-accent-primary/90 text-white"
+                      >
+                        Add Data
+                      </Button>
+                    </div>
+                  ) : isEditMode ? (
+                    <Button
+                      onClick={() => setIsEditMode(false)}
+                      className="bg-accent-tertiary/20 hover:bg-accent-tertiary/30 text-ink-dark"
+                    >
+                      View Results
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setIsMarkdownEditMode(false)}
+                      className="bg-accent-tertiary/20 hover:bg-accent-tertiary/30 text-ink-dark"
+                    >
+                      View Results
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded flex items-start text-red-700">
+                <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                <p className="font-serif text-[14px]">{error}</p>
+              </div>
+            )}
+
+            {/* Only show input forms if in edit mode or creating a new brain dump */}
+            {(!brainDumpId || isEditMode) && (
+              <>
+                <div className="brain-dump-container">
+                  <div className="pb-4 border-b border-accent-tertiary/30">
+                    <h2 className="font-display text-lg text-ink-dark">
+                      Content Input
+                    </h2>
+                  </div>
+                  <div className="pt-4">
+                    <Tabs defaultValue="paste" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3 mb-6 bg-white border border-accent-tertiary/40">
+                        <TabsTrigger 
+                          value="paste" 
+                          className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary flex items-center gap-2 text-ink-light font-serif text-[14px]"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Paste Text
+                        </TabsTrigger>
+                        <TabsTrigger 
+                          value="upload" 
+                          className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary flex items-center gap-2 text-ink-light font-serif text-[14px]"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Files
+                        </TabsTrigger>
+                        <TabsTrigger 
+                          value="link" 
+                          className="data-[state=active]:bg-white data-[state=active]:text-accent-primary data-[state=active]:border-b-2 data-[state=active]:border-accent-primary flex items-center gap-2 text-ink-light font-serif text-[14px]"
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                          Add Link
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="paste" className="space-y-4">
+                        <div className="space-y-2 form-field">
+                          <div className="flex justify-between">
+                            <Label htmlFor="content" className="form-label text-[14px]">Content</Label>
+                            <span className="text-xs text-ink-faded font-serif">
+                              {content.length} characters
+                            </span>
+                          </div>
+                          <Textarea
+                            id="content"
+                            placeholder="Paste your unorganized notes, ideas, or content here..."
+                            className="brain-dump-textarea min-h-[300px] text-[14px]"
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            onDrop={handleTextAreaDrop}
+                            onDragOver={(e) => e.preventDefault()}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="upload" className="space-y-4">
+                        <div 
+                          className="border-2 border-dashed border-accent-tertiary/40 rounded p-12 text-center"
+                          onDrop={handleTextDrop}
+                          onDragOver={(e) => e.preventDefault()}
+                        >
+                          <Upload className="h-12 w-12 mx-auto text-ink-faded mb-4" />
+                          <h3 className="text-lg font-medium text-ink-dark mb-2 font-display">
+                            Drag & drop files here
+                          </h3>
+                          <p className="text-[14px] text-ink-light mb-4 font-serif">
+                            Support for .docx, .pdf, .txt, .md, and more
+                          </p>
+                          <div className="flex justify-center space-x-3">
+                            <Button 
+                              variant="outline" 
+                              className="text-[14px]"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <File className="w-4 h-4 mr-1.5" />
+                              Documents
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="text-sm"
+                              onClick={() => imageInputRef.current?.click()}
+                            >
+                              <Image className="w-4 h-4 mr-1.5" />
+                              Images
+                            </Button>
+                          </div>
+                          <input 
+                            ref={fileInputRef} 
+                            type="file" 
+                            className="hidden" 
+                            accept=".pdf,.docx,.doc,.txt,.rtf,.ppt,.pptx,.epub,.csv"
+                            multiple
+                            onChange={handleFileChange}
+                          />
+                          <input 
+                            ref={imageInputRef} 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            multiple
+                            onChange={handleFileChange}
+                          />
+                          <p className="text-xs text-ink-faded mt-4 font-serif">
+                            Supported formats: PDF, DOCX, TXT, RTF, PPT, PPTX, EPUB, CSV, and common image formats
+                          </p>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="link" className="space-y-4">
+                        <div className="space-y-2 form-field">
+                          <Label htmlFor="content-url" className="form-label">URL</Label>
+                          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0">
+                            <div className="flex flex-1">
+                              <div 
+                                className={`flex-shrink-0 bg-cream border border-accent-tertiary/30 rounded-l-md p-3 flex items-center cursor-pointer ${isYouTube ? 'text-red-500' : 'text-accent-primary'}`}
+                                onClick={() => setIsYouTube(!isYouTube)}
+                              >
+                                {isYouTube ? 'YouTube' : 'Web Page'}
+                              </div>
+                            </div>
+                            <div className="flex flex-1">
+                              <Input
+                                id="content-url"
+                                placeholder="Enter URL"
+                                className="form-input"
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                              />
+                              <Button
+                                type="submit"
+                                className="bg-accent-primary text-white rounded-r-md"
+                                onClick={handleLinkAdd}
+                              >
+                                Add
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </div>
+
+                    <div className="flex justify-center mt-6">
+                      <Button 
+                        onClick={handleAnalyzeContent}
+                        disabled={isProcessing}
+                        className="bg-accent-primary hover:bg-accent-secondary text-white shadow-blue-sm text-[15px]"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Analyze Content <Sparkles className="ml-2 w-4 h-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Display added content (files and links) */}
+                    {(files.length > 0 || links.length > 0) && (
+                      <div className="border border-accent-tertiary/20 rounded-lg bg-paper shadow-textera p-6 space-y-4 mt-6">
+                        <h3 className="font-serif font-semibold text-ink-dark">Added Content</h3>
+                        
+                        {/* Files */}
+                        {files.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-serif text-sm text-ink-light mb-2">Files & Images ({files.length})</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {files.map(file => (
+                                <div 
+                                  key={file.id} 
+                                  className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-center"
+                                >
+                                  {file.type === 'image' && file.preview ? (
+                                    <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
+                                      <img src={file.preview} alt={file.name} className="w-full h-full object-cover" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
+                                      <FileText className="w-6 h-6 text-accent-primary" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-serif text-ink-dark text-sm truncate" title={file.name}>
+                                      {file.name}
+                                    </p>
+                                    <p className="font-serif text-ink-faded text-xs">
+                                      {formatFileSize(file.size)}
+                                    </p>
+                                  </div>
+                                  <Button 
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeFile(file.id)}
+                                    className="p-1.5 text-ink-faded hover:text-red-500 transition-colors"
+                                    disabled={isProcessing}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Links */}
+                        {links.length > 0 && (
+                          <div>
+                            <h4 className="font-serif text-sm text-ink-light mb-2">Links ({links.length})</h4>
+                            <div className="grid grid-cols-1 gap-2">
+                              {links.map(link => (
+                                <div 
+                                  key={link.id} 
+                                  className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-start"
+                                  data-youtube-link={link.type === 'youtube' ? 'true' : 'false'}
+                                  data-youtube-loading={link.type === 'youtube' && link.isLoadingTranscript ? 'true' : 'false'}
+                                  data-youtube-completed={link.type === 'youtube' && link.transcript ? 'true' : 'false'}
+                                >
+                                  {link.type === 'youtube' && link.thumbnail ? (
+                                    <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
+                                      <img src={link.thumbnail} alt={link.title} className="w-full h-full object-cover" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
+                                      {link.type === 'youtube' ? (
+                                        <Youtube className="w-5 h-5 text-red-500" />
+                                      ) : (
+                                        <LinkIcon className="w-5 h-5 text-accent-primary" />
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between">
+                                      <p className="font-serif text-ink-dark text-sm truncate" title={link.title}>
+                                        {link.title}
+                                      </p>
+                                      <Button 
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeLink(link.id)}
+                                        className="p-1.5 text-ink-faded hover:text-red-500 transition-colors ml-2 flex-shrink-0"
+                                        disabled={isProcessing}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                    <p className="font-serif text-ink-faded text-xs truncate mb-1" title={link.url}>
+                                      {link.url}
+                                    </p>
+                                    
+                                    {/* Transcript status for YouTube links */}
+                                    {link.type === 'youtube' && (
+                                      <div className="mt-1">
+                                        {link.isLoadingTranscript ? (
+                                          <p className="text-xs text-amber-600 flex items-center">
+                                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                            Extracting transcript...
+                                          </p>
+                                        ) : link.transcriptError ? (
+                                          <p className="text-xs text-red-600 flex items-center" title={link.transcriptError}>
+                                            <AlertCircle className="h-3 w-3 mr-1" />
+                                            {link.transcriptError.slice(0, 50)}{link.transcriptError.length > 50 ? '...' : ''}
+                                          </p>
+                                        ) : link.transcript ? (
+                                          <div>
+                                            <div 
+                                              className="text-xs text-green-600 flex items-center cursor-pointer hover:underline"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                // Toggle transcript preview
+                                                const transcriptPreview = document.getElementById(`transcript-preview-${link.id}`);
+                                                if (transcriptPreview) {
+                                                  const isHidden = transcriptPreview.classList.contains('hidden');
+                                                  if (isHidden) {
+                                                    transcriptPreview.classList.remove('hidden');
+                                                  } else {
+                                                    transcriptPreview.classList.add('hidden');
+                                                  }
+                                                }
+                                              }}
+                                            >
+                                              <Check className="h-3 w-3 mr-1" />
+                                              Transcript extracted ({(link.transcript.length / 1000).toFixed(1)}k characters)
+                                              <ChevronRight className="h-3 w-3 ml-1" />
+                                            </div>
+                                            <div 
+                                              id={`transcript-preview-${link.id}`} 
+                                              className="hidden mt-2 p-2 bg-paper/50 border border-accent-tertiary/20 rounded-sm text-xs text-ink-dark max-h-40 overflow-y-auto break-words font-serif whitespace-pre-line"
+                                            >
+                                              {link.transcript.slice(0, 1000)}
+                                              {link.transcript.length > 1000 && (
+                                                <>
+                                                  <span>...</span>
+                                                  <button 
+                                                    className="ml-1 text-accent-primary hover:underline"
+                                                    onClick={(e) => {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      
+                                                      // Create and show a modal with the full transcript
+                                                      const modalOverlay = document.createElement('div');
+                                                      modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+                                                      modalOverlay.id = 'transcript-modal-overlay';
+                                                      
+                                                      const modalContent = document.createElement('div');
+                                                      modalContent.className = 'bg-paper rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] flex flex-col';
+                                                      
+                                                      const modalHeader = document.createElement('div');
+                                                      modalHeader.className = 'flex justify-between items-center mb-4';
+                                                      
+                                                      const modalTitle = document.createElement('h3');
+                                                      modalTitle.className = 'font-display text-lg text-ink-dark';
+                                                      modalTitle.textContent = 'YouTube Transcript';
+                                                      
+                                                      const closeButton = document.createElement('button');
+                                                      closeButton.className = 'text-ink-faded hover:text-red-500 transition-colors';
+                                                      closeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                                                      closeButton.onclick = () => {
+                                                        document.body.removeChild(modalOverlay);
+                                                      };
+                                                      
+                                                      modalHeader.appendChild(modalTitle);
+                                                      modalHeader.appendChild(closeButton);
+                                                      
+                                                      const transcriptText = document.createElement('div');
+                                                      transcriptText.className = 'overflow-y-auto flex-1 font-serif text-sm whitespace-pre-line text-ink-dark bg-cream/30 p-4 rounded';
+                                                      transcriptText.textContent = link.transcript || '';
+                                                      
+                                                      modalContent.appendChild(modalHeader);
+                                                      modalContent.appendChild(transcriptText);
+                                                      
+                                                      modalOverlay.appendChild(modalContent);
+                                                      document.body.appendChild(modalOverlay);
+                                                      
+                                                      // Add click outside to close
+                                                      modalOverlay.addEventListener('click', (e) => {
+                                                        if (e.target === modalOverlay) {
+                                                          document.body.removeChild(modalOverlay);
+                                                        }
+                                                      });
+                                                    }}
+                                                  >
+                                                    View full transcript
+                                                  </button>
+                                                </>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <p className="text-xs text-ink-faded">No transcript available</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* Analysis Progress */}
+                {isProcessing && analysisProgress && (
+                  <div className="mt-6 p-4 bg-accent-primary/10 border border-accent-primary/20 rounded">
+                    <div className="flex items-center">
+                      <Loader2 className="h-5 w-5 mr-3 text-accent-primary animate-spin" />
+                      <div>
+                        <h4 className="font-serif font-medium text-accent-primary">Analysis in Progress</h4>
+                        <p className="font-serif text-sm text-ink-dark">{analysisProgress}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Analysis Results */}
+                {analyzedContent && !isProcessing && (
+                  <div className="mt-6 border border-accent-tertiary/20 rounded-lg bg-paper shadow-textera overflow-hidden">
+                    <div className="bg-accent-primary/5 border-b border-accent-tertiary/20 p-4">
+                      <h3 className="font-display text-xl text-ink-dark flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-accent-primary" />
+                        Analysis Results
+                      </h3>
+                    </div>
+                    
+                    <div className="p-6">
+                      {/* Moved buttons from bottom to top of the output box */}
+                      <div className="mb-6 pb-4 border-b border-accent-tertiary/20 flex justify-between">
+                        <Button
+                          onClick={() => {
+                            // Create a downloadable version
+                            const element = document.createElement('a');
+                            const file = new Blob([isMarkdownEditMode ? editableMarkdown : generateCustomStructuredDocument(analyzedContent)], {type: 'text/markdown'});
+                            element.href = URL.createObjectURL(file);
+                            element.download = "brain-dump-analysis.md";
+                            document.body.appendChild(element);
+                            element.click();
+                            document.body.removeChild(element);
+                          }}
+                          className="border border-accent-tertiary/20 hover:bg-accent-tertiary/5 text-ink-dark font-serif shadow-xs"
+                          variant="outline"
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Download Markdown
+                        </Button>
+                        
+                        {isMarkdownEditMode && (
+                          <Button
+                            onClick={async () => {
+                              if (!brainDumpId) return;
+                              
+                              try {
+                                setIsProcessing(true);
+                                
+                                // Update the brain dump with edited markdown
+                                const brainDump = await getBrainDumpById(brainDumpId);
+                                
+                                if (!brainDump) {
+                                  throw new Error('Failed to load brain dump for updating');
+                                }
+                                
+                                await updateBrainDump(brainDumpId, {
+                                  content: editableMarkdown,
+                                  title: brainDumpTitle,
+                                  // Keep the existing metadata but update the relevant parts
+                                  metadata: {
+                                    ...(brainDump.metadata || {}),
+                                    structuredDocument: editableMarkdown,
+                                    lastEdited: new Date().toISOString()
+                                  }
+                                });
+                                
+                                // Show success message
+                                const toastElement = document.createElement('div');
+                                toastElement.className = 'fixed bottom-4 left-4 z-50 bg-green-600/95 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in flex items-center gap-2';
+                                toastElement.innerHTML = `
+              <div className="flex justify-center mt-6">
+                <Button 
+                  onClick={handleAnalyzeContent}
+                  disabled={isProcessing}
+                  className="bg-accent-primary hover:bg-accent-secondary text-white shadow-blue-sm text-[15px]"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Analyze Content <Sparkles className="ml-2 w-4 h-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Display added content (files and links) */}
+              {(files.length > 0 || links.length > 0) && (
+                <div className="border border-accent-tertiary/20 rounded-lg bg-paper shadow-textera p-6 space-y-4 mt-6">
+                  <h3 className="font-serif font-semibold text-ink-dark">Added Content</h3>
+                  
+                  {/* Files */}
+                  {files.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="font-serif text-sm text-ink-light mb-2">Files & Images ({files.length})</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {files.map(file => (
+                          <div 
+                            key={file.id} 
+                            className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-center"
+                          >
+                            {file.type === 'image' && file.preview ? (
+                              <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
+                                <img src={file.preview} alt={file.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-accent-primary" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-serif text-ink-dark text-sm truncate" title={file.name}>
+                                {file.name}
+                              </p>
+                              <p className="font-serif text-ink-faded text-xs">
+                                {formatFileSize(file.size)}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeFile(file.id)}
+                              className="p-1.5 text-ink-faded hover:text-red-500 transition-colors"
+                              disabled={isProcessing}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Links */}
+                  {links.length > 0 && (
+                    <div>
+                      <h4 className="font-serif text-sm text-ink-light mb-2">Links ({links.length})</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {links.map(link => (
+                          <div 
+                            key={link.id} 
+                            className="p-3 bg-cream rounded-md border border-accent-tertiary/20 flex items-start"
+                            data-youtube-link={link.type === 'youtube' ? 'true' : 'false'}
+                            data-youtube-loading={link.type === 'youtube' && link.isLoadingTranscript ? 'true' : 'false'}
+                            data-youtube-completed={link.type === 'youtube' && link.transcript ? 'true' : 'false'}
+                          >
+                            {link.type === 'youtube' && link.thumbnail ? (
+                              <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper">
+                                <img src={link.thumbnail} alt={link.title} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 mr-3 bg-paper flex items-center justify-center">
+                                {link.type === 'youtube' ? (
+                                  <Youtube className="w-5 h-5 text-red-500" />
+                                ) : (
+                                  <LinkIcon className="w-5 h-5 text-accent-primary" />
+                                )}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between">
+                                <p className="font-serif text-ink-dark text-sm truncate" title={link.title}>
+                                  {link.title}
+                                </p>
+                                <Button 
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeLink(link.id)}
+                                  className="p-1.5 text-ink-faded hover:text-red-500 transition-colors ml-2 flex-shrink-0"
+                                  disabled={isProcessing}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <p className="font-serif text-ink-faded text-xs truncate mb-1" title={link.url}>
+                                {link.url}
+                              </p>
+                              
+                              {/* Transcript status for YouTube links */}
+                              {link.type === 'youtube' && (
+                                <div className="mt-1">
+                                  {link.isLoadingTranscript ? (
+                                    <p className="text-xs text-amber-600 flex items-center">
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      Extracting transcript...
+                                    </p>
+                                  ) : link.transcriptError ? (
+                                    <p className="text-xs text-red-600 flex items-center" title={link.transcriptError}>
+                                      <AlertCircle className="h-3 w-3 mr-1" />
+                                      {link.transcriptError.slice(0, 50)}{link.transcriptError.length > 50 ? '...' : ''}
+                                    </p>
+                                  ) : link.transcript ? (
+                                    <div>
+                                      <div 
+                                        className="text-xs text-green-600 flex items-center cursor-pointer hover:underline"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          // Toggle transcript preview
+                                          const transcriptPreview = document.getElementById(`transcript-preview-${link.id}`);
+                                          if (transcriptPreview) {
+                                            const isHidden = transcriptPreview.classList.contains('hidden');
+                                            if (isHidden) {
+                                              transcriptPreview.classList.remove('hidden');
+                                            } else {
+                                              transcriptPreview.classList.add('hidden');
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Transcript extracted ({(link.transcript.length / 1000).toFixed(1)}k characters)
+                                        <ChevronRight className="h-3 w-3 ml-1" />
+                                      </div>
+                                      <div 
+                                        id={`transcript-preview-${link.id}`} 
+                                        className="hidden mt-2 p-2 bg-paper/50 border border-accent-tertiary/20 rounded-sm text-xs text-ink-dark max-h-40 overflow-y-auto break-words font-serif whitespace-pre-line"
+                                      >
+                                        {link.transcript.slice(0, 1000)}
+                                        {link.transcript.length > 1000 && (
+                                          <>
+                                            <span>...</span>
+                                            <button 
+                                              className="ml-1 text-accent-primary hover:underline"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                
+                                                // Create and show a modal with the full transcript
+                                                const modalOverlay = document.createElement('div');
+                                                modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+                                                modalOverlay.id = 'transcript-modal-overlay';
+                                                
+                                                const modalContent = document.createElement('div');
+                                                modalContent.className = 'bg-paper rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] flex flex-col';
+                                                
+                                                const modalHeader = document.createElement('div');
+                                                modalHeader.className = 'flex justify-between items-center mb-4';
+                                                
+                                                const modalTitle = document.createElement('h3');
+                                                modalTitle.className = 'font-display text-lg text-ink-dark';
+                                                modalTitle.textContent = 'YouTube Transcript';
+                                                
+                                                const closeButton = document.createElement('button');
+                                                closeButton.className = 'text-ink-faded hover:text-red-500 transition-colors';
+                                                closeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                                                closeButton.onclick = () => {
+                                                  document.body.removeChild(modalOverlay);
+                                                };
+                                                
+                                                modalHeader.appendChild(modalTitle);
+                                                modalHeader.appendChild(closeButton);
+                                                
+                                                const transcriptText = document.createElement('div');
+                                                transcriptText.className = 'overflow-y-auto flex-1 font-serif text-sm whitespace-pre-line text-ink-dark bg-cream/30 p-4 rounded';
+                                                transcriptText.textContent = link.transcript || '';
+                                                
+                                                modalContent.appendChild(modalHeader);
+                                                modalContent.appendChild(transcriptText);
+                                                
+                                                modalOverlay.appendChild(modalContent);
+                                                document.body.appendChild(modalOverlay);
+                                                
+                                                // Add click outside to close
+                                                modalOverlay.addEventListener('click', (e) => {
+                                                  if (e.target === modalOverlay) {
+                                                    document.body.removeChild(modalOverlay);
+                                                  }
+                                                });
+                                              }}
+                                            >
+                                              View full transcript
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-ink-faded">No transcript available</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          
+          {/* Analysis Progress */}
+          {isProcessing && analysisProgress && (
+            <div className="mt-6 p-4 bg-accent-primary/10 border border-accent-primary/20 rounded">
+              <div className="flex items-center">
+                <Loader2 className="h-5 w-5 mr-3 text-accent-primary animate-spin" />
+                <div>
+                  <h4 className="font-serif font-medium text-accent-primary">Analysis in Progress</h4>
+                  <p className="font-serif text-sm text-ink-dark">{analysisProgress}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Analysis Results */}
+          {analyzedContent && !isProcessing && (
+            <div className="mt-6 border border-accent-tertiary/20 rounded-lg bg-paper shadow-textera overflow-hidden">
+              <div className="bg-accent-primary/5 border-b border-accent-tertiary/20 p-4">
+                <h3 className="font-display text-xl text-ink-dark flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-accent-primary" />
+                  Analysis Results
+                </h3>
+              </div>
+              
+              <div className="p-6">
+                {/* Moved buttons from bottom to top of the output box */}
+                <div className="mb-6 pb-4 border-b border-accent-tertiary/20 flex justify-between">
+                  <Button
+                    onClick={() => {
+                      // Create a downloadable version
+                      const element = document.createElement('a');
+                      const file = new Blob([isMarkdownEditMode ? editableMarkdown : generateCustomStructuredDocument(analyzedContent)], {type: 'text/markdown'});
+                      element.href = URL.createObjectURL(file);
+                      element.download = "brain-dump-analysis.md";
+                      document.body.appendChild(element);
+                      element.click();
+                      document.body.removeChild(element);
+                    }}
+                    className="border border-accent-tertiary/20 hover:bg-accent-tertiary/5 text-ink-dark font-serif shadow-xs"
+                    variant="outline"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Download Markdown
+                  </Button>
+                  
+                  {isMarkdownEditMode && (
+                    <Button
+                      onClick={async () => {
+                        if (!brainDumpId) return;
+                        
+                        try {
+                          setIsProcessing(true);
+                          
+                          // Update the brain dump with edited markdown
+                          const brainDump = await getBrainDumpById(brainDumpId);
+                          
+                          if (!brainDump) {
+                            throw new Error('Failed to load brain dump for updating');
+                          }
+                          
+                          await updateBrainDump(brainDumpId, {
+                            content: editableMarkdown,
+                            title: brainDumpTitle,
+                            // Keep the existing metadata but update the relevant parts
+                            metadata: {
+                              ...(brainDump.metadata || {}),
+                              structuredDocument: editableMarkdown,
+                              lastEdited: new Date().toISOString()
+                            }
+                          });
+                          
+                          // Show success message
+                          const toastElement = document.createElement('div');
+                          toastElement.className = 'fixed bottom-4 left-4 z-50 bg-green-600/95 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in flex items-center gap-2';
+                          toastElement.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <span>Content updated successfully</span>
+                          `;
+                          document.body.appendChild(toastElement);
+                          
+                          // Remove toast after 5 seconds
+                          setTimeout(() => {
+                            if (document.body.contains(toastElement)) {
+                              document.body.removeChild(toastElement);
+                            }
+                          }, 5000);
+                          
+                          // Exit edit mode - but keep using the edited content
+                          setIsMarkdownEditMode(false);
+                          // No need to reload brain dump, we already have the updated content in editableMarkdown
+                        } catch (err) {
+                          console.error('Error saving edited markdown:', err);
+                          setError('Failed to save changes. Please try again.');
+                        } finally {
+                          setIsProcessing(false);
+                        }
+                      }}
+                      className="bg-accent-primary hover:bg-accent-primary/90 text-white"
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Document-style output with proper markdown rendering */}
+                {isMarkdownEditMode ? (
+                  <div className="bg-cream dark:bg-card rounded border border-accent-tertiary/20 p-4 markdown-content">
+                    <Textarea
+                      value={editableMarkdown}
+                      onChange={(e) => setEditableMarkdown(e.target.value)}
+                      className="min-h-[500px] font-mono text-sm w-full bg-cream p-2"
+                      placeholder="Edit markdown content here..."
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-cream dark:bg-card rounded border border-accent-tertiary/20 p-4 markdown-content">
+                    <ReactMarkdown>
+                      {editableMarkdown || generateCustomStructuredDocument(analyzedContent)}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default BrainDump;

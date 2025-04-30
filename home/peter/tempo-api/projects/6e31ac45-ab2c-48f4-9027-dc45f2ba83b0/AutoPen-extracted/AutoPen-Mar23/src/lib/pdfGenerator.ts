@@ -1,6 +1,8 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { EbookContent, EbookChapter } from '../types/ebook.types';
+import { logError } from './utils/debug';
+import { formatEbookForExport } from './openRouter';
 
 /**
  * Service for generating PDF files from eBook content
@@ -330,36 +332,107 @@ export class PDFGeneratorService {
   }
 
   /**
-   * Generate a data URL for the PDF
+   * Generate a data URL for the PDF using the enhanced PDF generator
    * @param ebookContent The eBook content
+   * @param options PDF generation options
    * @returns Promise with the data URL
    */
-  public static async generatePDFDataUrl(ebookContent: EbookContent): Promise<string> {
-    const pdfBlob = this.generateEbookPDF(ebookContent);
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(pdfBlob);
-    });
+  public static async generatePDFDataUrl(
+    ebookContent: EbookContent, 
+    options: {
+      paperSize?: 'a4' | 'letter';
+      withCover?: boolean;
+      includeTableOfContents?: boolean;
+      template?: 'modern' | 'classic' | 'minimal' | 'academic';
+      author?: string;
+    } = {}
+  ): Promise<string> {
+    try {
+      // Extract required data from ebookContent
+      const title = ebookContent.title || 'Untitled eBook';
+      const description = ebookContent.description || '';
+      
+      // Get chapters in the right format
+      const chapters = ebookContent.chapters || [];
+      
+      // Create a properly formatted filename preserving the eBook title case
+      const filename = `${title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.pdf`;
+      
+      // Generate PDF with the enhanced generator
+      const pdfBlob = await generatePdf(
+        title,
+        description,
+        chapters,
+        {
+          ...options,
+          filename,
+          author: options.author || ebookContent.author || 'Created with AutoPen'
+        }
+      );
+      
+      // Convert blob to data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(pdfBlob);
+      });
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      throw new Error(`PDF generation failed: ${error.message}`);
+    }
   }
 
   /**
    * Save the PDF to a file
    * @param ebookContent The eBook content
    * @param filename The name of the file to save
+   * @param options PDF generation options
    */
-  public static savePDF(ebookContent: EbookContent, filename: string = 'ebook.pdf'): void {
-    const pdfBlob = this.generateEbookPDF(ebookContent);
-    const url = URL.createObjectURL(pdfBlob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    
-    // Clean up
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 100);
+  public static async savePDF(
+    ebookContent: EbookContent, 
+    filename: string = 'ebook.pdf',
+    options: {
+      paperSize?: 'a4' | 'letter';
+      withCover?: boolean;
+      includeTableOfContents?: boolean;
+      template?: 'modern' | 'classic' | 'minimal' | 'academic';
+      author?: string;
+    } = {}
+  ): Promise<void> {
+    try {
+      // Extract required data from ebookContent
+      const title = ebookContent.title || 'Untitled eBook';
+      const description = ebookContent.description || '';
+      
+      // Get chapters in the right format
+      const chapters = ebookContent.chapters || [];
+      
+      // Generate PDF with the enhanced generator
+      const pdfBlob = await generatePdf(
+        title,
+        description,
+        chapters,
+        {
+          ...options,
+          filename,
+          author: options.author || ebookContent.author || 'Created with AutoPen'
+        }
+      );
+      
+      // Save the blob to a file
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (error: any) {
+      console.error('Error saving PDF:', error);
+      throw new Error(`PDF save failed: ${error.message}`);
+    }
   }
 } 

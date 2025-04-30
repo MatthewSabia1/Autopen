@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Sun, Laptop } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
@@ -37,18 +37,15 @@ export function ThemeToggle({
   const labels = {
     light: 'Light',
     dark: 'Dark',
-    system: 'System',
   };
   
-  // Cycle through themes: light -> dark -> system -> light
+  // Cycle between light and dark
   const cycleTheme = () => {
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('system');
-    else setTheme('light');
+    setTheme(theme === 'light' ? 'dark' : 'light');
   };
   
   // Get the current icon based on theme
-  const Icon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Laptop;
+  const Icon = theme === 'light' ? Sun : Moon;
   
   const variantClasses = {
     default: 'theme-toggle',
@@ -79,7 +76,7 @@ export function ThemeToggle({
 }
 
 /**
- * More complex theme toggle that offers all three options as a dropdown
+ * More complex theme toggle that offers light and dark options as a dropdown
  */
 export function ThemeToggleDropdown({
   className,
@@ -113,16 +110,6 @@ export function ThemeToggleDropdown({
           >
             <Moon className="w-4 h-4 mr-2" />
             Dark
-          </button>
-          <button
-            onClick={() => setTheme('system')}
-            className={cn(
-              'flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-ink-light hover:bg-accent-tertiary/20 dark:hover:bg-accent-tertiary/20 text-left',
-              theme === 'system' && 'text-accent-primary dark:text-accent-primary bg-accent-tertiary/10 dark:bg-accent-tertiary/20'
-            )}
-          >
-            <Laptop className="w-4 h-4 mr-2" />
-            System
           </button>
         </div>
       </div>

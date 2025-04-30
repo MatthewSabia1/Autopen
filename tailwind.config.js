@@ -190,7 +190,8 @@ export default {
         "yellow-sm": "0 2px 5px rgba(204, 181, 149, 0.1)",
         "dark": "0 4px 12px rgba(0, 0, 0, 0.3)",
         "dark-sm": "0 2px 5px rgba(0, 0, 0, 0.2)",
-        "none": "none"
+        "none": "none",
+        "glow-sm": "0 0 8px rgba(204, 181, 149, 0.3)",
       },
     },
   },

@@ -46,6 +46,8 @@ export default function EbookCreationWorkflow() {
     brainDump,
     ebookIdeas,
     ebook,
+    isLoading,
+    ebookChapters,
   } = useWorkflow();
   
   // Safety check - ensure we're in the ebook workflow
@@ -308,6 +310,16 @@ export default function EbookCreationWorkflow() {
           </div>
         );
       case 'ebook-writing':
+        // Show loading indicator if entering this step and data isn't ready
+        if (isLoading || !ebook || !ebookChapters) {
+          return (
+            <div className="flex flex-col items-center justify-center p-20 text-center">
+              <Loader2 className="h-10 w-10 animate-spin text-accent-primary mb-4" />
+              <p className="font-serif text-lg text-ink-dark mb-1">Loading Chapters...</p>
+              <p className="font-serif text-sm text-ink-light">Please wait while we prepare the editor.</p>
+            </div>
+          );
+        }
         return <EbookWritingStep />;
       case 'ebook-preview':
         return <EbookPreviewStep />;

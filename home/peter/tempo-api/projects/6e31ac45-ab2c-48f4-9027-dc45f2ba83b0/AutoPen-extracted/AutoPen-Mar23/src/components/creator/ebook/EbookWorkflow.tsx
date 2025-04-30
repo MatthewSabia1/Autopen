@@ -523,8 +523,8 @@ const EbookWorkflow: React.FC = () => {
         return (
           <PDFStep
             contentData={ebookContent}
-            onGenerate={generatePDF}
-            onDownload={downloadPDF}
+            onGenerate={(options) => generatePDF(options)}
+            onDownload={(options) => downloadPDF(options)}
             generating={generating}
             previewUrl={previewUrl}
           />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { 
@@ -44,38 +44,12 @@ import { useProducts, Product } from "../../hooks/useProducts";
 export default function ProductsPage() {
   const { products, isLoading, error, deleteProduct, refreshProducts } = useProducts();
   const [searchQuery, setSearchQuery] = useState("");
-  const [forceUpdate, setForceUpdate] = useState(0);
-  const productsRef = useRef(products);
   const navigate = useNavigate();
   const [actionInProgress, setActionInProgress] = useState<{id: string, action: string} | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (products && products.length > 0 && JSON.stringify(productsRef.current) !== JSON.stringify(products)) {
-      console.log('Products actually changed!', products.length);
-      productsRef.current = products;
-      setForceUpdate(prev => prev + 1);
-    }
-  }, [products]);
-
-  useEffect(() => {
-    console.log('Products updated or component mounted, count:', products.length, 'forceUpdate:', forceUpdate);
-  }, [products, forceUpdate]);
-
-  useEffect(() => {
-    console.log('ProductsPage mounted, refreshing products...');
-    refreshProducts().then(freshProducts => {
-      console.log('Products refreshed, count:', freshProducts?.length || 0);
-      if (freshProducts && freshProducts.length > 0) {
-        productsRef.current = freshProducts;
-        setForceUpdate(prev => prev + 1);
-      }
-    });
-  }, []);
-
   const filteredProducts = useMemo(() => {
-    const currentProducts = productsRef.current || [];
-    console.log('Recalculating filtered products from', currentProducts.length, 'products');
+    const currentProducts = products || [];
     
     if (!searchQuery.trim()) {
       return currentProducts;
@@ -87,7 +61,7 @@ export default function ProductsPage() {
         product.title.toLowerCase().includes(lowercaseQuery) || 
         product.type.toLowerCase().includes(lowercaseQuery)
     );
-  }, [searchQuery, forceUpdate]);
+  }, [products, searchQuery]);
 
   const handleDelete = async (id: string) => {
     console.log("Delete handler called for product ID:", id);
@@ -138,8 +112,6 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit handler called for product ID:", id);
-    
     const product = products.find(p => p.id === id);
     if (!product) {
       console.error("Product not found for editing:", id);
@@ -147,41 +119,27 @@ export default function ProductsPage() {
     }
     
     setActionInProgress({id, action: 'edit'});
-    console.log("Edit action in progress for:", product.title);
     
-    // Short timeout to show loading state before navigation
-    setTimeout(() => {
-      console.log("Navigating to edit page for:", product.title);
-      navigate(`/creator?id=${id}&mode=edit`);
-    }, 200);
+    console.log("Navigating to edit page for:", product.title);
+    navigate(`/creator?id=${id}&mode=edit`);
   };
 
   const handleView = (id: string) => {
-    console.log("View handler called for product ID:", id);
-    
     const product = products.find(p => p.id === id);
     setActionInProgress({id, action: 'view'});
     
     if (!product) {
       console.warn("Product not found in state for viewing:", id);
-      // Short timeout to show loading state before navigation
-      setTimeout(() => {
-        console.log("Navigating to product detail by ID only");
-        navigate(`/products/${id}`);
-      }, 200);
+      console.log("Navigating to product detail by ID only");
+      navigate(`/products/${id}`);
       return;
     }
     
     console.log("Navigating to product detail:", product.title);
-    // Short timeout to show loading state before navigation
-    setTimeout(() => {
-      navigate(`/products/${id}`);
-    }, 200);
+    navigate(`/products/${id}`);
   };
 
   const handleContinue = (id: string) => {
-    console.log("Continue handler called for product ID:", id);
-    
     const product = products.find(p => p.id === id);
     if (!product) {
       console.error("Product not found for continue action:", id);
@@ -194,7 +152,6 @@ export default function ProductsPage() {
     }
     
     setActionInProgress({id, action: 'continue'});
-    console.log("Continue action in progress for:", product.title);
     
     if (product.type === 'ebook') {
       const resumeStep = product.metadata?.workflow_step ||
@@ -216,21 +173,14 @@ export default function ProductsPage() {
         
         if (product.project_id) {
           console.log(`Navigating to workflow/${product.project_id} to resume at ${resumeStep}`);
-          
-          // Short timeout to show loading state before navigation
-          setTimeout(() => {
-            navigate(`/workflow/${product.project_id}`);
-          }, 200);
+          navigate(`/workflow/${product.project_id}`);
           return;
         }
       }
     }
     
-    // Short timeout to show loading state before navigation
-    setTimeout(() => {
-      console.log("Navigating to creator for continue action:", product.title);
-      navigate(`/creator?id=${id}`);
-    }, 200);
+    console.log("Navigating to creator for continue action:", product.title);
+    navigate(`/creator?id=${id}`);
   };
 
   const formatDate = (dateStr: string) => {
@@ -427,13 +377,7 @@ export default function ProductsPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {console.log('RENDER:', {
-              products: products?.length || 0,
-              productsRef: productsRef.current?.length || 0,
-              filteredProducts: filteredProducts?.length || 0,
-              forceUpdate
-            })}
-            {!productsRef.current || productsRef.current.length === 0 ? (
+            {!products || products.length === 0 ? (
               <div className="p-16 text-center">
                 <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#F5F5F5] dark:bg-accent-tertiary/20 flex items-center justify-center">
                   <BookOpen className="w-10 h-10 text-[#CCCCCC] dark:text-accent-tertiary/70" />

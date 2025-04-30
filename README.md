@@ -1,6 +1,6 @@
-# AutopenV3: AI-Powered Content Creation Platform
+# Autopen: AI-Powered Content Creation Platform
 
-AutopenV3 is a comprehensive content creation platform that leverages AI to streamline the process of creating high-quality content including eBooks, blog posts, and courses. The platform features a workflow-based architecture, rich user interactions, and seamless AI integration.
+Autopen is a comprehensive content creation platform that leverages AI to streamline the process of creating high-quality content including eBooks, blog posts, and courses. The platform features a workflow-based architecture, rich user interactions, and seamless AI integration.
 
 ## Architecture Overview
 

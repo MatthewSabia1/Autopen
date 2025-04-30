@@ -22,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
 import AuthModal from './auth/AuthModal';
+import NotificationBell from './notifications/NotificationBell';
 
 const Header: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -94,6 +95,9 @@ const Header: React.FC = () => {
     setIsProfileDropdownOpen(false);
     setIsMobileMenuOpen(false);
   };
+
+  // Log the user object when Header renders
+  console.log('[Header] Rendering with user:', user ? `ID: ${user.id}` : 'null');
 
   return (
     <header 
@@ -183,51 +187,58 @@ const Header: React.FC = () => {
               </div>
             )}
             
+            {/* Log before the conditional rendering */}
+            {console.log('[Header] Checking user for conditional render:', !!user)}
             {user ? (
-              <div className="relative">
-                <button 
-                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="flex items-center space-x-2"
-                >
-                  <div className="h-8 w-8 rounded-full bg-accent-primary text-white flex items-center justify-center text-sm uppercase">
-                    {profile?.username ? profile.username[0] : user?.email ? user.email[0] : 'U'}
-                  </div>
-                  {profile?.username && <span className="font-serif text-ink-light dark:text-gray-300 hidden md:inline-block">{profile.username}</span>}
-                </button>
-                
-                {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-paper dark:bg-gray-700 rounded shadow-lg z-10 border border-accent-tertiary/20 dark:border-gray-600 transition-all duration-200">
-                    <button 
-                      onClick={() => handleProfileAction(() => navigate('/settings'))}
-                      className="flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-gray-300 hover:bg-cream dark:hover:bg-gray-600 text-left"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Account Settings
-                    </button>
-                    <button
-                      onClick={() => handleProfileAction(() => toggleDarkMode())}
-                      className="flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-gray-300 hover:bg-cream dark:hover:bg-gray-600 text-left"
-                    >
-                      {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                      {darkMode ? 'Light Mode' : 'Dark Mode'}
-                    </button>
-                    <button
-                      onClick={() => handleProfileAction(() => navigate('/support'))}
-                      className="flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-gray-300 hover:bg-cream dark:hover:bg-gray-600 text-left"
-                    >
-                      <LifeBuoy className="w-4 h-4 mr-2" />
-                      Support
-                    </button>
-                    <button
-                      onClick={handleSignOut}
-                      className="flex items-center w-full px-4 py-2 text-sm font-serif text-danger hover:bg-cream dark:hover:bg-gray-600 text-left border-t border-accent-tertiary/20 dark:border-gray-600"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
+              <>
+                {/* Log right before rendering NotificationBell */}
+                {console.log('[Header] Rendering NotificationBell...')}
+                <NotificationBell />
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    className="flex items-center space-x-2"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-accent-primary text-white flex items-center justify-center text-sm uppercase">
+                      {profile?.username ? profile.username[0] : user?.email ? user.email[0] : 'U'}
+                    </div>
+                    {profile?.username && <span className="font-serif text-ink-light dark:text-gray-300 hidden md:inline-block">{profile.username}</span>}
+                  </button>
+                  
+                  {isProfileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-paper dark:bg-gray-700 rounded shadow-lg z-10 border border-accent-tertiary/20 dark:border-gray-600 transition-all duration-200">
+                      <button 
+                        onClick={() => handleProfileAction(() => navigate('/settings'))}
+                        className="flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-gray-300 hover:bg-cream dark:hover:bg-gray-600 text-left"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Account Settings
+                      </button>
+                      <button
+                        onClick={() => handleProfileAction(() => toggleDarkMode())}
+                        className="flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-gray-300 hover:bg-cream dark:hover:bg-gray-600 text-left"
+                      >
+                        {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                        {darkMode ? 'Light Mode' : 'Dark Mode'}
+                      </button>
+                      <button
+                        onClick={() => handleProfileAction(() => navigate('/support'))}
+                        className="flex items-center w-full px-4 py-2 text-sm font-serif text-ink-light dark:text-gray-300 hover:bg-cream dark:hover:bg-gray-600 text-left"
+                      >
+                        <LifeBuoy className="w-4 h-4 mr-2" />
+                        Support
+                      </button>
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center w-full px-4 py-2 text-sm font-serif text-danger hover:bg-cream dark:hover:bg-gray-600 text-left border-t border-accent-tertiary/20 dark:border-gray-600"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="flex space-x-4">
                 <button 

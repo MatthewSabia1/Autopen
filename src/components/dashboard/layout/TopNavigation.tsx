@@ -51,7 +51,7 @@ export default function TopNavigation() {
             <span className="sr-only">Notifications</span>
           </Button>
           
-          <div className="h-8 w-px bg-accent-tertiary/40 dark:bg-accent-tertiary/30 mx-1"></div>
+          <div className="h-8 w-px bg-accent-tertiary/40 dark:bg-accent-tertiary/30 mx-3"></div>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

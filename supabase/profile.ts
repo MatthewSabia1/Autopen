@@ -9,6 +9,7 @@ export type Profile = {
   bio?: string;
   avatar_url?: string;
   updated_at?: string;
+  is_admin: boolean;
 };
 
 /**
@@ -104,45 +105,74 @@ export const createProfile = async (
  * @returns The URL of the uploaded image
  */
 export const updateProfileImage = async (userId: string, file: File): Promise<string> => {
+  let oldAvatarPath: string | null = null;
   try {
-    // Upload the new profile image
+    // 1. Get the current profile to find the old avatar URL
+    const currentProfile = await getProfile(userId);
+    const oldAvatarUrl = currentProfile?.avatar_url;
+
+    // Extract path from URL if it exists and is from our storage bucket
+    if (oldAvatarUrl && oldAvatarUrl.includes(BUCKET_NAME)) {
+      try {
+        const urlParts = new URL(oldAvatarUrl);
+        // Pathname usually starts with /storage/v1/object/public/bucket-name/...
+        // We want the part after the bucket name
+        const pathSegments = urlParts.pathname.split('/');
+        const bucketIndex = pathSegments.indexOf(BUCKET_NAME);
+        if (bucketIndex !== -1 && bucketIndex + 1 < pathSegments.length) {
+          oldAvatarPath = pathSegments.slice(bucketIndex + 1).join('/');
+        }
+      } catch (e) {
+        console.error("Error parsing old avatar URL:", e);
+        // Continue without deleting if URL parsing fails
+      }
+    }
+
+    // 2. Upload the new profile image
     const publicUrl = await uploadProfileImage(userId, file);
     
-    // Update the profile with the new image URL
+    // 3. Update the profile with the new image URL
     await updateProfile(userId, { avatar_url: publicUrl });
+
+    // 4. Delete the old profile image *after* successfully updating the profile
+    if (oldAvatarPath) {
+      // Extract the folder/filename part for deletion
+      await deleteProfileImage(userId, oldAvatarPath);
+    }
     
     return publicUrl;
   } catch (error) {
     console.error('Error updating profile image:', error);
+    // Optional: If upload succeeded but profile update/delete failed,
+    // potentially try to delete the newly uploaded image to avoid orphans.
     throw error;
   }
 };
 
 /**
- * Gets or creates a user profile
- * @param userId The ID of the user
- * @param email The user's email
- * @returns The user's profile
+ * Gets all user profiles (Admin only)
+ * Requires the calling user to have is_admin = true in their own profile due to RLS.
+ * @returns A list of all user profiles or null on error.
  */
-export const getOrCreateProfile = async (userId: string, email: string): Promise<Profile | null> => {
+export const getAllProfiles = async (): Promise<Profile[] | null> => {
   try {
-    // First try to get the profile
-    const profile = await getProfile(userId);
-    
-    // If profile exists, return it
-    if (profile) {
-      return profile;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, user_id, username, avatar_url, is_admin'); // Select specific fields needed for admin list
+
+    if (error) {
+      // RLS might throw an error if the user is not an admin
+      console.error('Error fetching all profiles (check RLS/admin status):', error);
+      throw error;
     }
-    
-    // Otherwise create a new profile
-    const username = email.split('@')[0]; // Default username from email
-    
-    return await createProfile(userId, {
-      username,
-      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`, // Default avatar
-    });
+
+    return data;
   } catch (error) {
-    console.error('Error in getOrCreateProfile:', error);
+    // Catch potential errors from the try block or re-thrown RLS errors
+    console.error('Failed to get all profiles:', error);
     return null;
   }
-}; 
+};
+
+// Added BUCKET_NAME constant here as well for parsing logic
+const BUCKET_NAME = 'profile-images'; 

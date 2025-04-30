@@ -4,6 +4,7 @@ import { FileItem, LinkItem, AnalysisData } from '../types/BrainDumpTypes';
 import { analyzeContent } from '../lib/openRouter';
 import { useAnalysis } from '../contexts/AnalysisContext';
 import { extractYoutubeVideoId, getFormattedTranscript, isYoutubeUrl } from '../lib/youtubeTranscript';
+import { generateTitle } from '../lib/ai/textProcessor';
 
 const BrainDump: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'paste' | 'link'>('paste');
@@ -286,6 +287,8 @@ const BrainDump: React.FC = () => {
       text: textContent
     };
     
+    let generatedTitle = 'Untitled Analysis'; // Default title
+
     try {
       // Process files to the format needed for the AI
       const processedFiles = files.map(file => ({
@@ -327,15 +330,45 @@ const BrainDump: React.FC = () => {
         });
       }
       
+      // Combine text content for analysis and title generation
+      let combinedTextContent = textContent;
+      const youtubeTranscripts = links
+          .filter(link => link.type === 'youtube' && link.transcript)
+          .map((link, index) => `\n\n--- YouTube Transcript ${index + 1} (${link.title.replace(/\(Transcript.*\)/, '').trim()}) ---\n${link.transcript}`)
+          .join('');
+      
+      if (youtubeTranscripts) {
+        combinedTextContent += `\n\n${youtubeTranscripts}`;
+      }
+      
       // Call the AI analysis service with the combined content
       const result = await analyzeContent({
-        text: transcriptContent ? `${textContent}\n\n${transcriptContent}` : textContent,
+        text: combinedTextContent,
         files: processedFiles,
         links: links
       });
       
+      // Generate Title (after successful analysis)
+      if (result && !result.error) { 
+          try {
+             // Use combined text or analysis summary if available for better title context
+             const textForTitle = result.summary || combinedTextContent;
+             if (textForTitle.trim()) {
+                console.log("Generating title based on content...");
+                generatedTitle = await generateTitle(textForTitle);
+                console.log("Generated title:", generatedTitle);
+             }
+          } catch (titleError: any) {
+             console.error('Error generating title:', titleError);
+             // Use default title if generation fails, don't block the process
+          }
+      } else {
+        // If analysis itself failed, use default title
+        console.warn('Analysis failed or produced an error, using default title.');
+      }
+      
       // Set the result in context for display in ResultsDisplay component
-      setAnalysisResult(result);
+      setAnalysisResult(result, generatedTitle);
       setIsAnalysisComplete(true);
       
       // Handle errors from the AI
@@ -345,6 +378,8 @@ const BrainDump: React.FC = () => {
     } catch (err) {
       console.error('Error during analysis:', err);
       setError('An unexpected error occurred during analysis. Please try again.');
+      setAnalysisResult(null); // Clear any partial results on critical error
+      setIsAnalysisComplete(false);
     } finally {
       setIsAnalyzing(false);
     }

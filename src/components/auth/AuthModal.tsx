@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 type AuthModalProps = {
@@ -17,8 +16,8 @@ type AuthModalProps = {
   initialView?: 'login' | 'signup';
 };
 
-const AuthModal: React.FC<AuthModalProps> = ({ 
-  isOpen, 
+const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
   onClose,
   initialView = 'login'
 }) => {
@@ -45,51 +44,46 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 border-accent-tertiary/20 bg-paper">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <div className="flex items-center justify-center gap-2 mb-2">
+      <DialogContent className="sm:max-w-md bg-paper rounded-lg shadow-lg border-0 p-6">
+        <DialogHeader className="px-0 pt-0 pb-4 space-y-4">
+          <div className="flex flex-col items-center justify-center gap-2 text-center">
             <PenTool className="h-8 w-8 text-accent-primary" />
-            <h1 className="text-3xl font-bold text-slate-800">Autopen</h1>
+            <h1 className="text-3xl font-bold text-ink-dark">Autopen</h1>
           </div>
-          <DialogTitle className="text-center text-slate-600">
+          <DialogTitle className="text-center text-ink-secondary">
             {view === 'login' ? 'Sign in to your account' : 'Create a new account'}
           </DialogTitle>
-          <DialogClose className="absolute right-4 top-4 text-ink-light hover:text-ink-dark">
-            <X className="h-5 w-5" />
-          </DialogClose>
         </DialogHeader>
-        <div className="p-6">
-          {view === 'login' ? (
-            <div className="py-4">
-              <LoginForm />
-              <div className="mt-4 text-center text-sm text-slate-600">
-                Don't have an account?{" "}
-                <button
-                  onClick={toggleView}
-                  className="text-accent-primary hover:text-accent-primary/80 font-medium"
-                >
-                  Sign up
-                </button>
-              </div>
+        {view === 'login' ? (
+          <div>
+            <LoginForm onToggle={toggleView} />
+            <div className="mt-4 text-center text-sm text-ink-secondary">
+              Don't have an account?{" "}
+              <button
+                onClick={toggleView}
+                className="text-accent-primary hover:text-accent-primary/80 font-medium focus:outline-none focus:ring-2 focus:ring-accent-primary/50 rounded"
+              >
+                Sign up
+              </button>
             </div>
-          ) : (
-            <div className="py-4">
-              <SignUpForm />
-              <div className="mt-4 text-center text-sm text-slate-600">
-                Already have an account?{" "}
-                <button
-                  onClick={toggleView}
-                  className="text-accent-primary hover:text-accent-primary/80 font-medium"
-                >
-                  Sign in
-                </button>
-              </div>
+          </div>
+        ) : (
+          <div>
+            <SignUpForm onToggle={toggleView} />
+            <div className="mt-4 text-center text-sm text-ink-secondary">
+              Already have an account?{" "}
+              <button
+                onClick={toggleView}
+                className="text-accent-primary hover:text-accent-primary/80 font-medium focus:outline-none focus:ring-2 focus:ring-accent-primary/50 rounded"
+              >
+                Sign in
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 };
 
-export default AuthModal; 
+export default AuthModal;

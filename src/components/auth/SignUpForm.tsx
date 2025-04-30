@@ -56,6 +56,7 @@ export default function SignUpForm({ onToggle }: { onToggle?: () => void }) {
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           required
+          autoComplete="name"
           className="border-slate-300 focus-visible:ring-accent-primary"
         />
       </div>
@@ -68,6 +69,7 @@ export default function SignUpForm({ onToggle }: { onToggle?: () => void }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
           className="border-slate-300 focus-visible:ring-accent-primary"
         />
       </div>
@@ -80,6 +82,7 @@ export default function SignUpForm({ onToggle }: { onToggle?: () => void }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="new-password"
           className="border-slate-300 focus-visible:ring-accent-primary"
         />
         <p className="text-xs text-slate-500">

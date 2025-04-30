@@ -49,19 +49,12 @@ export default function LoginForm({ onToggle }: { onToggle?: () => void }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
           className="border-slate-300 focus-visible:ring-accent-primary"
         />
       </div>
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Link
-            to="/forgot-password"
-            className="text-xs text-accent-primary hover:text-accent-primary/80"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <Label htmlFor="password">Password</Label>
         <Input
           id="password"
           type="password"
@@ -69,8 +62,17 @@ export default function LoginForm({ onToggle }: { onToggle?: () => void }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
           className="border-slate-300 focus-visible:ring-accent-primary"
         />
+        <div className="text-right">
+          <Link
+            to="/forgot-password"
+            className="text-xs text-accent-primary hover:text-accent-primary/80"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <Button

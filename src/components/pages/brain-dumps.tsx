@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { 
@@ -49,6 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 /**
  * DeleteConfirmationDialog Component
@@ -119,73 +120,17 @@ const DeleteConfirmationDialog = ({
 export default function BrainDumpsPage() {
   const { brainDumps, isLoading, error, deleteBrainDump, refreshBrainDumps } = useBrainDumps();
   const [searchQuery, setSearchQuery] = useState("");
-  const [forceUpdate, setForceUpdate] = useState(0);
-  const brainDumpsRef = useRef(brainDumps);
   const navigate = useNavigate();
   const [actionInProgress, setActionInProgress] = useState<{id: string, action: string} | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  
-  // State for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [brainDumpToDelete, setBrainDumpToDelete] = useState<SavedBrainDump | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Add new state for refresh button
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Enhanced effect to check for changes and force update
-  useEffect(() => {
-    // Check if we actually have brain dumps data
-    if (brainDumps) {
-      // Check if the reference is different or if counts differ
-      const currentCount = brainDumpsRef.current?.length || 0;
-      const newCount = brainDumps.length;
-      
-      if (brainDumpsRef.current !== brainDumps || currentCount !== newCount) {
-        console.log('Brain dumps changed:', {
-          previousCount: currentCount,
-          newCount: newCount,
-          isDifferentReference: brainDumpsRef.current !== brainDumps
-        });
-        
-        // Update the reference and force a re-render
-        brainDumpsRef.current = brainDumps;
-        setForceUpdate(prev => prev + 1);
-      }
-    }
-  }, [brainDumps]);
-
-  // Effect to refresh data on component mount and every 60 seconds
-  useEffect(() => {
-    console.log('BrainDumpsPage mounted, refreshing brain dumps...');
-    
-    // Initial refresh
-    refreshBrainDumps().then(freshBrainDumps => {
-      console.log('Brain dumps refreshed, count:', freshBrainDumps?.length || 0);
-      if (freshBrainDumps) {
-        brainDumpsRef.current = freshBrainDumps;
-        setForceUpdate(prev => prev + 1);
-      }
-    });
-    
-    // Set up automatic refresh interval
-    const intervalId = setInterval(() => {
-      console.log('Auto-refreshing brain dumps...');
-      refreshBrainDumps().then(freshBrainDumps => {
-        if (freshBrainDumps) {
-          brainDumpsRef.current = freshBrainDumps;
-          setForceUpdate(prev => prev + 1);
-        }
-      });
-    }, 60000); // Refresh every minute
-    
-    // Clean up interval on unmount
-    return () => clearInterval(intervalId);
-  }, []);
+  const { toast } = useToast();
 
   const filteredBrainDumps = useMemo(() => {
-    const currentBrainDumps = brainDumpsRef.current || [];
-    console.log('Recalculating filtered brain dumps from', currentBrainDumps.length, 'brain dumps');
+    const currentBrainDumps = brainDumps || [];
     
     if (!searchQuery.trim()) {
       return currentBrainDumps;
@@ -197,70 +142,46 @@ export default function BrainDumpsPage() {
         brainDump.title.toLowerCase().includes(lowercaseQuery) || 
         (brainDump.description && brainDump.description.toLowerCase().includes(lowercaseQuery))
     );
-  }, [searchQuery, forceUpdate]);
+  }, [brainDumps, searchQuery]);
 
   const handleDelete = async (id: string) => {
-    console.log("Delete handler called for brain dump ID:", id);
-    
     const brainDump = brainDumps.find(p => p.id === id);
     if (!brainDump) {
       console.error("Brain dump not found for deletion:", id);
       return;
     }
     
-    // Open the delete confirmation dialog instead of using browser's confirm
     setBrainDumpToDelete(brainDump);
     setDeleteDialogOpen(true);
   };
   
-  // New function to handle actual deletion after confirmation
   const confirmDelete = async () => {
     if (!brainDumpToDelete) return;
     
     try {
-      // Set loading state
       setIsDeleting(true);
       setActionInProgress({id: brainDumpToDelete.id, action: 'delete'});
-      console.log("Delete action in progress for:", brainDumpToDelete.title);
       
       const success = await deleteBrainDump(brainDumpToDelete.id);
       if (!success) throw new Error("Failed to delete brain dump");
       
-      console.log("Brain dump successfully deleted:", brainDumpToDelete.title);
-      
-      // Close the dialog
       setDeleteDialogOpen(false);
       
-      // Update local state by explicitly refreshing the list
-      await refreshBrainDumps();
-      setForceUpdate(prev => prev + 1);
+      toast({ 
+        title: "Brain Dump Deleted", 
+        description: `"${brainDumpToDelete.title}" has been deleted.`, 
+        variant: "default" 
+      });
       
-      // Show success message (temporary visual feedback)
-      const successToast = document.createElement('div');
-      successToast.className = 'fixed bottom-4 right-4 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg shadow-md border border-emerald-100 z-50 animate-fade-in';
-      successToast.innerHTML = `<div class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><polyline points="20 6 9 17 4 12"></polyline></svg>Brain dump "${brainDumpToDelete.title}" has been deleted</div>`;
-      document.body.appendChild(successToast);
-      
-      // Remove toast after 3 seconds
-      setTimeout(() => {
-        successToast.classList.add('animate-fade-out');
-        setTimeout(() => successToast.remove(), 300);
-      }, 3000);
-      
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error deleting brain dump:", e);
       
-      // Show error toast
-      const errorToast = document.createElement('div');
-      errorToast.className = 'fixed bottom-4 right-4 bg-red-50 text-red-700 px-4 py-3 rounded-lg shadow-md border border-red-100 z-50 animate-fade-in';
-      errorToast.innerHTML = `<div class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Failed to delete brain dump</div>`;
-      document.body.appendChild(errorToast);
-      
-      // Remove toast after 3 seconds
-      setTimeout(() => {
-        errorToast.classList.add('animate-fade-out');
-        setTimeout(() => errorToast.remove(), 300);
-      }, 3000);
+      toast({ 
+        title: "Error Deleting Brain Dump", 
+        description: e.message || "Failed to delete. Please try again.", 
+        variant: "destructive" 
+      });
+
     } finally {
       setIsDeleting(false);
       setActionInProgress(null);
@@ -269,67 +190,38 @@ export default function BrainDumpsPage() {
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit handler called for brain dump ID:", id);
-    
     const brainDump = brainDumps.find(p => p.id === id);
     if (!brainDump) {
       console.error("Brain dump not found for editing:", id);
       return;
     }
-    
     setActionInProgress({id, action: 'edit'});
-    console.log("Edit action in progress for:", brainDump.title);
-    
-    // Short timeout to show loading state before navigation
-    setTimeout(() => {
-      console.log("Navigating to edit page for:", brainDump.title);
-      navigate(`/brain-dump?id=${id}`);
-    }, 200);
+    console.log("Navigating to edit page for:", brainDump.title);
+    navigate(`/brain-dump?id=${id}`);
   };
 
   const handleView = (id: string) => {
-    console.log("View handler called for brain dump ID:", id);
-    
     const brainDump = brainDumps.find(p => p.id === id);
     setActionInProgress({id, action: 'view'});
-    
     if (!brainDump) {
-      console.warn("Brain dump not found in state for viewing:", id);
-      // Short timeout to show loading state before navigation
-      setTimeout(() => {
-        console.log("Navigating to brain dump detail by ID only");
-        navigate(`/brain-dump/${id}`);
-      }, 200);
+      console.log("Navigating to brain dump detail by ID only");
+      navigate(`/brain-dump/${id}`);
       return;
     }
-    
     console.log("Navigating to brain dump detail:", brainDump.title);
-    // Short timeout to show loading state before navigation
-    setTimeout(() => {
-      navigate(`/brain-dump/${id}`);
-    }, 200);
+    navigate(`/brain-dump/${id}`);
   };
 
   const handleUseInCreator = (id: string) => {
-    console.log("Use in creator handler called for brain dump ID:", id);
-    
     const brainDump = brainDumps.find(p => p.id === id);
     if (!brainDump) {
       console.error("Brain dump not found for use in creator action:", id);
       return;
     }
-    
     setActionInProgress({id, action: 'useInCreator'});
-    console.log("Use in creator action in progress for:", brainDump.title);
-    
-    // Store the brain dump ID in session storage to use it in the creator
     sessionStorage.setItem('use_brain_dump', id);
-    
-    // Short timeout to show loading state before navigation
-    setTimeout(() => {
-      console.log("Navigating to creator with brain dump:", brainDump.title);
-      navigate(`/creator?brainDumpId=${id}`);
-    }, 200);
+    console.log("Navigating to creator with brain dump:", brainDump.title);
+    navigate(`/creator?brainDumpId=${id}`);
   };
 
   const formatDate = (dateStr: string) => {
@@ -385,39 +277,30 @@ export default function BrainDumpsPage() {
       return `${brainDump.metadata.wordCount.toLocaleString()} words`;
     }
     
-    // Calculate if not in metadata
     const wordCount = brainDump.content ? brainDump.content.trim().split(/\s+/).length : 0;
     return `${wordCount.toLocaleString()} words`;
   };
 
-  // New function to handle manual refresh with loading state
   const handleManualRefresh = async () => {
     try {
       setIsRefreshing(true);
-      console.log('Manual refresh triggered');
       
-      const freshData = await refreshBrainDumps();
-      if (freshData) {
-        brainDumpsRef.current = freshData;
-        setForceUpdate(prev => prev + 1);
-        
-        // Show success toast
-        const successToast = document.createElement('div');
-        successToast.className = 'fixed bottom-4 right-4 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg shadow-md border border-emerald-100 z-50 animate-fade-in flex items-center gap-2';
-        successToast.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span>Brain dumps refreshed successfully</span>
-        `;
-        document.body.appendChild(successToast);
-        
-        // Remove toast after 3 seconds
-        setTimeout(() => {
-          successToast.classList.add('animate-fade-out');
-          setTimeout(() => successToast.remove(), 300);
-        }, 3000);
-      }
-    } catch (err) {
+      await refreshBrainDumps();
+      
+      toast({ 
+        title: "Refreshed", 
+        description: "Brain dumps list updated.", 
+        variant: "default" 
+      });
+
+    } catch (err: any) {
       console.error('Error refreshing brain dumps:', err);
+      
+      toast({ 
+        title: "Refresh Failed", 
+        description: err.message || "Could not refresh brain dumps.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -581,13 +464,7 @@ export default function BrainDumpsPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {console.log('RENDER:', {
-              brainDumps: brainDumps?.length || 0,
-              brainDumpsRef: brainDumpsRef.current?.length || 0,
-              filteredBrainDumps: filteredBrainDumps?.length || 0,
-              forceUpdate
-            })}
-            {!brainDumpsRef.current || brainDumpsRef.current.length === 0 ? (
+            {!brainDumps || brainDumps.length === 0 ? (
               <div className="p-16 text-center">
                 <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#F5F5F5] dark:bg-accent-tertiary/20 flex items-center justify-center">
                   <Brain className="w-10 h-10 text-[#CCCCCC] dark:text-accent-tertiary/70" />
@@ -842,7 +719,19 @@ export default function BrainDumpsPage() {
 
         {filteredBrainDumps.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <Card className="bg-white dark:bg-card border border-[#E8E8E8] dark:border-accent-tertiary/40 shadow-sm dark:shadow-md hover:shadow-blue-sm dark:hover:shadow-lg hover:border-[#738996]/20 dark:hover:border-accent-primary/40 transition-all duration-300 rounded-lg group">
+            <Card 
+              className="bg-white dark:bg-card border border-[#E8E8E8] dark:border-accent-tertiary/40 shadow-sm dark:shadow-md hover:shadow-blue-sm dark:hover:shadow-lg hover:border-[#738996]/20 dark:hover:border-accent-primary/40 transition-all duration-300 rounded-lg group cursor-pointer"
+              onClick={() => navigate("/brain-dump")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate("/brain-dump");
+                }
+              }}
+              aria-label="Create a new brain dump"
+            >
               <CardContent className="p-5">
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-[#738996]/10 dark:bg-accent-primary/20 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#738996]/15 dark:group-hover:bg-accent-primary/30 transition-colors duration-300">
@@ -852,18 +741,26 @@ export default function BrainDumpsPage() {
                     <p className="text-[#333333] dark:text-ink-dark font-display text-base font-medium">New Brain Dump</p>
                     <p className="text-[#666666] dark:text-ink-light text-sm font-serif mt-1">Create a new brain dump</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    className="ml-1 h-9 w-9 rounded-full text-[#738996] dark:text-accent-primary hover:bg-[#738996]/10 dark:hover:bg-accent-primary/20 hover:text-[#738996] dark:hover:text-accent-primary group-hover:translate-x-1 transition-all duration-300"
-                    onClick={() => navigate("/brain-dump")}
-                  >
+                  <div className="ml-1 h-9 w-9 rounded-full text-[#738996] dark:text-accent-primary group-hover:bg-[#738996]/10 dark:group-hover:bg-accent-primary/20 hover:text-[#738996] dark:hover:text-accent-primary group-hover:translate-x-1 transition-all duration-300 flex items-center justify-center">
                     <ArrowRight className="h-5 w-5" />
-                  </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white dark:bg-card border border-[#E8E8E8] dark:border-accent-tertiary/40 shadow-sm dark:shadow-md hover:shadow-yellow-sm dark:hover:shadow-lg hover:border-[#ccb595]/20 dark:hover:border-accent-yellow/40 transition-all duration-300 rounded-lg group">
+            <Card 
+              className="bg-white dark:bg-card border border-[#E8E8E8] dark:border-accent-tertiary/40 shadow-sm dark:shadow-md hover:shadow-yellow-sm dark:hover:shadow-lg hover:border-[#ccb595]/20 dark:hover:border-accent-yellow/40 transition-all duration-300 rounded-lg group cursor-pointer"
+              onClick={() => navigate("/brain-dumps")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate("/brain-dumps");
+                }
+              }}
+              aria-label="Manage your brain dumps"
+            >
               <CardContent className="p-5">
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-[#ccb595]/10 dark:bg-accent-yellow/20 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#ccb595]/15 dark:group-hover:bg-accent-yellow/30 transition-colors duration-300">
@@ -873,18 +770,26 @@ export default function BrainDumpsPage() {
                     <p className="text-[#333333] dark:text-ink-dark font-display text-base font-medium">Manage Brain Dumps</p>
                     <p className="text-[#666666] dark:text-ink-light text-sm font-serif mt-1">View and organize your brain dumps</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    className="ml-1 h-9 w-9 rounded-full text-[#ccb595] dark:text-accent-yellow hover:bg-[#ccb595]/10 dark:hover:bg-accent-yellow/20 hover:text-[#ccb595] dark:hover:text-accent-yellow group-hover:translate-x-1 transition-all duration-300"
-                    onClick={() => navigate("/brain-dumps")}
-                  >
+                  <div className="ml-1 h-9 w-9 rounded-full text-[#ccb595] dark:text-accent-yellow group-hover:bg-[#ccb595]/10 dark:group-hover:bg-accent-yellow/20 hover:text-[#ccb595] dark:hover:text-accent-yellow group-hover:translate-x-1 transition-all duration-300 flex items-center justify-center">
                     <ArrowRight className="h-5 w-5" />
-                  </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white dark:bg-card border border-[#E8E8E8] dark:border-accent-tertiary/40 shadow-sm dark:shadow-md hover:shadow-blue-sm dark:hover:shadow-lg hover:border-[#5e7282]/20 dark:hover:border-accent-secondary/40 transition-all duration-300 rounded-lg group">
+            <Card 
+              className="bg-white dark:bg-card border border-[#E8E8E8] dark:border-accent-tertiary/40 shadow-sm dark:shadow-md hover:shadow-blue-sm dark:hover:shadow-lg hover:border-[#5e7282]/20 dark:hover:border-accent-secondary/40 transition-all duration-300 rounded-lg group cursor-pointer"
+              onClick={() => navigate("/creator")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate("/creator");
+                }
+              }}
+              aria-label="Create content from brain dumps"
+            >
               <CardContent className="p-5">
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-[#5e7282]/10 dark:bg-accent-secondary/20 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#5e7282]/15 dark:group-hover:bg-accent-secondary/30 transition-colors duration-300">
@@ -894,13 +799,9 @@ export default function BrainDumpsPage() {
                     <p className="text-[#333333] dark:text-ink-dark font-display text-base font-medium">Create Content</p>
                     <p className="text-[#666666] dark:text-ink-light text-sm font-serif mt-1">Turn brain dumps into products</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    className="ml-1 h-9 w-9 rounded-full text-[#5e7282] dark:text-accent-secondary hover:bg-[#5e7282]/10 dark:hover:bg-accent-secondary/20 hover:text-[#5e7282] dark:hover:text-accent-secondary group-hover:translate-x-1 transition-all duration-300"
-                    onClick={() => navigate("/creator")}
-                  >
+                  <div className="ml-1 h-9 w-9 rounded-full text-[#5e7282] dark:text-accent-secondary group-hover:bg-[#5e7282]/10 dark:group-hover:bg-accent-secondary/20 hover:text-[#5e7282] dark:hover:text-accent-secondary group-hover:translate-x-1 transition-all duration-300 flex items-center justify-center">
                     <ArrowRight className="h-5 w-5" />
-                  </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

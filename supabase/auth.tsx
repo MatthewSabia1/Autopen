@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { getOrCreateProfile, updateProfile, updateProfileImage, type Profile } from "./profile";
+import { getProfile, updateProfile, updateProfileImage, type Profile } from "./profile";
 
 type AuthContextType = {
   user: User | null;
@@ -25,12 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(true);
 
   // Fetch the user's profile
-  const fetchProfile = async (userId: string, email: string) => {
+  const fetchProfile = async (userId: string, email?: string) => {
     if (!userId) return null;
     
     setProfileLoading(true);
     try {
-      const userProfile = await getOrCreateProfile(userId, email);
+      const userProfile = await getProfile(userId);
       setProfile(userProfile);
       return userProfile;
     } catch (error) {
@@ -43,8 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh the user's profile
   const refreshProfile = async () => {
-    if (!user?.id || !user?.email) return;
-    await fetchProfile(user.id, user.email);
+    if (!user?.id) return;
+    await fetchProfile(user.id);
   };
 
   // Update the user's profile
@@ -81,26 +81,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    console.log("=== AUTH CONTEXT DEBUG ===");
-    console.log("1. Initializing auth context, checking session...");
+    // console.log("=== AUTH CONTEXT DEBUG ===");
+    // console.log("1. Initializing auth context, checking session...");
     
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error("2. Error getting session:", error.message);
-      } else {
-        console.log("2. Session check result:", session ? "Active session found" : "No active session");
+        console.error("Error getting session:", error.message); // Keep error log
       }
+      // else {
+        // console.log("2. Session check result:", session ? "Active session found" : "No active session");
+      // }
       
       const currentUser = session?.user ?? null;
-      console.log("3. Current user from session:", currentUser?.email || "none", currentUser?.id || "none");
+      // console.log("3. Current user from session:", currentUser?.email || "none", currentUser?.id || "none");
       setUser(currentUser);
       
       if (currentUser?.id && currentUser?.email) {
-        console.log("4. User authenticated, fetching profile...");
+        // console.log("4. User authenticated, fetching profile...");
         fetchProfile(currentUser.id, currentUser.email);
       } else {
-        console.log("4. No authenticated user, skipping profile fetch");
+        // console.log("4. No authenticated user, skipping profile fetch");
         setProfileLoading(false);
       }
       
@@ -111,18 +112,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("5. Auth state change detected:", event);
-      console.log("6. New session state:", session ? "Session exists" : "No session");
+      // console.log("5. Auth state change detected:", event);
+      // console.log("6. New session state:", session ? "Session exists" : "No session");
       
       const currentUser = session?.user ?? null;
-      console.log("7. Current user after state change:", currentUser?.email || "none", currentUser?.id || "none");
+      // console.log("7. Current user after state change:", currentUser?.email || "none", currentUser?.id || "none");
       setUser(currentUser);
       
       if (currentUser?.id && currentUser?.email) {
-        console.log("8. User authenticated after state change, fetching profile...");
+        // console.log("8. User authenticated after state change, fetching profile...");
         fetchProfile(currentUser.id, currentUser.email);
       } else {
-        console.log("8. No authenticated user after state change");
+        // console.log("8. No authenticated user after state change");
         setProfile(null);
         setProfileLoading(false);
       }
@@ -147,8 +148,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log("=== SIGN IN DEBUG ===");
-    console.log("1. Attempting to sign in user:", email);
+    // console.log("=== SIGN IN DEBUG ===");
+    // console.log("1. Attempting to sign in user:", email);
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -156,20 +157,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     
     if (error) {
-      console.error("2. Sign in error:", error.message);
+      console.error("Sign in error:", error.message); // Keep error log
       throw error;
     }
     
-    console.log("2. Sign in successful:", data.user?.email);
-    console.log("3. User ID:", data.user?.id);
-    console.log("4. Session expiry:", new Date(data.session?.expires_at || 0).toLocaleString());
+    // console.log("2. Sign in successful:", data.user?.email);
+    // console.log("3. User ID:", data.user?.id);
+    // console.log("4. Session expiry:", new Date(data.session?.expires_at || 0).toLocaleString());
     
     // Verify we can access user data immediately after login
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    console.log("5. getUser check after login:", userData?.user?.id || "No user");
+    // console.log("5. getUser check after login:", userData?.user?.id || "No user");
     
     if (userError) {
-      console.error("6. Get user error after login:", userError.message);
+      console.error("Get user error after login:", userError.message); // Keep error log
     }
     
     return;

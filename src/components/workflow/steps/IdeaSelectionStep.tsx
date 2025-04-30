@@ -118,8 +118,9 @@ const IdeaSelectionStep = () => {
         return;
       }
       
-      // Explicitly handle the step transition after state updates
-      setCurrentStep('ebook-writing');
+      // Context will handle the step transition after ebook data is loaded
+      console.log("Ebook creation initiated. Context will handle next step.");
+
     } catch (err: any) {
       setError(err.message || 'Failed to proceed with the selected idea');
       setIsCreating(false);
@@ -273,14 +274,6 @@ const IdeaSelectionStep = () => {
                           <span>{idea.unique_value}</span>
                         </div>
                       )}
-                    </div>
-                  )}
-                  
-                  {idea.source_data && (
-                    <div className="mt-auto pt-3 border-t border-accent-tertiary/10 dark:border-accent-tertiary/20">
-                      <p className="text-xs text-ink-faded dark:text-ink-light/60 font-serif italic">
-                        <span className="font-medium">Source:</span> {idea.source_data}
-                      </p>
                     </div>
                   )}
                 </CardContent>

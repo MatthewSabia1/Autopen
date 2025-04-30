@@ -769,7 +769,7 @@ export const useEbookCreator = (contentId?: string) => {
   };
   
   // Step 8: Generate PDF
-  const generatePDF = async () => {
+  const generatePDF = async (options = {}) => {
     if (!contentId || !ebookContent) {
       return { error: 'Missing eBook content' };
     }
@@ -786,8 +786,8 @@ export const useEbookCreator = (contentId?: string) => {
         )]
       });
       
-      // Generate PDF
-      const pdfDataUrl = await PDFGeneratorService.generatePDFDataUrl(ebookContent);
+      // Generate PDF with customization options
+      const pdfDataUrl = await PDFGeneratorService.generatePDFDataUrl(ebookContent, options);
       
       // Set preview URL
       setPreviewUrl(pdfDataUrl);
@@ -990,11 +990,33 @@ export const useEbookCreator = (contentId?: string) => {
     }
   };
   
-  // Download the PDF
-  const downloadPDF = () => {
-    if (ebookContent) {
-      const filename = `${ebookContent.title || 'ebook'}.pdf`;
-      PDFGeneratorService.savePDF(ebookContent, filename);
+  // Download PDF with options
+  const downloadPDF = async (options = {}) => {
+    if (!contentId || !ebookContent) {
+      return { error: 'Missing eBook content' };
+    }
+    
+    try {
+      setGenerating(true);
+      setError(null);
+      
+      // Create a properly formatted filename preserving the eBook title case
+      const safeFilename = `${ebookContent.title?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') || 'ebook'}.pdf`;
+      
+      // Use the PDFGeneratorService to save the PDF with options
+      await PDFGeneratorService.savePDF(
+        ebookContent,
+        safeFilename,
+        options
+      );
+      
+      return { success: true, error: null };
+    } catch (err: any) {
+      console.error('Error downloading PDF:', err);
+      setError(err.message || 'Error downloading PDF');
+      return { error: err.message || 'Error downloading PDF' };
+    } finally {
+      setGenerating(false);
     }
   };
   

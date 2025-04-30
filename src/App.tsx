@@ -1,10 +1,12 @@
 import { Suspense, useState, useEffect } from "react";
-import { Navigate, Route, Routes, useRoutes } from "react-router-dom";
+import { Navigate, Route, Routes, useRoutes, Outlet } from "react-router-dom";
 import routes from "tempo-routes";
 import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
+import AdminRoute from "./components/auth/AdminRoute";
 import Dashboard from "./components/pages/dashboard";
 import BrainDump from "./components/pages/brain-dump";
+import BrainDumps from "./components/pages/brain-dumps";
 import Creator from "./components/pages/creator";
 import Products from "./components/pages/products";
 import ProductDetail from "./components/pages/product-detail";
@@ -13,6 +15,8 @@ import Success from "./components/pages/success";
 import Home from "./components/pages/home";
 import Settings from "./components/pages/settings";
 import Documentation from "./components/pages/documentation";
+import Support from "./components/pages/support";
+import AdminDashboard from "./pages/AdminDashboard";
 import { AuthProvider, useAuth } from "../supabase/auth";
 import { Toaster } from "./components/ui/toaster";
 import { WorkflowProvider } from "./lib/contexts/WorkflowContext";
@@ -72,6 +76,22 @@ function AppRoutes() {
         />
         <Route
           path="/brain-dump/:id"
+          element={
+            <PrivateRoute>
+              <BrainDump />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/brain-dumps"
+          element={
+            <PrivateRoute>
+              <BrainDumps />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/brain-dumps/:id"
           element={
             <PrivateRoute>
               <BrainDump />
@@ -149,6 +169,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/support"
+          element={
+            <PrivateRoute>
+              <Support />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/debug"
           element={
             <PrivateRoute>
@@ -156,6 +184,9 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
+        <Route path="/admin" element={<AdminRoute />}>
+          <Route index element={<AdminDashboard />} />
+        </Route>
         <Route path="/success" element={<Success />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
